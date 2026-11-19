@@ -2,13 +2,12 @@
 //  Pública (site):  GET /api/public/properties · POST /api/public/contact
 //  Restrita (CRC):  /api/leads · /api/clients · /api/properties  (exige Cloudflare Access)
 const STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito', 'Fechado'];
-const CLIENT_MODALITIES = ['Compra', 'Aluguel'];
+const CLIENT_MODALITIES = ['Compra', 'Venda', 'Aluguel'];
 const LEAD_MODALITIES_BY_CATEGORY = {
   Interessado: ['Compra', 'Aluguel'],
   Captação: ['Venda', 'Aluguel'],
 };
 const TEMPS = ['Quente', 'Morno', 'Frio'];
-const PROFILES = ['Comprador', 'Proprietário', 'Investidor', 'Locatário'];
 const CATEGORIES = ['Interessado', 'Captação'];   // Captação = proprietário que quer anunciar
 const PURPOSES = ['Comprar', 'Alugar'];
 const PSTATUS = ['Disponível', 'Reservado', 'Vendido', 'Alugado', 'Inativo'];
@@ -123,9 +122,10 @@ function leadOut(r, events) {
   };
 }
 const clientOut = (r) => ({
-  id: clientCode(r.id), name: r.name, phone: r.phone, modality: r.modality, profile: r.profile, regions: r.regions,
+  id: clientCode(r.id), name: r.name, phone: r.phone, modality: r.modality, regions: r.regions,
   budget: r.budget, preferences: r.preferences, lastInteraction: r.last_interaction, nextAction: r.next_action,
   pendingFollowup: !!r.pending_followup, birthdayMonth: !!r.birthday_month, source: r.source,
+  createdAt: r.created_at, updatedAt: r.updated_at,
 });
 const propOut = (r) => ({
   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
@@ -151,9 +151,10 @@ async function ensureClient(env, v) {
   const found = await env.DB.prepare('SELECT * FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(v.phone).first();
   if (found) return { row: found, created: false };
   const t = nowIso();
+  const defaultProfile = v.profile || (v.modality === 'Venda' ? 'Proprietário' : v.modality === 'Aluguel' ? 'Locatário' : 'Comprador');
   try {
     const row = await env.DB.prepare('INSERT INTO clients (name, phone, modality, profile, regions, budget, preferences, next_action, birthday_month, pending_followup, last_interaction, source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?) RETURNING *')
-      .bind(v.name, v.phone, v.modality, v.profile, v.regions || 'A definir', v.budget || 'A definir', v.preferences || '', v.nextAction || '',
+      .bind(v.name, v.phone, v.modality, defaultProfile, v.regions || 'A definir', v.budget || 'A definir', v.preferences || '', v.nextAction || '',
         v.lastInteraction || 'Hoje • Cadastro inicial', v.source, t, t).first();
     return { row, created: true };
   } catch (e) {
@@ -207,10 +208,8 @@ async function createLead(env, b) {
     const dup = await openLeadFor(env, v.phone, v.modality, v.category);
     if (dup) throw new HttpError(409, `Já existe um lead em aberto com este telefone (${leadCode(dup.id)}).`, { duplicateOf: leadCode(dup.id) });
   }
-  // lead -> cliente: garante o cadastro no CRC (tabela clients aceita 'Compra' ou 'Aluguel')
-  const clientModality = v.modality === 'Venda' ? 'Compra' : v.modality;
   const { row: client, created } = await ensureClient(env, {
-    name: v.name, phone: v.phone, modality: clientModality,
+    name: v.name, phone: v.phone, modality: v.modality,
     profile: v.category === 'Captação' ? 'Proprietário' : v.modality === 'Compra' ? 'Comprador' : 'Locatário',
     regions: v.property, source: 'Lead', lastInteraction: 'Hoje • Lead criado no funil',
   });
@@ -227,7 +226,6 @@ async function patchLead(env, id, b) {
   const set = (col, val) => { sets.push(`${col} = ?`); vals.push(val); };
   if (b.stage !== undefined && b.stage !== cur.stage) {
     oneOf(b.stage, STAGES, 'etapa'); set('stage', b.stage); set('closed_at', b.stage === 'Fechado' ? t : null);
-    // interação com o lead: próximo follow-up = amanhã (a menos que o pedido traga outra data)
     if (b.followup_at === undefined) set('followup_at', b.stage === 'Fechado' ? null : addDays(todayBR(), 1));
     events.push(['etapa', `Etapa alterada de "${cur.stage}" para "${b.stage}".`]);
   }
@@ -255,7 +253,6 @@ async function patchLead(env, id, b) {
     set('property', str(b.property, 'imóvel', { max: 200 })); events.push(['nota', 'Imóvel de interesse atualizado.']);
   }
   if (b.value !== undefined) set('value', money(b.value));
-  // nome / telefone pertencem à pessoa: atualiza cliente e todos os leads dele
   const newName = b.name !== undefined ? str(b.name, 'nome', { min: 2, max: 120, required: true }) : cur.name;
   const newPhone = b.phone !== undefined ? normPhone(b.phone) : cur.phone;
   if (newName !== cur.name || newPhone !== cur.phone) {
@@ -285,7 +282,6 @@ async function addNote(env, id, b) {
   const text = str(b.text, 'nota', { min: 1, max: 1000, required: true });
   const cur = await env.DB.prepare('SELECT stage, followup_at FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
   if (!cur) throw new HttpError(404, 'Lead não encontrado.');
-  // interação com o lead: próximo follow-up = amanhã, a menos que o pedido traga outra data (lead fechado não tem follow-up)
   const followup = b.followup_at !== undefined ? dateOrNull(b.followup_at)
     : cur.stage === 'Fechado' ? cur.followup_at : addDays(todayBR(), 1);
   const t = nowIso();
@@ -309,21 +305,21 @@ async function createClient(env, b) {
   const modality = oneOf(b.modality, CLIENT_MODALITIES, 'modalidade');
   const dup = await env.DB.prepare('SELECT id FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(phone).first();
   if (dup) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.');
-  const profile = oneOf(b.profile, PROFILES, 'perfil');
-  const category = profile === 'Proprietário' ? 'Captação' : 'Interessado';
+  const isVenda = modality === 'Venda';
+  const category = isVenda ? 'Captação' : 'Interessado';
+  const legacyProfile = isVenda ? 'Proprietário' : modality === 'Aluguel' ? 'Locatário' : 'Comprador';
   const { row } = await ensureClient(env, {
-    name, phone, modality, profile,
+    name, phone, modality, profile: legacyProfile,
     regions: str(b.regions, 'regiões', { max: 200, required: true }), budget: str(b.budget, 'orçamento', { max: 120 }),
     preferences: str(b.preferences, 'preferências', { max: 1000 }), nextAction: str(b.next_action, 'próxima ação', { max: 300 }),
     lastInteraction: 'Hoje • Cadastro inicial no CRC', source: 'Painel',
   });
   if (b.birthday_month) await env.DB.prepare('UPDATE clients SET birthday_month = 1 WHERE id = ?').bind(row.id).run();
   // cliente -> lead: abre um lead se ainda não houver um em aberto
-  const leadModality = category === 'Captação' && modality === 'Compra' ? 'Venda' : modality;
   let leadCreated = false;
-  if (!(await openLeadFor(env, phone, leadModality, category))) {
+  if (!(await openLeadFor(env, phone, modality, category))) {
     await insertLead(env, {
-      name, phone, modality: leadModality, stage: 'Novo Lead', temp: 'Morno', property: '', value: 0, followup: null, clientId: row.id,
+      name, phone, modality, stage: 'Novo Lead', temp: 'Morno', property: '', value: 0, followup: null, clientId: row.id,
       category, source: 'CRC', note: 'Lead criado a partir do cadastro no CRC.',
     });
     leadCreated = true;
@@ -339,8 +335,11 @@ async function patchClient(env, id, b) {
   const set = (c, v) => { sets.push(`${c} = ?`); vals.push(v); };
   if (b.name !== undefined) { const n = str(b.name, 'nome', { min: 2, max: 120, required: true }); set('name', n); leadSets.push('name = ?'); leadVals.push(n); }
   if (b.phone !== undefined) { const p = normPhone(b.phone); set('phone', p); leadSets.push('phone = ?'); leadVals.push(p); }
-  if (b.modality !== undefined) set('modality', oneOf(b.modality, CLIENT_MODALITIES, 'modalidade'));
-  if (b.profile !== undefined) set('profile', oneOf(b.profile, PROFILES, 'perfil'));
+  if (b.modality !== undefined) {
+    const m = oneOf(b.modality, CLIENT_MODALITIES, 'modalidade');
+    set('modality', m);
+    set('profile', m === 'Venda' ? 'Proprietário' : m === 'Aluguel' ? 'Locatário' : 'Comprador');
+  }
   if (b.regions !== undefined) set('regions', str(b.regions, 'regiões', { max: 200, required: true }));
   if (b.budget !== undefined) set('budget', str(b.budget, 'orçamento', { max: 120 }) || 'A definir');
   if (b.preferences !== undefined) set('preferences', str(b.preferences, 'preferências', { max: 1000 }));
@@ -358,7 +357,6 @@ async function patchClient(env, id, b) {
 
 // ---------- Imóveis ----------
 async function resolveImage(url) {
-  // links "ibb.co/xxxx" (página) viram o link direto da imagem (i.ibb.co), sem proxies de terceiros no site
   try {
     if (new URL(url).hostname === 'ibb.co') {
       const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
@@ -425,7 +423,7 @@ async function publicProperties(env) {
 }
 
 async function publicContact(env, b) {
-  if (b.website) return json({ ok: true });            // isca anti-robô (campo oculto preenchido)
+  if (b.website) return json({ ok: true });
   const recent = await env.DB.prepare("SELECT count(*) AS n FROM leads WHERE source = 'Site' AND created_at > ?").bind(new Date(Date.now() - 3600_000).toISOString()).first();
   if (recent.n >= 40) throw new HttpError(429, 'Muitas solicitações. Tente novamente em instantes.');
   const name = str(b.name, 'nome', { min: 2, max: 120, required: true });
@@ -435,7 +433,7 @@ async function publicContact(env, b) {
   if (b.kind === 'proprietario') {
     const purpose = oneOf(b.purpose, ['Venda', 'Locação', 'Venda ou Locação'], 'finalidade');
     const what = str(b.what, 'imóvel', { min: 2, max: 200, required: true });
-    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Venda', clientModality: purpose === 'Locação' ? 'Aluguel' : 'Compra', profile: 'Proprietário', regions: what, property: what, value: 0, temp: 'Morno',
+    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Venda', clientModality: purpose === 'Locação' ? 'Aluguel' : 'Venda', profile: 'Proprietário', regions: what, property: what, value: 0, temp: 'Morno',
       note: `Contato pelo site (anunciar imóvel — ${purpose}): ${what}.${msg ? ' Detalhes: ' + msg : ''}` };
   } else {
     const code = String(b.property_code || '').trim();
@@ -448,7 +446,7 @@ async function publicContact(env, b) {
   }
   const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, profile: v.profile, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
   const open = await openLeadFor(env, phone, v.modality, v.category);
-  if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);   // não duplica lead aberto
+  if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);
   else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, note: v.note });
   return json({ ok: true }, 201);
 }
@@ -458,7 +456,7 @@ function csvEsc(v) {
   if (v === null || v === undefined) return '""';
   if (typeof v === 'number') return String(v);
   let t = String(v);
-  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;          // evita execução de fórmula
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;
   return '"' + t.replace(/"/g, '""') + '"';
 }
 const toCsv = (headers, rows) => '\uFEFF' + [headers, ...rows].map((r) => r.map(csvEsc).join(';')).join('\r\n') + '\r\n';
@@ -470,8 +468,8 @@ async function exportCsv(env, base) {
     headers = ['codigo', 'nome', 'telefone', 'categoria', 'modalidade', 'etapa', 'temperatura', 'imovel_interesse', 'valor', 'proximo_followup', 'origem', 'codigo_cliente', 'criado_em', 'atualizado_em', 'fechado_em', 'excluido_em'];
     rows = (await q('SELECT * FROM leads ORDER BY id')).map((r) => [leadCode(r.id), r.name, r.phone, r.category, r.modality, r.stage, r.temp, r.property, r.value, r.followup_at, r.source, r.client_id ? clientCode(r.client_id) : '', r.created_at, r.updated_at, r.closed_at, r.deleted_at]);
   } else if (base === 'clientes') {
-    headers = ['codigo', 'nome', 'telefone', 'modalidade', 'perfil', 'regioes_interesse', 'faixa_orcamento', 'preferencias', 'ultima_interacao', 'proxima_acao', 'aniversariante_do_mes', 'follow_up_pendente', 'origem', 'criado_em', 'atualizado_em', 'excluido_em'];
-    rows = (await q('SELECT * FROM clients ORDER BY id')).map((r) => [clientCode(r.id), r.name, r.phone, r.modality, r.profile, r.regions, r.budget, r.preferences, r.last_interaction, r.next_action, r.birthday_month ? 'Sim' : 'Não', r.pending_followup ? 'Sim' : 'Não', r.source, r.created_at, r.updated_at, r.deleted_at]);
+    headers = ['codigo', 'nome', 'telefone', 'modalidade', 'regioes_interesse', 'faixa_orcamento', 'preferencias', 'ultima_interacao', 'proxima_acao', 'aniversariante_do_mes', 'follow_up_pendente', 'origem', 'criado_em', 'atualizado_em', 'excluido_em'];
+    rows = (await q('SELECT * FROM clients ORDER BY id')).map((r) => [clientCode(r.id), r.name, r.phone, r.modality, r.regions, r.budget, r.preferences, r.last_interaction, r.next_action, r.birthday_month ? 'Sim' : 'Não', r.pending_followup ? 'Sim' : 'Não', r.source, r.created_at, r.updated_at, r.deleted_at]);
   } else if (base === 'imoveis') {
     headers = ['codigo', 'titulo', 'finalidade', 'tipo', 'bairro', 'cidade', 'valor', 'area_m2', 'quartos', 'banheiros', 'vagas', 'foto_url', 'destaque', 'status', 'descricao', 'criado_em', 'atualizado_em', 'excluido_em'];
     rows = (await q('SELECT * FROM properties ORDER BY id')).map((r) => [propCode(r.id), r.title, r.purpose, r.type, r.neighborhood, r.city, r.price, r.area_m2, r.bedrooms, r.bathrooms, r.parking, r.photo_url, r.badge, r.status, r.description, r.created_at, r.updated_at, r.deleted_at]);
@@ -498,13 +496,13 @@ export async function onRequest({ request, env, params }) {
     }
     const body = method === 'GET' || method === 'DELETE' ? {} : await request.json().catch(() => { throw new HttpError(400, 'JSON inválido.'); });
 
-    if (parts[0] === 'public') {                                   // sem login
+    if (parts[0] === 'public') {
       if (parts[1] === 'properties' && method === 'GET') return await publicProperties(env);
       if (parts[1] === 'contact' && method === 'POST') return await publicContact(env, body);
       throw new HttpError(404, 'Rota não encontrada.');
     }
 
-    await authenticate(request, env);                              // tudo abaixo exige Access
+    await authenticate(request, env);
     authed = true;
     const [res, id, sub] = parts;
     if (res === 'export' && method === 'GET' && id) return await exportCsv(env, id.replace(/\.csv$/, ''));
@@ -539,7 +537,6 @@ export async function onRequest({ request, env, params }) {
     if (e instanceof HttpError) return json({ error: e.message, ...(e.extra || {}) }, e.status);
     if (isUnique(e)) return json({ error: 'Registro duplicado.' }, 409);
     console.error(e);
-    // quem está logado no CRC vê o motivo real (ajuda a diagnosticar banco/migração); o público nunca vê
     return json({ error: authed ? 'Erro interno: ' + String((e && e.message) || e).slice(0, 300) : 'Erro interno.' }, 500);
   }
 }

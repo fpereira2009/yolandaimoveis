@@ -345,18 +345,20 @@
                     <div class="flex flex-col md:flex-row gap-3">
                         <div class="relative flex-1">
                             <i data-lucide="search" class="w-4 h-4 text-moss/50 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                            <input type="text" id="crc-search" oninput="renderCrc()" placeholder="Buscar por nome, perfil, bairro ou preferência (ex: 3 quartos, Manejo)..." 
+                            <input type="text" id="crc-search" oninput="renderCrc()" placeholder="Buscar por nome, bairro ou preferência (ex: 3 quartos, Manejo)..." 
                                    class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                         </div>
 
                         <div class="flex gap-1.5 overflow-x-auto no-scrollbar">
                             <button onclick="setCrcFilter('Todos')" data-crc="Todos" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-moss text-white shrink-0">Todos</button>
                             <button onclick="setCrcFilter('Compra')" data-crc="Compra" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss shrink-0">Compra</button>
-                            <button onclick="setCrcFilter('Aluguel')" data-crc="Aluguel" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-terracotta shrink-0">Aluguel</button>
                             <button onclick="setCrcFilter('Venda')" data-crc="Venda" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss shrink-0">Venda</button>
+                            <button onclick="setCrcFilter('Aluguel')" data-crc="Aluguel" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-terracotta shrink-0">Aluguel</button>
                             <button onclick="setCrcFilter('Follow-up')" data-crc="Follow-up" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Follow-ups</button>
-                            <button onclick="setCrcFilter('Comprador')" data-crc="Comprador" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Compradores</button>
-                            <button onclick="setCrcFilter('Proprietário')" data-crc="Proprietário" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Proprietários</button>
+                            <button onclick="setCrcFilter('7d')" data-crc="7d" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Últimos 7 dias</button>
+                            <button onclick="setCrcFilter('30d')" data-crc="30d" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Último mês</button>
+                            <button onclick="setCrcFilter('365d')" data-crc="365d" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Último ano</button>
+                            <button onclick="setCrcFilter('+1y')" data-crc="+1y" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">+ 1 ano</button>
                             <button onclick="setCrcFilter('Aniversariante')" data-crc="Aniversariante" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Aniversariantes</button>
                         </div>
                     </div>
@@ -406,7 +408,7 @@
                                 <i data-lucide="contact" class="w-5 h-5 text-moss shrink-0"></i>
                                 <div class="min-w-0">
                                     <p class="font-heading font-bold text-moss text-sm">Clientes (CRC)</p>
-                                    <p class="text-xs text-charcoal/65">Perfil, regiões, orçamento, preferências e próxima ação</p>
+                                    <p class="text-xs text-charcoal/65">Modalidade, regiões, orçamento, preferências e próxima ação</p>
                                 </div>
                             </div>
                             <a href="/api/export/clientes" data-export="clientes" download class="shrink-0 px-4 py-2.5 rounded-xl bg-moss hover:bg-moss-light text-white font-heading font-bold text-xs">Baixar CSV</a>
@@ -558,13 +560,12 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                        <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
-                        <select id="crc-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
-                            <option value="Compra">🏡 Compra</option>
-                            <option value="Venda">🏷️ Venda</option>
-                            <option value="Aluguel">🔑 Aluguel</option>
-                        </select>
-                    </div>
+                            <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
+                            <select id="lead-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
+                                <option value="Compra">🏡 Compra</option>
+                                <option value="Aluguel">🔑 Aluguel</option>
+                            </select>
+                        </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">Etapa Inicial *</label>
                             <select id="lead-stage" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
@@ -635,33 +636,22 @@
 
                 <form onsubmit="handleCreateCrc(event)" class="mt-4 space-y-3.5">
                     <input type="hidden" id="crc-edit-id">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Nome Completo *</label>
+                        <input type="text" id="crc-name" required placeholder="Ex: Roberto Almeida" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-moss mb-1">Nome Completo *</label>
-                            <input type="text" id="crc-name" required placeholder="Ex: Roberto Almeida" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
-                        </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">WhatsApp *</label>
                             <input type="tel" id="crc-phone" required placeholder="(24) 99999-9999" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                         </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
                             <select id="crc-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
                                 <option value="Compra">🏡 Compra</option>
                                 <option value="Venda">🏷️ Venda</option>
                                 <option value="Aluguel">🔑 Aluguel</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-moss mb-1">Perfil *</label>
-                            <select id="crc-profile" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
-                                <option value="Comprador">Comprador</option>
-                                <option value="Proprietário">Proprietário</option>
-                                <option value="Investidor">Investidor</option>
-                                <option value="Locatário">Locatário</option>
                             </select>
                         </div>
                     </div>
@@ -1078,7 +1068,6 @@
             return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-moss-soft text-moss text-[11px] font-semibold"><i data-lucide="calendar" class="w-3 h-3"></i> ${label}</span>`;
         }
 
-        // URL WhatsApp sem HTML-escape dentro do texto encodado (evita &amp; / &#39; na mensagem)
         function getLeadWhatsAppUrl(lead) {
             const firstName = String(lead.name || '').trim().split(/\s+/)[0] || 'Cliente';
             const propText = String(lead.property || '').trim();
@@ -1266,11 +1255,11 @@
 
             if (matchedLeads.length === 0) {
                 openNewLeadModal();
-                const isProp = client.profile === 'Proprietário';
+                const isVenda = client.modality === 'Venda';
                 document.getElementById('lead-name').value = client.name || '';
                 document.getElementById('lead-phone').value = String(client.phone || '').replace(/^55/, '');
-                document.getElementById('lead-category').value = isProp ? 'Captação' : 'Interessado';
-                syncLeadModalityOptions(isProp && client.modality === 'Compra' ? 'Venda' : (client.modality || 'Compra'));
+                document.getElementById('lead-category').value = isVenda ? 'Captação' : 'Interessado';
+                syncLeadModalityOptions(client.modality || 'Compra');
                 document.getElementById('lead-property').value = client.regions || '';
                 showToast(`Dados de ${client.name} preenchidos para novo lead.`);
                 return;
@@ -1585,7 +1574,26 @@
             catch (e) { showToast(e.message); }
         }
 
-        // 5. CRC RENDERING & ACTIONS
+        // 5. CRC RENDERING & BUCKETS DE ÚLTIMO CONTATO
+        function getCrcContactBucket(client) {
+            const raw = client.updatedAt || client.createdAt;
+            const ms = raw ? Date.parse(raw) : NaN;
+            if (!Number.isFinite(ms)) {
+                return { key: '7d', label: 'Últimos 7 dias', badgeClass: 'bg-moss-soft text-moss' };
+            }
+            const days = Math.max(0, (Date.now() - ms) / 86400000);
+            if (days <= 7) {
+                return { key: '7d', label: 'Últimos 7 dias', badgeClass: 'bg-moss-soft text-moss' };
+            }
+            if (days <= 30) {
+                return { key: '30d', label: 'Último mês', badgeClass: 'bg-sky-50 text-sky-800 border border-sky-200' };
+            }
+            if (days <= 365) {
+                return { key: '365d', label: 'Último ano', badgeClass: 'bg-amber-50 text-amber-800 border border-amber-200' };
+            }
+            return { key: '+1y', label: '+ 1 ano', badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200' };
+        }
+
         function setCrcFilter(filter) {
             activeCrcFilter = filter;
             document.querySelectorAll('.crc-filter-btn').forEach(btn => {
@@ -1602,7 +1610,6 @@
             renderCrc();
         }
 
-        // URL WhatsApp sem HTML-escape dentro do texto encodado
         function getCrcWhatsAppUrl(client) {
             const firstName = String(client.name || '').trim().split(/\s+/)[0] || 'Cliente';
             const regionsText = String(client.regions || '').trim();
@@ -1620,20 +1627,22 @@
             const grid = document.getElementById('crc-cards-grid');
 
             const filtered = crcClients.filter(c => {
+                const bucket = getCrcContactBucket(c);
                 const matchSearch = !query ||
                     c.name.toLowerCase().includes(query) ||
                     c.regions.toLowerCase().includes(query) ||
                     c.preferences.toLowerCase().includes(query) ||
-                    c.profile.toLowerCase().includes(query) ||
-                    c.modality.toLowerCase().includes(query);
+                    c.modality.toLowerCase().includes(query) ||
+                    bucket.label.toLowerCase().includes(query);
 
                 let matchFilter = true;
                 if (activeCrcFilter === 'Compra') matchFilter = c.modality === 'Compra';
                 else if (activeCrcFilter === 'Venda') matchFilter = c.modality === 'Venda';
                 else if (activeCrcFilter === 'Aluguel') matchFilter = c.modality === 'Aluguel';
                 else if (activeCrcFilter === 'Follow-up') matchFilter = c.pendingFollowup;
-                else if (activeCrcFilter === 'Comprador') matchFilter = c.profile === 'Comprador' || c.profile === 'Investidor';
-                else if (activeCrcFilter === 'Proprietário') matchFilter = c.profile === 'Proprietário';
+                else if (activeCrcFilter === '7d' || activeCrcFilter === '30d' || activeCrcFilter === '365d' || activeCrcFilter === '+1y') {
+                    matchFilter = bucket.key === activeCrcFilter;
+                }
                 else if (activeCrcFilter === 'Aniversariante') matchFilter = c.birthdayMonth;
                 return matchSearch && matchFilter;
             });
@@ -1650,6 +1659,7 @@
             grid.innerHTML = filtered.map(c => {
                 const clientLeads = findLeadsForClient(c);
                 const activeLead = clientLeads.find(l => l.stage !== 'Fechado') || clientLeads[0];
+                const bucket = getCrcContactBucket(c);
                 return `
                 <article id="crc-card-${esc(c.id)}" class="bg-white rounded-3xl border border-sand-border shadow-card p-5 flex flex-col justify-between space-y-4 transition-all">
                     <div class="space-y-3">
@@ -1657,7 +1667,7 @@
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-1.5 mb-1">
                                     ${getModalityBadge(c.modality)}
-                                    <span class="px-2.5 py-0.5 rounded-md bg-moss-soft text-moss text-[11px] font-bold">${esc(c.profile)}</span>
+                                    <span class="px-2.5 py-0.5 rounded-md ${bucket.badgeClass} text-[11px] font-bold">${esc(bucket.label)}</span>
                                     ${c.pendingFollowup ? `<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold">⏰ Follow-up</span>` : ''}
                                     ${c.birthdayMonth ? `<span class="px-2 py-0.5 rounded-md bg-terracotta-soft text-terracotta text-[11px] font-bold">🎂 Aniversariante</span>` : ''}
                                 </div>
@@ -1672,7 +1682,7 @@
                         </div>
 
                         <div class="bg-sand/70 p-3 rounded-2xl border border-sand-border space-y-1.5">
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-moss/70">Perfil & Preferências</p>
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-moss/70">Preferências</p>
                             <p class="text-xs text-charcoal/85 leading-relaxed">${esc(c.preferences)}</p>
                         </div>
 
@@ -1705,7 +1715,6 @@
                 name: document.getElementById('crc-name').value,
                 phone: document.getElementById('crc-phone').value,
                 modality: document.getElementById('crc-modality').value,
-                profile: document.getElementById('crc-profile').value,
                 regions: document.getElementById('crc-regions').value,
                 budget: document.getElementById('crc-budget').value,
                 preferences: document.getElementById('crc-preferences').value,
@@ -1732,7 +1741,6 @@
             document.getElementById('crc-name').value = c.name;
             document.getElementById('crc-phone').value = String(c.phone || '').replace(/^55/, '');
             document.getElementById('crc-modality').value = c.modality;
-            document.getElementById('crc-profile').value = c.profile;
             document.getElementById('crc-regions').value = c.regions;
             document.getElementById('crc-budget').value = c.budget === 'A definir' ? '' : c.budget;
             document.getElementById('crc-preferences').value = c.preferences;
@@ -2022,7 +2030,7 @@
                 canvas.width = W;
                 canvas.height = H;
                 const ctx = canvas.getContext('2d');
-                const FONT_SCALE = 1.15; // Aumenta todos os textos em 15% (use 1.10 para +10% ou 1.20 para +20%)
+                const FONT_SCALE = 1.15;
                 const fs = px => Math.round(px * FONT_SCALE);
 
                 const [photoImg, localLogo] = await Promise.all([
@@ -2031,11 +2039,9 @@
                 ]);
                 const logoImg = localLogo || await loadCleanSocialImage('https://i.ibb.co/5VmrCDM/logo.png');
 
-                // 1. Fundo Areia (#F5F2EB)
                 ctx.fillStyle = '#F5F2EB';
                 ctx.fillRect(0, 0, W, H);
 
-                // 2. Cabeçalho Verde Musgo (#2C4A3E)
                 ctx.fillStyle = '#2C4A3E';
                 ctx.fillRect(0, 0, W, 146);
 
@@ -2056,7 +2062,6 @@
                 ctx.font = `600 ${fs(21)}px "Inter", sans-serif`;
                 ctx.fillText('Iêda Holanda • CRECI-RJ 112406 • Resende e Região', textStartX, 106);
 
-                // 3. Foto Principal (968 x 580)
                 const imgX = 56, imgY = 180, imgW = W - 112, imgH = 580;
                 ctx.save();
                 drawSocialRoundedRect(ctx, imgX, imgY, imgW, imgH, 32);
@@ -2087,7 +2092,6 @@
                 drawSocialRoundedRect(ctx, imgX, imgY, imgW, imgH, 32);
                 ctx.stroke();
 
-// 4. Selos: Finalidade (Venda/Aluguel), Destaque (p.badge) e Código (YTI-XXXX)
                 const isRental = p.purpose === 'Alugar';
                 const finLabel = isRental ? 'ALUGUEL' : 'VENDA';
                 ctx.font = `800 ${fs(22)}px "Plus Jakarta Sans", sans-serif`;
@@ -2108,7 +2112,6 @@
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(codeLabel, imgX + imgW - codeW - 4, imgY + 60);
 
-                // Selo de Destaque (p.badge), quando preenchido no imóvel
                 const badgeText = String(p.badge || '').trim();
                 if (badgeText) {
                     ctx.font = `800 ${fs(21)}px "Plus Jakarta Sans", sans-serif`;
@@ -2134,7 +2137,6 @@
                     }
                 }
 
-                // 5. Card de Informações (y: 790 até 1236)
                 const cardX = 56, cardY = 790, cardW = W - 112, cardH = 446;
                 ctx.fillStyle = '#FFFFFF';
                 drawSocialRoundedRect(ctx, cardX, cardY, cardW, cardH, 32);
@@ -2188,7 +2190,6 @@
                 });
                 ctx.textAlign = 'left';
 
-                // 6. Rodapé Institucional
                 ctx.fillStyle = '#1E342B';
                 ctx.fillRect(0, H - 84, W, 84);
 
@@ -2202,7 +2203,6 @@
                 ctx.fillText('CRECI-RJ 112406', W - 56, H - 33);
                 ctx.textAlign = 'left';
 
-                // 7. Download do arquivo PNG
                 const fileName = `card-${String(p.code || 'imovel').replace(/[^a-zA-Z0-9_-]/g, '')}.png`;
                 const link = document.createElement('a');
                 link.download = fileName;
