@@ -1985,6 +1985,8 @@
                 canvas.width = W;
                 canvas.height = H;
                 const ctx = canvas.getContext('2d');
+                const FONT_SCALE = 1.15; // Aumenta todos os textos em 15% (use 1.10 para +10% ou 1.20 para +20%)
+                const fs = px => Math.round(px * FONT_SCALE);
 
                 const [photoImg, localLogo] = await Promise.all([
                     loadCleanSocialImage(p.photo_url),
@@ -2010,12 +2012,12 @@
 
                 const textStartX = logoImg ? 168 : 56;
                 ctx.fillStyle = '#FFFFFF';
-                ctx.font = '800 32px "Plus Jakarta Sans", sans-serif';
-                ctx.fillText('Yolanda Transações Imobiliárias', textStartX, 68);
+                ctx.font = `800 ${fs(32)}px "Plus Jakarta Sans", sans-serif`;
+                ctx.fillText('Yolanda Transações Imobiliárias', textStartX, 66);
 
                 ctx.fillStyle = '#E5DFD3';
-                ctx.font = '600 21px "Inter", sans-serif';
-                ctx.fillText('Iêda Holanda • CRECI-RJ 112406 • Resende e Região', textStartX, 104);
+                ctx.font = `600 ${fs(21)}px "Inter", sans-serif`;
+                ctx.fillText('Iêda Holanda • CRECI-RJ 112406 • Resende e Região', textStartX, 106);
 
                 // 3. Foto Principal (968 x 580)
                 const imgX = 56, imgY = 180, imgW = W - 112, imgH = 580;
@@ -2051,7 +2053,7 @@
 // 4. Selos: Finalidade (Venda/Aluguel), Destaque (p.badge) e Código (YTI-XXXX)
                 const isRental = p.purpose === 'Alugar';
                 const finLabel = isRental ? 'ALUGUEL' : 'VENDA';
-                ctx.font = '800 22px "Plus Jakarta Sans", sans-serif';
+                ctx.font = `800 ${fs(22)}px "Plus Jakarta Sans", sans-serif`;
                 const finW = ctx.measureText(finLabel).width + 48;
 
                 ctx.fillStyle = isRental ? '#C86D51' : '#2C4A3E';
@@ -2061,18 +2063,18 @@
                 ctx.fillText(finLabel, imgX + 50, imgY + 59);
 
                 const codeLabel = String(p.code || 'YTI');
-                ctx.font = '700 22px monospace';
+                ctx.font = `700 ${fs(22)}px monospace`;
                 const codeW = ctx.measureText(codeLabel).width + 44;
                 ctx.fillStyle = 'rgba(35, 40, 37, 0.88)';
                 drawSocialRoundedRect(ctx, imgX + imgW - codeW - 26, imgY + 26, codeW, 50, 16);
                 ctx.fill();
                 ctx.fillStyle = '#FFFFFF';
-                ctx.fillText(codeLabel, imgX + imgW - codeW - 4, imgY + 59);
+                ctx.fillText(codeLabel, imgX + imgW - codeW - 4, imgY + 60);
 
                 // Selo de Destaque (p.badge), quando preenchido no imóvel
                 const badgeText = String(p.badge || '').trim();
                 if (badgeText) {
-                    ctx.font = '800 21px "Plus Jakarta Sans", sans-serif';
+                    ctx.font = `800 ${fs(21)}px "Plus Jakarta Sans", sans-serif`;
                     const badgeStartX = imgX + 26 + finW + 14;
                     const maxBadgeW = (imgX + imgW - codeW - 40) - badgeStartX;
 
@@ -2091,7 +2093,7 @@
                         ctx.fill();
 
                         ctx.fillStyle = '#2C4A3E';
-                        ctx.fillText(displayBadge, badgeStartX + 22, imgY + 59);
+                        ctx.fillText(displayBadge, badgeStartX + 22, imgY + 60);
                     }
                 }
 
@@ -2105,21 +2107,22 @@
                 ctx.stroke();
 
                 ctx.fillStyle = '#C86D51';
-                ctx.font = '700 24px "Plus Jakarta Sans", sans-serif';
+                ctx.font = `700 ${fs(24)}px "Plus Jakarta Sans", sans-serif`;
                 ctx.fillText(`${p.type || 'Imóvel'}  •  ${p.neighborhood || ''}, ${p.city || ''}`, cardX + 40, cardY + 56);
 
                 ctx.fillStyle = '#2C4A3E';
-                ctx.font = '800 38px "Plus Jakarta Sans", sans-serif';
+                ctx.font = `800 ${fs(38)}px "Plus Jakarta Sans", sans-serif`;
+                const titleLineH = fs(46);
                 const titleLines = wrapSocialText(ctx, p.title || 'Imóvel Selecionado', cardW - 80, 2);
                 titleLines.forEach((line, idx) => {
-                    ctx.fillText(line, cardX + 40, cardY + 108 + idx * 46);
+                    ctx.fillText(line, cardX + 40, cardY + 110 + idx * titleLineH);
                 });
 
-                const priceY = titleLines.length > 1 ? cardY + 224 : cardY + 188;
+                const priceY = titleLines.length > 1 ? cardY + 124 + titleLineH * 2 : cardY + 194;
                 ctx.fillStyle = '#232825';
-                ctx.font = '800 50px "Plus Jakarta Sans", sans-serif';
+                ctx.font = `800 ${fs(50)}px "Plus Jakarta Sans", sans-serif`;
                 ctx.fillText(formatBRL(p.price) + (isRental ? '/mês' : ''), cardX + 40, priceY);
-
+                
                 const specsY = cardY + 286;
                 const boxGap = 18;
                 const boxW = (cardW - 80 - boxGap * 3) / 4;
@@ -2139,12 +2142,12 @@
 
                     ctx.textAlign = 'center';
                     ctx.fillStyle = '#2C4A3E';
-                    ctx.font = '800 30px "Plus Jakarta Sans", sans-serif';
+                    ctx.font = `800 ${fs(30)}px "Plus Jakarta Sans", sans-serif`;
                     ctx.fillText(sp.val, bx + boxW / 2, specsY + 54);
 
                     ctx.fillStyle = '#5A625E';
-                    ctx.font = '600 20px "Inter", sans-serif';
-                    ctx.fillText(sp.lbl, bx + boxW / 2, specsY + 90);
+                    ctx.font = `600 ${fs(20)}px "Inter", sans-serif`;
+                    ctx.fillText(sp.lbl, bx + boxW / 2, specsY + 92);
                 });
                 ctx.textAlign = 'left';
 
@@ -2153,13 +2156,13 @@
                 ctx.fillRect(0, H - 84, W, 84);
 
                 ctx.fillStyle = '#F5F2EB';
-                ctx.font = '700 23px "Plus Jakarta Sans", sans-serif';
-                ctx.fillText('WhatsApp: (24) 99904-0775  •  yolandaimoveis.com.br', 56, H - 34);
+                ctx.font = `700 ${fs(23)}px "Plus Jakarta Sans", sans-serif`;
+                ctx.fillText('WhatsApp: (24) 99904-0775  •  yolandaimoveis.com.br', 56, H - 33);
 
                 ctx.fillStyle = '#C86D51';
-                ctx.font = '800 22px "Plus Jakarta Sans", sans-serif';
+                ctx.font = `800 ${fs(22)}px "Plus Jakarta Sans", sans-serif`;
                 ctx.textAlign = 'right';
-                ctx.fillText('CRECI-RJ 112406', W - 56, H - 34);
+                ctx.fillText('CRECI-RJ 112406', W - 56, H - 33);
                 ctx.textAlign = 'left';
 
                 // 7. Download do arquivo PNG
