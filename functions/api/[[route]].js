@@ -2,7 +2,11 @@
 //  Pública (site):  GET /api/public/properties · POST /api/public/contact
 //  Restrita (CRC):  /api/leads · /api/clients · /api/properties  (exige Cloudflare Access)
 const STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito', 'Fechado'];
-const MODALITIES = ['Compra', 'Aluguel'];
+const CLIENT_MODALITIES = ['Compra', 'Aluguel'];
+const LEAD_MODALITIES_BY_CATEGORY = {
+  Interessado: ['Compra', 'Aluguel'],
+  Captação: ['Venda', 'Aluguel'],
+};
 const TEMPS = ['Quente', 'Morno', 'Frio'];
 const PROFILES = ['Comprador', 'Proprietário', 'Investidor', 'Locatário'];
 const CATEGORIES = ['Interessado', 'Captação'];   // Captação = proprietário que quer anunciar
@@ -79,6 +83,13 @@ function str(v, field, { min = 0, max = 200, required = false } = {}) {
 function oneOf(v, list, field) {
   if (!list.includes(v)) throw new HttpError(400, `Valor inválido em "${field}".`);
   return v;
+}
+function validateLeadModality(category, modality) {
+  const allowed = LEAD_MODALITIES_BY_CATEGORY[category];
+  if (!allowed || !allowed.includes(modality)) {
+    throw new HttpError(400, `Modalidade "${modality}" inválida para a categoria "${category}". Use: ${(allowed || []).join(' ou ')}.`);
+  }
+  return modality;
 }
 function intIn(v, field, max) {
   const n = Number(v === '' || v == null ? 0 : v);
@@ -182,21 +193,24 @@ async function listLeads(env) {
 }
 
 async function createLead(env, b) {
+  const category = oneOf(b.category || 'Interessado', CATEGORIES, 'categoria');
+  const modality = validateLeadModality(category, b.modality);
   const v = {
     name: str(b.name, 'nome', { min: 2, max: 120, required: true }), phone: normPhone(b.phone),
-    modality: oneOf(b.modality, MODALITIES, 'modalidade'), stage: oneOf(b.stage || 'Novo Lead', STAGES, 'etapa'),
+    modality, stage: oneOf(b.stage || 'Novo Lead', STAGES, 'etapa'),
     temp: oneOf(b.temp || 'Morno', TEMPS, 'temperatura'), property: str(b.property, 'imóvel', { max: 200 }),
     value: money(b.value ?? 0), followup: dateOrNull(b.followup_at), source: 'Painel',
-    category: oneOf(b.category || 'Interessado', CATEGORIES, 'categoria'),
+    category,
     note: str(b.note, 'nota', { max: 1000 }) || 'Lead cadastrado pelo painel.',
   };
   if (!b.force) {
     const dup = await openLeadFor(env, v.phone, v.modality, v.category);
     if (dup) throw new HttpError(409, `Já existe um lead em aberto com este telefone (${leadCode(dup.id)}).`, { duplicateOf: leadCode(dup.id) });
   }
-  // lead -> cliente: garante o cadastro no CRC
+  // lead -> cliente: garante o cadastro no CRC (tabela clients aceita 'Compra' ou 'Aluguel')
+  const clientModality = v.modality === 'Venda' ? 'Compra' : v.modality;
   const { row: client, created } = await ensureClient(env, {
-    name: v.name, phone: v.phone, modality: v.modality,
+    name: v.name, phone: v.phone, modality: clientModality,
     profile: v.category === 'Captação' ? 'Proprietário' : v.modality === 'Compra' ? 'Comprador' : 'Locatário',
     regions: v.property, source: 'Lead', lastInteraction: 'Hoje • Lead criado no funil',
   });
@@ -217,17 +231,21 @@ async function patchLead(env, id, b) {
     if (b.followup_at === undefined) set('followup_at', b.stage === 'Fechado' ? null : addDays(todayBR(), 1));
     events.push(['etapa', `Etapa alterada de "${cur.stage}" para "${b.stage}".`]);
   }
-  if (b.modality !== undefined && b.modality !== cur.modality) {
-    oneOf(b.modality, MODALITIES, 'modalidade'); set('modality', b.modality);
-    events.push(['modalidade', `Modalidade alterada para "${b.modality}".`]);
+  const nextCategory = b.category !== undefined ? oneOf(b.category, CATEGORIES, 'categoria') : cur.category;
+  const nextModality = b.modality !== undefined ? b.modality : cur.modality;
+  validateLeadModality(nextCategory, nextModality);
+
+  if (nextModality !== cur.modality) {
+    set('modality', nextModality);
+    events.push(['modalidade', `Modalidade alterada para "${nextModality}".`]);
   }
   if (b.temp !== undefined && b.temp !== cur.temp) {
     oneOf(b.temp, TEMPS, 'temperatura'); set('temp', b.temp);
     events.push(['temperatura', `Temperatura alterada para "${b.temp}".`]);
   }
-  if (b.category !== undefined && b.category !== cur.category) {
-    oneOf(b.category, CATEGORIES, 'categoria'); set('category', b.category);
-    events.push(['nota', `Categoria alterada para "${b.category}".`]);
+  if (nextCategory !== cur.category) {
+    set('category', nextCategory);
+    events.push(['nota', `Categoria alterada para "${nextCategory}".`]);
   }
   if (b.followup_at !== undefined) {
     const f = dateOrNull(b.followup_at);
@@ -288,7 +306,7 @@ async function softDelete(env, table, id) {
 async function createClient(env, b) {
   const name = str(b.name, 'nome', { min: 2, max: 120, required: true });
   const phone = normPhone(b.phone);
-  const modality = oneOf(b.modality, MODALITIES, 'modalidade');
+  const modality = oneOf(b.modality, CLIENT_MODALITIES, 'modalidade');
   const dup = await env.DB.prepare('SELECT id FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(phone).first();
   if (dup) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.');
   const profile = oneOf(b.profile, PROFILES, 'perfil');
@@ -301,10 +319,11 @@ async function createClient(env, b) {
   });
   if (b.birthday_month) await env.DB.prepare('UPDATE clients SET birthday_month = 1 WHERE id = ?').bind(row.id).run();
   // cliente -> lead: abre um lead se ainda não houver um em aberto
+  const leadModality = category === 'Captação' && modality === 'Compra' ? 'Venda' : modality;
   let leadCreated = false;
-  if (!(await openLeadFor(env, phone, modality, category))) {
+  if (!(await openLeadFor(env, phone, leadModality, category))) {
     await insertLead(env, {
-      name, phone, modality, stage: 'Novo Lead', temp: 'Morno', property: '', value: 0, followup: null, clientId: row.id,
+      name, phone, modality: leadModality, stage: 'Novo Lead', temp: 'Morno', property: '', value: 0, followup: null, clientId: row.id,
       category, source: 'CRC', note: 'Lead criado a partir do cadastro no CRC.',
     });
     leadCreated = true;
@@ -320,7 +339,7 @@ async function patchClient(env, id, b) {
   const set = (c, v) => { sets.push(`${c} = ?`); vals.push(v); };
   if (b.name !== undefined) { const n = str(b.name, 'nome', { min: 2, max: 120, required: true }); set('name', n); leadSets.push('name = ?'); leadVals.push(n); }
   if (b.phone !== undefined) { const p = normPhone(b.phone); set('phone', p); leadSets.push('phone = ?'); leadVals.push(p); }
-  if (b.modality !== undefined) set('modality', oneOf(b.modality, MODALITIES, 'modalidade'));
+  if (b.modality !== undefined) set('modality', oneOf(b.modality, CLIENT_MODALITIES, 'modalidade'));
   if (b.profile !== undefined) set('profile', oneOf(b.profile, PROFILES, 'perfil'));
   if (b.regions !== undefined) set('regions', str(b.regions, 'regiões', { max: 200, required: true }));
   if (b.budget !== undefined) set('budget', str(b.budget, 'orçamento', { max: 120 }) || 'A definir');
@@ -416,17 +435,18 @@ async function publicContact(env, b) {
   if (b.kind === 'proprietario') {
     const purpose = oneOf(b.purpose, ['Venda', 'Locação', 'Venda ou Locação'], 'finalidade');
     const what = str(b.what, 'imóvel', { min: 2, max: 200, required: true });
-    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Compra', profile: 'Proprietário', regions: what, property: what, value: 0, temp: 'Morno',
+    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Venda', clientModality: purpose === 'Locação' ? 'Aluguel' : 'Compra', profile: 'Proprietário', regions: what, property: what, value: 0, temp: 'Morno',
       note: `Contato pelo site (anunciar imóvel — ${purpose}): ${what}.${msg ? ' Detalhes: ' + msg : ''}` };
   } else {
     const code = String(b.property_code || '').trim();
     const p = code ? await env.DB.prepare("SELECT * FROM properties WHERE id = ? AND deleted_at IS NULL").bind(parseId(code)).first() : null;
     if (!p) throw new HttpError(400, 'Imóvel não encontrado.');
-    v = { category: 'Interessado', modality: p.purpose === 'Alugar' ? 'Aluguel' : 'Compra', profile: p.purpose === 'Alugar' ? 'Locatário' : 'Comprador',
+    const m = p.purpose === 'Alugar' ? 'Aluguel' : 'Compra';
+    v = { category: 'Interessado', modality: m, clientModality: m, profile: p.purpose === 'Alugar' ? 'Locatário' : 'Comprador',
       regions: p.neighborhood, property: `${propCode(p.id)} - ${p.title}`.slice(0, 200), value: p.price, temp: 'Quente',
       note: `Interesse pelo site em ${propCode(p.id)} - ${p.title}.${msg ? ' Mensagem: ' + msg : ''}` };
   }
-  const { row: client } = await ensureClient(env, { name, phone, modality: v.modality, profile: v.profile, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
+  const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, profile: v.profile, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
   const open = await openLeadFor(env, phone, v.modality, v.category);
   if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);   // não duplica lead aberto
   else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, note: v.note });

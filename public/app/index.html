@@ -545,14 +545,14 @@
 
                     <div>
                         <label class="block text-xs font-bold text-moss mb-1">Categoria *</label>
-                        <select id="lead-category" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <select id="lead-category" onchange="syncLeadModalityOptions()" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                             <option value="Interessado">Interessado (comprador / locatário)</option>
                             <option value="Captação">Captação (proprietário que quer anunciar)</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-moss mb-1">Modalidade (Compra / Aluguel) *</label>
+                            <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
                             <select id="lead-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
                                 <option value="Compra">🏡 Compra</option>
                                 <option value="Aluguel">🔑 Aluguel</option>
@@ -1047,6 +1047,9 @@
             if (modality === 'Aluguel') {
                 return `<span class="px-2 py-0.5 rounded-md bg-terracotta text-white text-[11px] font-bold">🔑 Aluguel</span>`;
             }
+            if (modality === 'Venda') {
+                return `<span class="px-2 py-0.5 rounded-md bg-moss text-white text-[11px] font-bold">🏷️ Venda</span>`;
+            }
             return `<span class="px-2 py-0.5 rounded-md bg-moss text-white text-[11px] font-bold">🏡 Compra</span>`;
         }
 
@@ -1169,12 +1172,14 @@
             );
 
             document.getElementById('count-funnel-todos').textContent = searchMatched.length;
-            document.getElementById('count-funnel-compra').textContent = searchMatched.filter(l => l.modality === 'Compra').length;
+            document.getElementById('count-funnel-compra').textContent = searchMatched.filter(l => l.modality === 'Compra' || l.modality === 'Venda').length;
             document.getElementById('count-funnel-aluguel').textContent = searchMatched.filter(l => l.modality === 'Aluguel').length;
 
-            const filteredLeads = searchMatched.filter(l =>
-                funnelModalityFilter === 'Todos' || l.modality === funnelModalityFilter
-            );
+            const filteredLeads = searchMatched.filter(l => {
+                if (funnelModalityFilter === 'Todos') return true;
+                if (funnelModalityFilter === 'Compra') return l.modality === 'Compra' || l.modality === 'Venda';
+                return l.modality === funnelModalityFilter;
+            });
 
             const pillsBar = document.getElementById('stage-pills-bar');
             pillsBar.innerHTML = STAGES.map(stage => {
@@ -1253,10 +1258,11 @@
 
             if (matchedLeads.length === 0) {
                 openNewLeadModal();
+                const isProp = client.profile === 'Proprietário';
                 document.getElementById('lead-name').value = client.name || '';
                 document.getElementById('lead-phone').value = String(client.phone || '').replace(/^55/, '');
-                document.getElementById('lead-modality').value = client.modality || 'Compra';
-                document.getElementById('lead-category').value = client.profile === 'Proprietário' ? 'Captação' : 'Interessado';
+                document.getElementById('lead-category').value = isProp ? 'Captação' : 'Interessado';
+                syncLeadModalityOptions(isProp && client.modality === 'Compra' ? 'Venda' : (client.modality || 'Compra'));
                 document.getElementById('lead-property').value = client.regions || '';
                 showToast(`Dados de ${client.name} preenchidos para novo lead.`);
                 return;
@@ -1289,6 +1295,9 @@
             if (!lead) return;
             followupTouched = false;
             const linkedClient = findClientForLead(lead);
+
+            const primaryMod = lead.category === 'Captação' ? 'Venda' : 'Compra';
+            const primaryModLabel = lead.category === 'Captação' ? '🏷️ Venda' : '🏡 Compra';
 
             const container = document.getElementById('lead-detail-content');
             container.innerHTML = `
@@ -1341,8 +1350,8 @@
                 <div class="flex items-center justify-between gap-2 bg-sand/60 px-4 py-2.5 rounded-2xl border border-sand-border">
                     <span class="text-xs font-heading font-bold text-moss">Modalidade do Atendimento:</span>
                     <div class="flex gap-1.5">
-                        <button onclick="changeLeadModality('${esc(lead.id)}', 'Compra')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${lead.modality === 'Compra' ? 'bg-moss text-white' : 'bg-white text-moss border border-sand-border'}">
-                            🏡 Compra
+                        <button onclick="changeLeadModality('${esc(lead.id)}', '${primaryMod}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${lead.modality === primaryMod ? 'bg-moss text-white' : 'bg-white text-moss border border-sand-border'}">
+                            ${primaryModLabel}
                         </button>
                         <button onclick="changeLeadModality('${esc(lead.id)}', 'Aluguel')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${lead.modality === 'Aluguel' ? 'bg-terracotta text-white' : 'bg-white text-terracotta border border-sand-border'}">
                             🔑 Aluguel
@@ -1479,6 +1488,25 @@
             return body;
         }
 
+        function syncLeadModalityOptions(preferredModality) {
+            const catEl = document.getElementById('lead-category');
+            const modEl = document.getElementById('lead-modality');
+            if (!catEl || !modEl) return;
+
+            const isCaptacao = catEl.value === 'Captação';
+            const options = isCaptacao
+                ? [{ value: 'Venda', label: '🏷️ Venda' }, { value: 'Aluguel', label: '🔑 Aluguel' }]
+                : [{ value: 'Compra', label: '🏡 Compra' }, { value: 'Aluguel', label: '🔑 Aluguel' }];
+
+            const rawVal = preferredModality !== undefined ? preferredModality : modEl.value;
+            const mappedVal = isCaptacao && rawVal === 'Compra'
+                ? 'Venda'
+                : (!isCaptacao && rawVal === 'Venda' ? 'Compra' : rawVal);
+
+            modEl.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+            modEl.value = options.some(o => o.value === mappedVal) ? mappedVal : options[0].value;
+        }
+
         function openNewLeadModalClean() {
             const f = document.getElementById('lead-name').closest('form');
             f.reset();
@@ -1488,6 +1516,7 @@
             document.getElementById('lead-delete-btn').classList.add('hidden');
             document.getElementById('lead-followup-date').value = tomorrowBR();
             document.getElementById('lead-note').closest('div').classList.remove('hidden');
+            syncLeadModalityOptions('Compra');
         }
 
         function openNewLeadModal() {
@@ -1505,8 +1534,8 @@
             document.getElementById('lead-delete-btn').classList.remove('hidden');
             document.getElementById('lead-name').value = l.name;
             document.getElementById('lead-phone').value = String(l.phone || '').replace(/^55/, '');
-            document.getElementById('lead-modality').value = l.modality;
             document.getElementById('lead-category').value = l.category || 'Interessado';
+            syncLeadModalityOptions(l.modality);
             document.getElementById('lead-stage').value = l.stage;
             document.getElementById('lead-temp').value = l.temp;
             document.getElementById('lead-property').value = l.property;
