@@ -289,7 +289,7 @@
                         </button>
                     </div>
 
-                    <!-- Modality Filter Pills (Compra vs Aluguel with Live Counters) -->
+                    <!-- Modality Filter Pills (Compra, Venda vs Aluguel with Live Counters) -->
                     <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-sand-border">
                         <span class="text-[11px] font-bold uppercase tracking-wider text-moss/65 shrink-0 mr-1">Modalidade:</span>
                         <button onclick="setFunnelModality('Todos')" data-mod="Todos" class="funnel-mod-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-moss text-white shrink-0 flex items-center gap-1.5 transition-all">
@@ -300,6 +300,11 @@
                             <span class="w-2 h-2 rounded-full bg-moss"></span>
                             <span>Compra</span>
                             <span id="count-funnel-compra" class="px-1.5 py-0.5 rounded-full bg-white text-moss text-[10px] font-bold">0</span>
+                        </button>
+                        <button onclick="setFunnelModality('Venda')" data-mod="Venda" class="funnel-mod-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss hover:bg-moss/10 shrink-0 flex items-center gap-1.5 transition-all">
+                            <span class="w-2 h-2 rounded-full bg-moss"></span>
+                            <span>Venda</span>
+                            <span id="count-funnel-venda" class="px-1.5 py-0.5 rounded-full bg-white text-moss text-[10px] font-bold">0</span>
                         </button>
                         <button onclick="setFunnelModality('Aluguel')" data-mod="Aluguel" class="funnel-mod-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-terracotta hover:bg-terracotta/10 shrink-0 flex items-center gap-1.5 transition-all">
                             <span class="w-2 h-2 rounded-full bg-terracotta"></span>
@@ -348,6 +353,7 @@
                             <button onclick="setCrcFilter('Todos')" data-crc="Todos" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-moss text-white shrink-0">Todos</button>
                             <button onclick="setCrcFilter('Compra')" data-crc="Compra" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss shrink-0">Compra</button>
                             <button onclick="setCrcFilter('Aluguel')" data-crc="Aluguel" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-terracotta shrink-0">Aluguel</button>
+                            <button onclick="setCrcFilter('Venda')" data-crc="Venda" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss shrink-0">Venda</button>
                             <button onclick="setCrcFilter('Follow-up')" data-crc="Follow-up" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Follow-ups</button>
                             <button onclick="setCrcFilter('Comprador')" data-crc="Comprador" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Compradores</button>
                             <button onclick="setCrcFilter('Proprietário')" data-crc="Proprietário" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Proprietários</button>
@@ -552,12 +558,13 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
-                            <select id="lead-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
-                                <option value="Compra">🏡 Compra</option>
-                                <option value="Aluguel">🔑 Aluguel</option>
-                            </select>
-                        </div>
+                        <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
+                        <select id="crc-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
+                            <option value="Compra">🏡 Compra</option>
+                            <option value="Venda">🏷️ Venda</option>
+                            <option value="Aluguel">🔑 Aluguel</option>
+                        </select>
+                    </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">Etapa Inicial *</label>
                             <select id="lead-stage" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
@@ -644,6 +651,7 @@
                             <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
                             <select id="crc-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
                                 <option value="Compra">🏡 Compra</option>
+                                <option value="Venda">🏷️ Venda</option>
                                 <option value="Aluguel">🔑 Aluguel</option>
                             </select>
                         </div>
@@ -1172,12 +1180,12 @@
             );
 
             document.getElementById('count-funnel-todos').textContent = searchMatched.length;
-            document.getElementById('count-funnel-compra').textContent = searchMatched.filter(l => l.modality === 'Compra' || l.modality === 'Venda').length;
+            document.getElementById('count-funnel-compra').textContent = searchMatched.filter(l => l.modality === 'Compra').length;
+            document.getElementById('count-funnel-venda').textContent = searchMatched.filter(l => l.modality === 'Venda').length;
             document.getElementById('count-funnel-aluguel').textContent = searchMatched.filter(l => l.modality === 'Aluguel').length;
 
             const filteredLeads = searchMatched.filter(l => {
                 if (funnelModalityFilter === 'Todos') return true;
-                if (funnelModalityFilter === 'Compra') return l.modality === 'Compra' || l.modality === 'Venda';
                 return l.modality === funnelModalityFilter;
             });
 
@@ -1621,12 +1629,12 @@
 
                 let matchFilter = true;
                 if (activeCrcFilter === 'Compra') matchFilter = c.modality === 'Compra';
+                else if (activeCrcFilter === 'Venda') matchFilter = c.modality === 'Venda';
                 else if (activeCrcFilter === 'Aluguel') matchFilter = c.modality === 'Aluguel';
                 else if (activeCrcFilter === 'Follow-up') matchFilter = c.pendingFollowup;
                 else if (activeCrcFilter === 'Comprador') matchFilter = c.profile === 'Comprador' || c.profile === 'Investidor';
                 else if (activeCrcFilter === 'Proprietário') matchFilter = c.profile === 'Proprietário';
                 else if (activeCrcFilter === 'Aniversariante') matchFilter = c.birthdayMonth;
-
                 return matchSearch && matchFilter;
             });
 
