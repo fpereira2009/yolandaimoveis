@@ -8,6 +8,12 @@ database_name = "yolanda-crm"
 database_id = "f13b20fb-3b81-4dd2-b837-e7b96d28a98d"
 migrations_dir = "migrations"
 
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "yolanda-crm-dev"
+database_id = "23514b9c-5c0e-464c-8c85-1342b4fae522"
+migrations_dir = "migrations"
+
 # Variáveis (Pages > Settings > Variables):
 #   ACCESS_TEAM_DOMAIN = "SEU-TIME.cloudflareaccess.com"
 #   ACCESS_AUD         = "<Application Audience (AUD) tag da aplicação no Access>"
