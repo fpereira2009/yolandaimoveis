@@ -2048,7 +2048,7 @@
                 drawSocialRoundedRect(ctx, imgX, imgY, imgW, imgH, 32);
                 ctx.stroke();
 
-                // 4. Selos: Finalidade (Venda/Aluguel) e Código (YTI-XXXX)
+// 4. Selos: Finalidade (Venda/Aluguel), Destaque (p.badge) e Código (YTI-XXXX)
                 const isRental = p.purpose === 'Alugar';
                 const finLabel = isRental ? 'ALUGUEL' : 'VENDA';
                 ctx.font = '800 22px "Plus Jakarta Sans", sans-serif';
@@ -2068,6 +2068,32 @@
                 ctx.fill();
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(codeLabel, imgX + imgW - codeW - 4, imgY + 59);
+
+                // Selo de Destaque (p.badge), quando preenchido no imóvel
+                const badgeText = String(p.badge || '').trim();
+                if (badgeText) {
+                    ctx.font = '800 21px "Plus Jakarta Sans", sans-serif';
+                    const badgeStartX = imgX + 26 + finW + 14;
+                    const maxBadgeW = (imgX + imgW - codeW - 40) - badgeStartX;
+
+                    if (maxBadgeW > 80) {
+                        let displayBadge = badgeText;
+                        while (ctx.measureText(displayBadge).width + 44 > maxBadgeW && displayBadge.length > 3) {
+                            displayBadge = displayBadge.slice(0, -1);
+                        }
+                        if (displayBadge !== badgeText) {
+                            displayBadge = displayBadge.trim() + '…';
+                        }
+
+                        const badgeW = ctx.measureText(displayBadge).width + 44;
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+                        drawSocialRoundedRect(ctx, badgeStartX, imgY + 26, badgeW, 50, 25);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#2C4A3E';
+                        ctx.fillText(displayBadge, badgeStartX + 22, imgY + 59);
+                    }
+                }
 
                 // 5. Card de Informações (y: 790 até 1236)
                 const cardX = 56, cardY = 790, cardW = W - 112, cardH = 446;
