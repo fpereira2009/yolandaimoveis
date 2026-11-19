@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yolanda Transações Imobiliárias | Iêda Holanda - CRECI-RJ 112406</title>
     <meta name="description" content="Compra, venda e locação de imóveis em Resende, Itatiaia, Penedo, Quatis e Porto Real com atendimento personalizado por Iêda Holanda (CRECI-RJ 112406).">
-    <link rel="icon" type="image/png" href="/img/logo.png">
-    <link rel="apple-touch-icon" href="/img/logo.png">
 
     <!-- Google Fonts: Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -83,11 +81,15 @@
     <header class="sticky top-0 z-40 bg-sand/95 backdrop-blur-md border-b border-sand-border">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
             
-            <!-- Marca + Logotipo Oficial -->
-            <a href="#inicio" class="flex items-center gap-2.5 sm:gap-3 min-w-0 group">
-                <img src="/img/logo.png"
-                     alt="Logotipo Yolanda Transações Imobiliárias"
-                     class="h-9 sm:h-10 w-auto object-contain shrink-0">
+            <!-- Marca + Avatar Circular 1:1 da Iêda Holanda -->
+            <a href="#inicio" class="flex items-center gap-3 min-w-0 group">
+                <div class="relative shrink-0">
+                    <img src="https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png"
+                         onerror="this.onerror=null;this.src='https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH';"
+                         alt="Iêda Holanda"
+                         class="w-10 h-10 aspect-square rounded-full object-cover object-top border-2 border-terracotta shadow-xs">
+                    <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-whatsapp border-2 border-sand"></span>
+                </div>
                 <div class="min-w-0">
                     <span class="block font-heading font-extrabold text-moss text-base sm:text-lg leading-tight tracking-tight truncate">
                         Yolanda
@@ -203,7 +205,7 @@
 
                     <!-- Cartão Flutuante da Corretora com Foto 1:1 -->
                     <div class="bg-sand rounded-2xl p-4 border border-sand-border flex items-center gap-4">
-                        <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                        <img src="https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png"
                              onerror="this.onerror=null;this.src='https://placehold.co/240x240/2C4A3E/F5F2EB?text=I%C3%AAda+Holanda';"
                              alt="Iêda Holanda - Corretora de Imóveis"
                              class="w-24 h-24 sm:w-28 sm:h-28 aspect-square rounded-2xl object-cover object-top shrink-0 border-2 border-white shadow-sm">
@@ -255,7 +257,7 @@
                         <span id="sheets-live-text">Catálogo ao vivo</span>
                     </div>
 
-                    <button type="button" onclick="loadCatalog(true)" title="Atualizar imóveis agora"
+                    <button type="button" onclick="loadCatalog(true)" title="Atualizar imóveis da planilha agora"
                             class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">
                         <i data-lucide="refresh-cw" id="sync-icon" class="w-3.5 h-3.5 text-terracotta"></i>
                         <span>Sincronizar</span>
@@ -290,14 +292,14 @@
                     </div>
 
                     <span id="results-counter" class="text-xs font-bold text-moss/75">
-                        Exibindo 0 imóveis
+                        Exibindo 4 imóveis
                     </span>
                 </div>
 
                 <!-- Inputs de Filtro Detalhado -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
                     
-                    <!-- Localidade / Bairro (populado dinamicamente apenas com bairros disponíveis) -->
+                    <!-- Localidade / Bairro -->
                     <div class="lg:col-span-3">
                         <label for="filter-location" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Localidade / Bairro
@@ -378,7 +380,7 @@
                 <div class="lg:col-span-5">
                     <div class="w-full max-w-md mx-auto bg-moss-dark rounded-3xl border border-white/15 overflow-hidden shadow-2xl">
                         <div class="w-full aspect-square overflow-hidden bg-moss-dark">
-                            <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                            <img src="https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png"
                                  onerror="this.onerror=null;this.src='https://placehold.co/600x600/1E352C/F5F2EB?text=I%C3%AAda+Holanda';"
                                  alt="Iêda Holanda - Corretora de Imóveis"
                                  class="w-full h-full aspect-square object-cover object-top block">
@@ -504,7 +506,7 @@
                 <!-- Rodapé do Formulário com Avatar 1:1 da Iêda Holanda -->
                 <div class="sm:col-span-2 pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-sand-warm p-4 rounded-2xl border border-sand-border">
                     <div class="flex items-center gap-3">
-                        <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                        <img src="https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png"
                              onerror="this.onerror=null;this.src='https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH';"
                              alt="Iêda Holanda"
                              class="w-12 h-12 aspect-square rounded-full object-cover object-top border-2 border-terracotta shrink-0">
@@ -530,7 +532,7 @@
             
             <div class="space-y-3">
                 <div class="flex items-center gap-3">
-                    <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                    <img src="https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png"
                          onerror="this.onerror=null;this.src='https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH';"
                          alt="Iêda Holanda"
                          class="w-10 h-10 aspect-square rounded-full object-cover object-top border-2 border-terracotta shrink-0">
@@ -601,16 +603,15 @@
             "use strict";
 
             const BROKER_PHONE = "5524999040775";
-            const BROKER_AVATAR = "https://i.ibb.co/RTTfKmBb/fotocorretora.jpg";
+            const BROKER_AVATAR = "https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png";
 
             const DEFAULT_ARCH_FALLBACK = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80";
             const RESOLVING_PLACEHOLDER = "https://placehold.co/900x560/EAF0ED/2C4A3E?text=Carregando+Foto+do+Im%C3%B3vel...";
-            const RESOLVED_IMG_CACHE_KEY = "yti_resolved_img_v1";
 
             // Mapa instantâneo para links ImgBB conhecidos
             const KNOWN_IMGBB_MAP = {
                 "https://ibb.co/sd7SvxgQ": "https://i.ibb.co/JwZLR6c2/casa.png",
-                "https://ibb.co/3mvthgsG": "https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                "https://ibb.co/3mvthgsG": "https://i.ibb.co/Ldr4pVPb/Avatar-Yeda.png"
             };
 
             const inFlightImageResolutions = {};
@@ -633,7 +634,6 @@
             }
             let catalogFailed = false;
             let properties = readCatalogCache();
-            let apiNeighborhoods = null;
             let activeFinalidade = "Todos";
 
             // ==================== HELPERS SEGUROS ====================
@@ -642,7 +642,9 @@
                     if (window.lucide && typeof window.lucide.createIcons === "function") {
                         window.lucide.createIcons();
                     }
-                } catch (e) {}
+                } catch (e) {
+                    // Ignora falhas de ícone para nunca quebrar a UI
+                }
             }
 
             function safeGetStorage(key, fallback) {
@@ -657,7 +659,9 @@
             function safeSetStorage(key, value) {
                 try {
                     window.localStorage.setItem(key, value);
-                } catch (e) {}
+                } catch (e) {
+                    // Ignora em modo privado restrito
+                }
             }
 
             function getResolvedImageCache() {
@@ -675,7 +679,9 @@
                     const cache = getResolvedImageCache();
                     cache[key] = directUrl;
                     safeSetStorage(RESOLVED_IMG_CACHE_KEY, JSON.stringify(cache));
-                } catch (e) {}
+                } catch (e) {
+                    // Ignora erro de quota
+                }
             }
 
             function normalizeImgbbViewerUrl(url) {
@@ -687,12 +693,14 @@
 
             function extractDirectImgbbFromHtml(html) {
                 const text = String(html || "");
+                // 1. Prioriza meta og:image
                 const ogMatch1 = text.match(/<meta[^>]+property=["']og:image["'][^>]+content=["'](https:\/\/i\.ibb\.co\/[^"']+)["']/i);
                 if (ogMatch1 && ogMatch1[1]) return ogMatch1[1];
 
                 const ogMatch2 = text.match(/<meta[^>]+content=["'](https:\/\/i\.ibb\.co\/[^"']+)["'][^>]+property=["']og:image["']/i);
                 if (ogMatch2 && ogMatch2[1]) return ogMatch2[1];
 
+                // 2. Fallback: qualquer <img src="https://i.ibb.co/..."> (ignorando avatares pequenos)
                 const imgRegex = /<img[^>]+src=["'](https:\/\/i\.ibb\.co\/[^"']+)["']/gi;
                 let m;
                 while ((m = imgRegex.exec(text)) !== null) {
@@ -704,12 +712,14 @@
             }
 
             function applyResolvedUrlToDom(normalizedKey, directUrl) {
+                // Atualiza em memória na lista de imóveis
                 properties.forEach(function (p) {
                     if (normalizeImgbbViewerUrl(p.foto_url) === normalizedKey || p.foto_url === normalizedKey) {
                         p.resolved_foto_url = directUrl;
                     }
                 });
 
+                // Atualiza imediatamente todas as imagens (cards e modal aberto) com esse link
                 document.querySelectorAll("img[data-raw-img]").forEach(function (imgEl) {
                     if (imgEl.getAttribute("data-raw-img") === normalizedKey) {
                         imgEl.src = directUrl;
@@ -739,8 +749,11 @@
                                 applyResolvedUrlToDom(normalizedKey, directUrl);
                                 return directUrl;
                             }
-                        } catch (err) {}
+                        } catch (err) {
+                            // Tenta o próximo proxy
+                        }
                     }
+                    // Se nenhum proxy conseguir extrair, aplica fallback arquitetônico limpo
                     applyResolvedUrlToDom(normalizedKey, DEFAULT_ARCH_FALLBACK);
                     return DEFAULT_ARCH_FALLBACK;
                 })().finally(function () {
@@ -751,6 +764,7 @@
                 return task;
             }
 
+            // Resolvedor Universal de Imagens para Google Sheets (ImgBB viewer, Google Drive e URLs diretas)
             function resolvePropertyImageUrl(rawUrl, imgElement) {
                 const clean = String(rawUrl || "").trim();
                 if (!clean) {
@@ -758,6 +772,7 @@
                     return DEFAULT_ARCH_FALLBACK;
                 }
 
+                // 1. Conversão automática para links de compartilhamento do Google Drive
                 const driveMatch = clean.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i);
                 if (driveMatch && driveMatch[1]) {
                     const driveDirect = "https://drive.google.com/thumbnail?id=" + driveMatch[1] + "&sz=w1200";
@@ -765,18 +780,21 @@
                     return driveDirect;
                 }
 
+                // 2. Resolução automática para páginas de visualização ImgBB (https://ibb.co/<codigo>)
                 const normalizedImgbb = normalizeImgbbViewerUrl(clean);
                 if (normalizedImgbb) {
                     if (imgElement) {
                         imgElement.setAttribute("data-raw-img", normalizedImgbb);
                     }
 
+                    // 2a. Verifica mapa instantâneo embutido
                     if (KNOWN_IMGBB_MAP[normalizedImgbb]) {
                         const mapped = KNOWN_IMGBB_MAP[normalizedImgbb];
                         if (imgElement) imgElement.src = mapped;
                         return mapped;
                     }
 
+                    // 2b. Verifica cache persistente no localStorage
                     const cache = getResolvedImageCache();
                     if (cache[normalizedImgbb]) {
                         const cachedUrl = cache[normalizedImgbb];
@@ -784,16 +802,18 @@
                         return cachedUrl;
                     }
 
+                    // 2c. Dispara resolução assíncrona via proxy e retorna placeholder temporário
                     if (imgElement) imgElement.src = RESOLVING_PLACEHOLDER;
                     fetchAndCacheImgbbDirectUrl(normalizedImgbb);
                     return RESOLVING_PLACEHOLDER;
                 }
 
+                // 3. URL já direta (i.ibb.co, Unsplash, etc.)
                 if (imgElement) imgElement.src = clean;
                 return clean;
             }
 
-            function handlePropertyImgError(imgEl) {
+            function handlePropertyImgError(imgEl, codigo) {
                 if (!imgEl || imgEl.dataset.fallbackApplied === "1") return;
                 imgEl.dataset.fallbackApplied = "1";
                 imgEl.onerror = null;
@@ -806,6 +826,45 @@
                     .normalize("NFD")
                     .replace(/[\u0300-\u036f]/g, "")
                     .trim();
+            }
+
+            function normalizeFinalidade(raw) {
+                const n = normalizeText(raw);
+                if (n.includes("alug") || n.includes("loca")) return "Alugar";
+                return "Comprar";
+            }
+
+            function isInactiveStatus(rawStatus) {
+                const n = normalizeText(rawStatus);
+                return n === "vendido" || n === "alugado" || n === "inativo" || n === "indisponivel";
+            }
+
+            function parseNumber(raw) {
+                if (typeof raw === "number") return isNaN(raw) ? 0 : raw;
+                const str = String(raw || "").trim();
+                if (!str) return 0;
+
+                // Formato brasileiro com vírgula decimal (ex: R$ 680.000,00)
+                if (str.indexOf(",") !== -1) {
+                    const brCleaned = str
+                        .replace(/R\$/gi, "")
+                        .replace(/\./g, "")
+                        .replace(",", ".")
+                        .replace(/[^\d.-]/g, "");
+                    const brNum = parseFloat(brCleaned);
+                    return isNaN(brNum) ? 0 : brNum;
+                }
+
+                // Formato com pontos de milhar sem centavos (ex: 680.000)
+                if (/^\D*\d{1,3}(\.\d{3})+\D*$/.test(str)) {
+                    const thousandsCleaned = str.replace(/\./g, "").replace(/[^\d-]/g, "");
+                    const tNum = parseFloat(thousandsCleaned);
+                    return isNaN(tNum) ? 0 : tNum;
+                }
+
+                const cleaned = str.replace(/[^\d.-]/g, "");
+                const num = parseFloat(cleaned);
+                return isNaN(num) ? 0 : num;
             }
 
             function formatCurrency(value, finalidade) {
@@ -843,7 +902,7 @@
                 if (text) text.textContent = label;
             }
 
-            // ==================== CARREGAMENTO DO CATÁLOGO ====================
+            // ==================== PARSER DE PLANILHA & CSV ====================
             async function loadCatalog(manualTrigger) {
                 const syncIcon = document.getElementById("sync-icon");
                 if (syncIcon) syncIcon.classList.add("animate-spin");
@@ -862,37 +921,28 @@
                         return p;
                     });
                     properties = items;
-                    apiNeighborhoods = Array.isArray(data.neighborhoods) ? data.neighborhoods : null;
                     catalogFailed = false;
                     saveCatalogCache(items);
                     const nowStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
                     updateSyncStatusUI("connected", "Atualizado • " + items.length + (items.length === 1 ? " imóvel (" : " imóveis (") + nowStr + ")");
                     if (manualTrigger) showToast(items.length + (items.length === 1 ? " imóvel disponível." : " imóveis disponíveis."));
                 } catch (err) {
-                    properties = readCatalogCache();
-                    apiNeighborhoods = null;
-                    catalogFailed = properties.length === 0;
+                    properties = readCatalogCache(); catalogFailed = properties.length === 0;
                     updateSyncStatusUI("error", "Sem conexão com o catálogo • exibindo última versão salva");
                     if (manualTrigger) showToast("Não foi possível atualizar agora. Tente novamente em instantes.");
                 } finally {
                     if (syncIcon) syncIcon.classList.remove("animate-spin");
                     populateLocationDropdown();
                     applyFilters();
-                    openPropertyFromUrlIfPresent();
                 }
             }
 
-            // ==================== CONTATO & WHATSAPP ====================
+            // Cadastra o contato no CRC (cliente + lead) e devolve { ok, status, error }
             async function sendContactAsync(payload) {
                 try {
                     const ctrl = new AbortController();
                     const timer = setTimeout(function () { ctrl.abort(); }, 8000);
-                    const r = await fetch("/api/public/contact", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload),
-                        signal: ctrl.signal
-                    });
+                    const r = await fetch("/api/public/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ctrl.signal });
                     clearTimeout(timer);
                     let d = null; try { d = await r.json(); } catch (e) {}
                     if (r.ok) return { ok: true };
@@ -901,17 +951,15 @@
                     return { ok: false, status: 0, error: "Sem conexão para registrar o seu contato." };
                 }
             }
-
+            // A janela do WhatsApp é aberta no clique (senão o navegador bloqueia) e só recebe o link depois do cadastro
             function openBlankWindow() {
                 const w = window.open("about:blank", "_blank");
                 try { if (w) w.opener = null; } catch (e) {}
                 return w;
             }
-
             function goToWhatsApp(url, w) {
                 if (w && !w.closed) w.location.href = url; else window.location.href = url;
             }
-
             function setBusy(btn, busy) {
                 if (!btn) return;
                 btn.disabled = busy;
@@ -932,92 +980,50 @@
                 const btn = document.getElementById("interest-submit");
                 const w = openBlankWindow();
                 setBusy(btn, true);
-                const res = await sendContactAsync({
-                    kind: "interesse",
-                    name: name,
-                    phone: phone,
-                    property_code: codigo,
-                    website: (document.getElementById("interest-website") || {}).value || ""
-                });
+                const res = await sendContactAsync({ kind: "interesse", name: name, phone: phone, property_code: codigo, website: (document.getElementById("interest-website") || {}).value || "" });
                 setBusy(btn, false);
                 if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
                 goToWhatsApp(getWhatsAppPropertyLink(prop, name), w);
                 showToast(res.ok ? "Contato registrado! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o contato agora).");
             }
 
-            // ==================== FILTRO DINÂMICO DE LOCALIDADE / BAIRRO ====================
+            // ==================== FILTROS & RENDERIZAÇÃO DO PORTFÓLIO ====================
             function populateLocationDropdown() {
                 const select = document.getElementById("filter-location");
                 if (!select) return;
                 const previousVal = select.value;
 
-                // Extrai exclusivamente bairros de imóveis ativos e disponíveis (sem lista fixa)
-                const availableNeighborhoods = properties
-                    .filter(function (p) {
-                        return normalizeText(p.status) === "disponivel" && String(p.bairro || "").trim() !== "";
-                    })
-                    .map(function (p) {
-                        return String(p.bairro).trim();
-                    });
+                const regionalBase = [
+                    "Resende",
+                    "Manejo",
+                    "Campos Elíseos",
+                    "Jardim Jalisco",
+                    "Cidade Alegria",
+                    "Itatiaia",
+                    "Penedo",
+                    "Porto Real"
+                ];
+                const locationsSet = new Set(regionalBase);
 
-                const sourceList = availableNeighborhoods.length > 0
-                    ? availableNeighborhoods
-                    : (Array.isArray(apiNeighborhoods) ? apiNeighborhoods.map(function (b) { return String(b || "").trim(); }).filter(Boolean) : []);
-
-                const uniqueByNorm = new Map();
-                sourceList.forEach(function (bairro) {
-                    const key = normalizeText(bairro);
-                    if (key && !uniqueByNorm.has(key)) {
-                        uniqueByNorm.set(key, bairro);
-                    }
+                properties.forEach(function (p) {
+                    if (p.bairro) locationsSet.add(p.bairro);
+                    if (p.cidade) locationsSet.add(p.cidade);
                 });
 
-                const sorted = Array.from(uniqueByNorm.values()).sort(function (a, b) {
-                    return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
-                });
-
+                const sorted = Array.from(locationsSet).sort();
                 select.innerHTML = '<option value="Todos">Todas as localidades</option>' +
                     sorted.map(function (loc) {
-                        return '<option value="' + esc(loc) + '">' + esc(loc) + '</option>';
+                        return '<option value="' + loc.replace(/"/g, "&quot;") + '">' + loc + '</option>';
                     }).join("");
 
                 if (sorted.indexOf(previousVal) !== -1) {
                     select.value = previousVal;
-                } else {
-                    select.value = "Todos";
                 }
             }
 
             function getWhatsAppPropertyLink(prop, name) {
                 const msg = "Olá Iêda Holanda! Tenho interesse no imóvel *" + prop.codigo + " - " + prop.titulo + "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias." + (name ? " Meu nome é " + name + "." : "");
                 return "https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg);
-            }
-
-            // ==================== ENCAMINHAR ANÚNCIO VIA WHATSAPP (SEM NÚMERO FIXO) ====================
-            function getPropertyDirectShareUrl(prop) {
-                const base = window.location.origin + window.location.pathname;
-                return base + "?imovel=" + encodeURIComponent(prop.codigo) + "#imoveis";
-            }
-
-            function getWhatsAppForwardUrl(prop) {
-                const finalidadeLabel = prop.finalidade === "Alugar" ? "Locação" : "Venda";
-                const valorFormatado = formatCurrency(prop.valor, prop.finalidade);
-                const linkDireto = getPropertyDirectShareUrl(prop);
-                const text =
-                    "Olha este imóvel que encontrei na *Yolanda Transações Imobiliárias*:\n\n" +
-                    "*" + prop.titulo + "*\n" +
-                    "• Código: " + prop.codigo + "\n" +
-                    "• Finalidade: " + finalidadeLabel + "\n" +
-                    "• Localização: " + prop.bairro + " - " + prop.cidade + "\n" +
-                    "• Valor: " + valorFormatado + "\n\n" +
-                    "Veja os detalhes aqui:\n" + linkDireto;
-                return "https://api.whatsapp.com/send?text=" + encodeURIComponent(text);
-            }
-
-            function sharePropertyWhatsApp(codigo) {
-                const prop = properties.find(function (p) { return p.codigo === codigo; });
-                if (!prop) return;
-                window.open(getWhatsAppForwardUrl(prop), "_blank", "noopener,noreferrer");
             }
 
             function renderProperties(list) {
@@ -1050,19 +1056,18 @@
 
                     const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
                     const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
-                    const safeCodeAttr = prop.codigo.replace(/'/g, "\\'");
 
                     return (
                         '<article class="bg-white rounded-3xl border border-sand-border shadow-card overflow-hidden flex flex-col justify-between group hover:border-moss/35 transition-all">' +
                             '<div>' +
                                 '<div class="relative aspect-[16/10] bg-moss-soft overflow-hidden">' +
-                                    '<img src="' + esc(resolvedImg) + '" ' +
+                                    '<img src="' + esc(resolvedImg) + '\" ' +
                                          'data-raw-img="' + esc(normalizedRawKey) + '" ' +
-                                         'onerror="handlePropertyImgError(this, \'' + safeCodeAttr + '\')" ' +
+                                         'onerror="handlePropertyImgError(this, \'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
                                          'alt="' + esc(prop.titulo) + '" ' +
                                          'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">' +
                                     '<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">' +
-                                        '<span class="px-3 py-1 rounded-full text-[11px] font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
+                                        '<span class="px-3 py-1 rounded-full text-[11px] font-heading font-bold ' + badgeClass + '">' + prop.finalidade + '</span>' +
                                         destaqueHtml +
                                     '</div>' +
                                     '<span class="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-charcoal/80 text-white font-mono text-[11px] font-bold">' + esc(prop.codigo) + '</span>' +
@@ -1102,20 +1107,15 @@
                                 '</div>' +
                             '</div>' +
 
-                            '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
-                                '<button type="button" onclick="openPropertyModal(\'' + safeCodeAttr + '\')" ' +
+                            '<div class="px-5 pb-5 pt-1 flex items-center gap-2.5">' +
+                                '<button type="button" onclick="openPropertyModal(\'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
                                         'class="flex-1 py-3 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs transition-colors">' +
                                     'Ver Detalhes' +
                                 '</button>' +
-                                '<button type="button" onclick="openPropertyModal(\'' + safeCodeAttr + '\')" ' +
+                                '<button type="button" onclick="openPropertyModal(\'' + prop.codigo + '\')" ' +
                                    'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
                                     '<i data-lucide="message-circle" class="w-4 h-4"></i>' +
                                     '<span>Tenho Interesse</span>' +
-                                '</button>' +
-                                '<button type="button" onclick="sharePropertyWhatsApp(\'' + safeCodeAttr + '\')" ' +
-                                        'title="Encaminhar anúncio via WhatsApp" aria-label="Encaminhar anúncio via WhatsApp" ' +
-                                        'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border transition-colors shrink-0">' +
-                                    '<i data-lucide="share-2" class="w-4 h-4"></i>' +
                                 '</button>' +
                             '</div>' +
                         '</article>'
@@ -1145,7 +1145,8 @@
                 const filtered = properties.filter(function (p) {
                     const matchFin = activeFinalidade === "Todos" || p.finalidade === activeFinalidade;
                     const matchLoc = locVal === "Todos" ||
-                        normalizeText(p.bairro) === normalizeText(locVal);
+                        normalizeText(p.bairro).includes(normalizeText(locVal)) ||
+                        normalizeText(p.cidade).includes(normalizeText(locVal));
                     const matchType = typeVal === "Todos" || normalizeText(p.tipo).includes(normalizeText(typeVal));
                     const matchBeds = bedsVal === 0 || Number(p.quartos) >= bedsVal;
                     const matchSearch = !searchVal ||
@@ -1185,14 +1186,13 @@
                 const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
                 const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
                 const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
-                const safeCodeAttr = prop.codigo.replace(/'/g, "\\'");
 
                 content.innerHTML =
                     '<div class="relative aspect-[16/9] bg-moss-soft">' +
                         '<img id="modal-property-img" ' +
-                             'src="' + esc(resolvedImg) + '" ' +
+                             'src="' + resolvedImg + '" ' +
                              'data-raw-img="' + esc(normalizedRawKey) + '" ' +
-                             'onerror="handlePropertyImgError(this, \'' + safeCodeAttr + '\')" ' +
+                             'onerror="handlePropertyImgError(this, \'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
                              'alt="' + esc(prop.titulo) + '" ' +
                              'class="w-full h-full object-cover">' +
                         '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
@@ -1200,23 +1200,16 @@
                             '<i data-lucide="x" class="w-5 h-5"></i>' +
                         '</button>' +
                         '<div class="absolute bottom-4 left-4 flex items-center gap-2">' +
-                            '<span class="px-3 py-1 rounded-full text-xs font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
+                            '<span class="px-3 py-1 rounded-full text-xs font-heading font-bold ' + badgeClass + '">' + prop.finalidade + '</span>' +
                             '<span class="px-3 py-1 rounded-full bg-charcoal/85 text-white font-mono text-xs font-bold">' + esc(prop.codigo) + '</span>' +
                         '</div>' +
                     '</div>' +
 
                     '<div class="p-5 sm:p-7 space-y-5">' +
-                        '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">' +
-                            '<div>' +
-                                '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
-                                '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
-                                '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
-                            '</div>' +
-                            '<a href="' + esc(getWhatsAppForwardUrl(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
-                               'class="self-start inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors shrink-0">' +
-                                '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
-                                '<span>Encaminhar no WhatsApp</span>' +
-                            '</a>' +
+                        '<div>' +
+                            '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
+                            '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
+                            '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
                         '</div>' +
 
                         '<div class="grid grid-cols-4 gap-2.5 text-center">' +
@@ -1243,7 +1236,7 @@
                             '<p class="text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + esc(prop.descricao) + '</p>' +
                         '</div>' +
 
-                        '<form id="interest-form" onsubmit="submitInterest(event, \'' + safeCodeAttr + '\')" class="space-y-2">' +
+                        '<form id="interest-form" onsubmit="submitInterest(event, \'' + prop.codigo + '\')" class="space-y-2">' +
                             '<h4 class="font-heading font-bold text-moss text-sm">Quero falar sobre este imóvel</h4>' +
                             '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
                                 '<input type="text" id="interest-name" required minlength="2" maxlength="120" autocomplete="name" placeholder="Seu nome *" class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:ring-2 focus:ring-moss/30">' +
@@ -1255,7 +1248,7 @@
 
                         '<div class="pt-4 border-t border-sand-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-sand p-4 rounded-2xl">' +
                             '<div class="flex items-center gap-3">' +
-                                '<img src="' + esc(BROKER_AVATAR) + '" ' +
+                                '<img src="' + esc(BROKER_AVATAR) + '\" ' +
                                      'onerror="this.onerror=null;this.src=\'https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH\';" ' +
                                      'alt="Iêda Holanda" ' +
                                      'class="w-12 h-12 aspect-square rounded-full object-cover object-top border-2 border-terracotta shrink-0">' +
@@ -1290,19 +1283,7 @@
                 document.body.style.overflow = "";
             }
 
-            let deepLinkHandled = false;
-            function openPropertyFromUrlIfPresent() {
-                if (deepLinkHandled) return;
-                const params = new URLSearchParams(window.location.search);
-                const codeParam = (params.get("imovel") || "").trim().toUpperCase();
-                if (!codeParam) return;
-                const found = properties.find(function (p) { return String(p.codigo || "").toUpperCase() === codeParam; });
-                if (found) {
-                    deepLinkHandled = true;
-                    openPropertyModal(found.codigo);
-                }
-            }
-
+            // ==================== ÁREA DA CORRETORA: agora em /app (Cloudflare Access) ====================
             async function handleOwnerSubmit(event) {
                 event.preventDefault();
                 const form = event.target;
@@ -1322,15 +1303,7 @@
 
                 const w = openBlankWindow();
                 setBusy(btn, true);
-                const res = await sendContactAsync({
-                    kind: "proprietario",
-                    name: name,
-                    phone: phone,
-                    purpose: purpose,
-                    what: typeLoc,
-                    message: notes,
-                    website: (document.getElementById("owner-website") || {}).value || ""
-                });
+                const res = await sendContactAsync({ kind: "proprietario", name: name, phone: phone, purpose: purpose, what: typeLoc, message: notes, website: (document.getElementById("owner-website") || {}).value || "" });
                 setBusy(btn, false);
                 if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
                 goToWhatsApp("https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg), w);
@@ -1343,6 +1316,7 @@
                 if (menu) menu.classList.toggle("hidden");
             }
 
+            // Expor funções no escopo global para atributos onclick/onsubmit
             window.resolvePropertyImageUrl = resolvePropertyImageUrl;
             window.handlePropertyImgError = handlePropertyImgError;
             window.loadCatalog = loadCatalog;
@@ -1352,10 +1326,10 @@
             window.resetFilters = resetFilters;
             window.openPropertyModal = openPropertyModal;
             window.closePropertyModal = closePropertyModal;
-            window.sharePropertyWhatsApp = sharePropertyWhatsApp;
             window.handleOwnerSubmit = handleOwnerSubmit;
             window.toggleMobileMenu = toggleMobileMenu;
 
+            // Inicialização Protegida com DOMContentLoaded + try/catch
             function initApp() {
                 try {
                     const yearEl = document.getElementById("current-year");
@@ -1365,8 +1339,11 @@
                     renderProperties(properties);
                     safeRefreshIcons();
 
+                    // Carrega o catálogo do banco ao abrir a página
                     loadCatalog(false);
-                } catch (err) {}
+                } catch (err) {
+                    /* mantém a página sem imóveis de exemplo */
+                }
             }
 
             if (document.readyState === "loading") {

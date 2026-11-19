@@ -1,466 +1,525 @@
-/**
- * API do Funil & CRC — Yolanda Transações Imobiliárias
- * Todas as rotas /api/public/* são abertas (com validação e rate-limit);
- * todas as demais /api/* exigem JWT válido do Cloudflare Access (validado no _middleware.js).
- */
-
-const STAGES = ['Novo Contato', 'Em Atendimento', 'Visita Agendada', 'Proposta / Negociação', 'Fechado / Ganho', 'Perdido'];
-const MODALITIES = ['Compra', 'Aluguel', 'Venda'];
-const MODALITIES_BY_CATEGORY = {
-  Interessado: ['Compra', 'Aluguel'],
-  'Captação': ['Venda', 'Aluguel'],
-};
-const PROP_PURPOSES = ['Comprar', 'Alugar'];
-const PROP_STATUS = ['Disponível', 'Reservado', 'Vendido', 'Alugado', 'Inativo'];
-const CLIENT_PROFILES = ['Comprador', 'Locatário', 'Proprietário', 'Investidor'];
-
-function json(data, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extraHeaders },
-  });
-}
-
-function nowISO() {
-  return new Date().toISOString();
-}
-
-function todayBR() {
-  return new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
-}
-
-function tomorrowBR() {
-  return new Date(Date.now() - 3 * 3600 * 1000 + 86400 * 1000).toISOString().slice(0, 10);
-}
-
-function cleanStr(v, max = 500) {
-  return String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max);
-}
-
-function cleanPhone(v) {
-  const digits = String(v == null ? '' : v).replace(/\D/g, '');
-  if (digits.length < 10 || digits.length > 13) return null;
-  return digits.startsWith('55') ? digits : '55' + digits;
-}
-
-function validateCategoryModality(category, modality) {
-  const allowed = MODALITIES_BY_CATEGORY[category];
-  if (!allowed) return 'Categoria inválida.';
-  if (!allowed.includes(modality)) {
-    return category === 'Captação'
-      ? 'Para Captação, a modalidade deve ser Venda ou Aluguel.'
-      : 'Para Interessado, a modalidade deve ser Compra ou Aluguel.';
-  }
-  return null;
-}
-
-async function readJson(request, maxBytes = 65536) {
-  const len = Number(request.headers.get('content-length') || 0);
-  if (len > maxBytes) throw new HttpError(413, 'Payload muito grande.');
-  const raw = await request.text();
-  if (raw.length > maxBytes) throw new HttpError(413, 'Payload muito grande.');
-  try {
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    throw new HttpError(400, 'JSON inválido.');
-  }
-}
+// API (Cloudflare Pages Functions + D1)
+//  Pública (site):  GET /api/public/properties · POST /api/public/contact
+//  Restrita (CRC):  /api/leads · /api/clients · /api/properties  (exige Cloudflare Access)
+const STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito', 'Fechado'];
+const MODALITIES = ['Compra', 'Aluguel'];
+const TEMPS = ['Quente', 'Morno', 'Frio'];
+const PROFILES = ['Comprador', 'Proprietário', 'Investidor', 'Locatário'];
+const CATEGORIES = ['Interessado', 'Captação'];   // Captação = proprietário que quer anunciar
+const PURPOSES = ['Comprar', 'Alugar'];
+const PSTATUS = ['Disponível', 'Reservado', 'Vendido', 'Alugado', 'Inativo'];
+const TZ = 'America/Sao_Paulo';
+const CODE_PREFIX = 'YTI-';
 
 class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
+  constructor(status, message, extra) { super(message); this.status = status; this.extra = extra; }
 }
+const json = (data, status = 200, headers = {}) =>
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
 
-async function rateLimit(env, key, maxHits, windowSec) {
-  const now = Math.floor(Date.now() / 1000);
-  const row = await env.DB.prepare('SELECT count, reset_at FROM rate_limits WHERE key = ?').bind(key).first();
-  if (!row || row.reset_at <= now) {
-    await env.DB.prepare('INSERT OR REPLACE INTO rate_limits (key, count, reset_at) VALUES (?, 1, ?)')
-      .bind(key, now + windowSec).run();
-    return true;
+// ---------- Autenticação: valida o JWT do Cloudflare Access ----------
+let jwksCache = { at: 0, keys: [] };
+const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+
+async function authenticate(request, env) {
+  if (env.DEV_BYPASS === '1') return 'dev@local';
+  if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) throw new HttpError(503, 'Acesso não configurado no servidor.');
+  const token = request.headers.get('Cf-Access-Jwt-Assertion');
+  if (!token) throw new HttpError(401, 'Não autenticado.');
+  const [h, p, s] = token.split('.');
+  if (!h || !p || !s) throw new HttpError(401, 'Token inválido.');
+  const header = JSON.parse(new TextDecoder().decode(b64u(h)));
+  const payload = JSON.parse(new TextDecoder().decode(b64u(p)));
+  if (Date.now() - jwksCache.at > 3600_000 || !jwksCache.keys.some((k) => k.kid === header.kid)) {
+    const r = await fetch(`https://${env.ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`);
+    if (!r.ok) throw new HttpError(503, 'Falha ao validar acesso.');
+    jwksCache = { at: Date.now(), keys: (await r.json()).keys || [] };
   }
-  if (row.count >= maxHits) return false;
-  await env.DB.prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?').bind(key).run();
-  return true;
+  const jwk = jwksCache.keys.find((k) => k.kid === header.kid);
+  if (!jwk) throw new HttpError(401, 'Chave desconhecida.');
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(s), new TextEncoder().encode(`${h}.${p}`));
+  const aud = [].concat(payload.aud || []);
+  if (!ok || !aud.includes(env.ACCESS_AUD) || payload.iss !== `https://${env.ACCESS_TEAM_DOMAIN}` || payload.exp * 1000 < Date.now())
+    throw new HttpError(401, 'Sessão inválida ou expirada.');
+  return payload.email || 'desconhecido';
 }
 
-function propPublic(row) {
+// ---------- Utilidades ----------
+const nowIso = () => new Date().toISOString();
+const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const todayBR = () => dayFmt.format(new Date());
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dmy = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
+
+function followupView(at) {
+  if (!at) return { status: 'Em dia', label: 'Sem data' };
+  const t = todayBR();
+  if (at < t) return { status: 'Atrasado', label: 'Atrasado • ' + dmy(at) };
+  if (at === t) return { status: 'Hoje', label: 'Hoje' };
+  if (at === addDays(t, 1)) return { status: 'Em dia', label: 'Amanhã' };
+  return { status: 'Em dia', label: dmy(at) };
+}
+const eventDate = (iso) => new Date(iso).toLocaleString('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ' •');
+
+const leadCode = (id) => 'LD-' + (100 + id);
+const clientCode = (id) => 'CRC-' + String(id).padStart(2, '0');
+const propCode = (id) => CODE_PREFIX + String(id).padStart(4, '0');
+const parseId = (code, offset = 0) => {
+  const n = parseInt(String(code).replace(/\D/g, ''), 10) - offset;
+  if (!Number.isInteger(n) || n < 1) throw new HttpError(404, 'Registro não encontrado.');
+  return n;
+};
+
+function str(v, field, { min = 0, max = 200, required = false } = {}) {
+  const s = String(v ?? '').trim();
+  if ((required || s) && (s.length < Math.max(min, 1) || s.length > max)) throw new HttpError(400, `Campo "${field}" inválido (${required || min ? 'obrigatório, ' : ''}até ${max} caracteres).`);
+  return s;
+}
+function oneOf(v, list, field) {
+  if (!list.includes(v)) throw new HttpError(400, `Valor inválido em "${field}".`);
+  return v;
+}
+function intIn(v, field, max) {
+  const n = Number(v === '' || v == null ? 0 : v);
+  if (!Number.isFinite(n) || n < 0 || n > max) throw new HttpError(400, `Valor inválido em "${field}".`);
+  return Math.round(n);
+}
+function normPhone(v) {
+  let d = String(v ?? '').replace(/\D/g, '');
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
+  if (d.length < 10 || d.length > 11) throw new HttpError(400, 'Telefone inválido. Use DDD + número, ex.: (24) 99999-9999.');
+  return '55' + d;
+}
+const money = (v) => intIn(v, 'valor', 1e9);
+function dateOrNull(v) {
+  if (v === null || v === '' || v === undefined) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(new Date(v + 'T12:00:00Z'))) throw new HttpError(400, 'Data de follow-up inválida.');
+  return v;
+}
+const isUnique = (e) => String(e && e.message).includes('UNIQUE');
+
+// ---------- Serialização (formato que as telas esperam) ----------
+function leadOut(r, events) {
+  const f = followupView(r.followup_at);
+  const closed = r.stage === 'Fechado';
   return {
-    codigo: row.code,
-    finalidade: row.purpose,
-    tipo: row.type,
-    titulo: row.title,
-    bairro: row.neighborhood,
-    cidade: row.city,
-    valor: row.price,
-    area_m2: row.area_m2,
-    quartos: row.bedrooms,
-    banheiros: row.bathrooms,
-    vagas: row.parking,
-    destaque: row.highlight,
-    foto_url: row.photo_url,
-    descricao: row.description,
-    status: row.status,
+    id: leadCode(r.id), name: r.name, phone: r.phone, modality: r.modality, stage: r.stage, temp: r.temp,
+    property: r.property, value: r.value, followupAt: r.followup_at, source: r.source, category: r.category,
+    clientId: r.client_id ? clientCode(r.client_id) : null,
+    followupStatus: closed ? 'Em dia' : f.status, followupDate: closed ? 'Concluído' : f.label,
+    history: events.map((e) => ({ date: eventDate(e.created_at), text: e.text })),
   };
 }
+const clientOut = (r) => ({
+  id: clientCode(r.id), name: r.name, phone: r.phone, modality: r.modality, profile: r.profile, regions: r.regions,
+  budget: r.budget, preferences: r.preferences, lastInteraction: r.last_interaction, nextAction: r.next_action,
+  pendingFollowup: !!r.pending_followup, birthdayMonth: !!r.birthday_month, source: r.source,
+});
+const propOut = (r) => ({
+  id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
+  city: r.city, price: r.price, area_m2: r.area_m2, bedrooms: r.bedrooms, bathrooms: r.bathrooms, parking: r.parking,
+  photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
+});
+const propPublic = (r) => ({   // mesmo formato que o site já usava ao ler a planilha
+  codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
+  valor: r.price, area_m2: r.area_m2, quartos: r.bedrooms, banheiros: r.bathrooms, vagas: r.parking,
+  foto_url: r.photo_url, destaque: r.badge, status: r.status,
+  descricao: r.description || 'Imóvel selecionado por Iêda Holanda. Entre em contato para mais informações.',
+});
 
-// ==================== ENDPOINTS PÚBLICOS ====================
+async function loadLead(env, id) {
+  const row = await env.DB.prepare('SELECT * FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
+  if (!row) throw new HttpError(404, 'Lead não encontrado.');
+  const ev = await env.DB.prepare('SELECT text, created_at FROM lead_events WHERE lead_id = ? ORDER BY created_at DESC, id DESC').bind(id).all();
+  return leadOut(row, ev.results);
+}
 
+// ---------- Núcleo da integração lead <-> cliente ----------
+async function ensureClient(env, v) {
+  const found = await env.DB.prepare('SELECT * FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(v.phone).first();
+  if (found) return { row: found, created: false };
+  const t = nowIso();
+  try {
+    const row = await env.DB.prepare('INSERT INTO clients (name, phone, modality, profile, regions, budget, preferences, next_action, birthday_month, pending_followup, last_interaction, source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?) RETURNING *')
+      .bind(v.name, v.phone, v.modality, v.profile, v.regions || 'A definir', v.budget || 'A definir', v.preferences || '', v.nextAction || '',
+        v.lastInteraction || 'Hoje • Cadastro inicial', v.source, t, t).first();
+    return { row, created: true };
+  } catch (e) {
+    if (!isUnique(e)) throw e;
+    return { row: await env.DB.prepare('SELECT * FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(v.phone).first(), created: false };
+  }
+}
+
+async function insertLead(env, v) {
+  const t = nowIso();
+  const res = await env.DB.batch([
+    env.DB.prepare('INSERT INTO leads (name, phone, modality, stage, temp, property, value, followup_at, client_id, source, category, created_at, updated_at, closed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(v.name, v.phone, v.modality, v.stage, v.temp, v.property, v.value, v.followup, v.clientId, v.source, v.category || 'Interessado', t, t, v.stage === 'Fechado' ? t : null),
+    env.DB.prepare('SELECT last_insert_rowid() AS id'),
+    env.DB.prepare("INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (last_insert_rowid(), 'criado', ?, ?)").bind(v.note, t),
+  ]);
+  return res[1].results[0].id;
+}
+const openLeadFor = (env, phone, modality, category = 'Interessado') =>
+  env.DB.prepare("SELECT id FROM leads WHERE phone = ? AND modality = ? AND category = ? AND stage != 'Fechado' AND deleted_at IS NULL LIMIT 1").bind(phone, modality, category).first();
+
+async function addEvent(env, leadId, kind, text) {
+  const t = nowIso();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').bind(t, leadId),
+    env.DB.prepare('INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?,?,?,?)').bind(leadId, kind, text.slice(0, 1000), t),
+  ]);
+}
+
+// ---------- Leads ----------
+async function listLeads(env) {
+  const rows = (await env.DB.prepare('SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY updated_at DESC').all()).results;
+  const evs = (await env.DB.prepare('SELECT lead_id, text, created_at FROM lead_events WHERE lead_id IN (SELECT id FROM leads WHERE deleted_at IS NULL) ORDER BY created_at DESC, id DESC').all()).results;
+  const by = new Map();
+  for (const e of evs) (by.get(e.lead_id) || by.set(e.lead_id, []).get(e.lead_id)).push(e);
+  return { items: rows.map((r) => leadOut(r, by.get(r.id) || [])) };
+}
+
+async function createLead(env, b) {
+  const v = {
+    name: str(b.name, 'nome', { min: 2, max: 120, required: true }), phone: normPhone(b.phone),
+    modality: oneOf(b.modality, MODALITIES, 'modalidade'), stage: oneOf(b.stage || 'Novo Lead', STAGES, 'etapa'),
+    temp: oneOf(b.temp || 'Morno', TEMPS, 'temperatura'), property: str(b.property, 'imóvel', { max: 200 }),
+    value: money(b.value ?? 0), followup: dateOrNull(b.followup_at), source: 'Painel',
+    category: oneOf(b.category || 'Interessado', CATEGORIES, 'categoria'),
+    note: str(b.note, 'nota', { max: 1000 }) || 'Lead cadastrado pelo painel.',
+  };
+  if (!b.force) {
+    const dup = await openLeadFor(env, v.phone, v.modality, v.category);
+    if (dup) throw new HttpError(409, `Já existe um lead em aberto com este telefone (${leadCode(dup.id)}).`, { duplicateOf: leadCode(dup.id) });
+  }
+  // lead -> cliente: garante o cadastro no CRC
+  const { row: client, created } = await ensureClient(env, {
+    name: v.name, phone: v.phone, modality: v.modality,
+    profile: v.category === 'Captação' ? 'Proprietário' : v.modality === 'Compra' ? 'Comprador' : 'Locatário',
+    regions: v.property, source: 'Lead', lastInteraction: 'Hoje • Lead criado no funil',
+  });
+  v.clientId = client.id;
+  const id = await insertLead(env, v);
+  return { ...(await loadLead(env, id)), clientCreated: created };
+}
+
+async function patchLead(env, id, b) {
+  const cur = await env.DB.prepare('SELECT * FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
+  if (!cur) throw new HttpError(404, 'Lead não encontrado.');
+  const t = nowIso();
+  const sets = [], vals = [], events = [], extra = [];
+  const set = (col, val) => { sets.push(`${col} = ?`); vals.push(val); };
+  if (b.stage !== undefined && b.stage !== cur.stage) {
+    oneOf(b.stage, STAGES, 'etapa'); set('stage', b.stage); set('closed_at', b.stage === 'Fechado' ? t : null);
+    // interação com o lead: próximo follow-up = amanhã (a menos que o pedido traga outra data)
+    if (b.followup_at === undefined) set('followup_at', b.stage === 'Fechado' ? null : addDays(todayBR(), 1));
+    events.push(['etapa', `Etapa alterada de "${cur.stage}" para "${b.stage}".`]);
+  }
+  if (b.modality !== undefined && b.modality !== cur.modality) {
+    oneOf(b.modality, MODALITIES, 'modalidade'); set('modality', b.modality);
+    events.push(['modalidade', `Modalidade alterada para "${b.modality}".`]);
+  }
+  if (b.temp !== undefined && b.temp !== cur.temp) {
+    oneOf(b.temp, TEMPS, 'temperatura'); set('temp', b.temp);
+    events.push(['temperatura', `Temperatura alterada para "${b.temp}".`]);
+  }
+  if (b.category !== undefined && b.category !== cur.category) {
+    oneOf(b.category, CATEGORIES, 'categoria'); set('category', b.category);
+    events.push(['nota', `Categoria alterada para "${b.category}".`]);
+  }
+  if (b.followup_at !== undefined) {
+    const f = dateOrNull(b.followup_at);
+    if (f !== cur.followup_at) { set('followup_at', f); events.push(['followup', f ? `Próximo follow-up: ${dmy(f)}.` : 'Follow-up removido.']); }
+  }
+  if (b.property !== undefined && String(b.property).trim() !== cur.property) {
+    set('property', str(b.property, 'imóvel', { max: 200 })); events.push(['nota', 'Imóvel de interesse atualizado.']);
+  }
+  if (b.value !== undefined) set('value', money(b.value));
+  // nome / telefone pertencem à pessoa: atualiza cliente e todos os leads dele
+  const newName = b.name !== undefined ? str(b.name, 'nome', { min: 2, max: 120, required: true }) : cur.name;
+  const newPhone = b.phone !== undefined ? normPhone(b.phone) : cur.phone;
+  if (newName !== cur.name || newPhone !== cur.phone) {
+    if (cur.client_id) {
+      if (newPhone !== cur.phone) {
+        const dup = await env.DB.prepare('SELECT id FROM clients WHERE phone = ? AND id != ? AND deleted_at IS NULL').bind(newPhone, cur.client_id).first();
+        if (dup) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.');
+      }
+      extra.push(env.DB.prepare('UPDATE clients SET name = ?, phone = ?, updated_at = ? WHERE id = ?').bind(newName, newPhone, t, cur.client_id));
+      extra.push(env.DB.prepare('UPDATE leads SET name = ?, phone = ? WHERE client_id = ? AND id != ?').bind(newName, newPhone, cur.client_id, id));
+    }
+    set('name', newName); set('phone', newPhone);
+  }
+  if (!sets.length) return loadLead(env, id);
+  set('updated_at', t);
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id),
+      ...extra,
+      ...events.map(([k, txt]) => env.DB.prepare('INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?,?,?,?)').bind(id, k, txt, t)),
+    ]);
+  } catch (e) { if (isUnique(e)) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.'); throw e; }
+  return loadLead(env, id);
+}
+
+async function addNote(env, id, b) {
+  const text = str(b.text, 'nota', { min: 1, max: 1000, required: true });
+  const cur = await env.DB.prepare('SELECT stage, followup_at FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
+  if (!cur) throw new HttpError(404, 'Lead não encontrado.');
+  // interação com o lead: próximo follow-up = amanhã, a menos que o pedido traga outra data (lead fechado não tem follow-up)
+  const followup = b.followup_at !== undefined ? dateOrNull(b.followup_at)
+    : cur.stage === 'Fechado' ? cur.followup_at : addDays(todayBR(), 1);
+  const t = nowIso();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE leads SET updated_at = ?, followup_at = ? WHERE id = ?').bind(t, followup, id),
+    env.DB.prepare("INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?, 'nota', ?, ?)").bind(id, text, t),
+  ]);
+  return loadLead(env, id);
+}
+
+async function softDelete(env, table, id) {
+  const r = await env.DB.prepare(`UPDATE ${table} SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`).bind(nowIso(), id).run();
+  if (!r.meta.changes) throw new HttpError(404, 'Registro não encontrado.');
+  return { ok: true };
+}
+
+// ---------- CRC (clientes) ----------
+async function createClient(env, b) {
+  const name = str(b.name, 'nome', { min: 2, max: 120, required: true });
+  const phone = normPhone(b.phone);
+  const modality = oneOf(b.modality, MODALITIES, 'modalidade');
+  const dup = await env.DB.prepare('SELECT id FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(phone).first();
+  if (dup) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.');
+  const profile = oneOf(b.profile, PROFILES, 'perfil');
+  const category = profile === 'Proprietário' ? 'Captação' : 'Interessado';
+  const { row } = await ensureClient(env, {
+    name, phone, modality, profile,
+    regions: str(b.regions, 'regiões', { max: 200, required: true }), budget: str(b.budget, 'orçamento', { max: 120 }),
+    preferences: str(b.preferences, 'preferências', { max: 1000 }), nextAction: str(b.next_action, 'próxima ação', { max: 300 }),
+    lastInteraction: 'Hoje • Cadastro inicial no CRC', source: 'Painel',
+  });
+  if (b.birthday_month) await env.DB.prepare('UPDATE clients SET birthday_month = 1 WHERE id = ?').bind(row.id).run();
+  // cliente -> lead: abre um lead se ainda não houver um em aberto
+  let leadCreated = false;
+  if (!(await openLeadFor(env, phone, modality, category))) {
+    await insertLead(env, {
+      name, phone, modality, stage: 'Novo Lead', temp: 'Morno', property: '', value: 0, followup: null, clientId: row.id,
+      category, source: 'CRC', note: 'Lead criado a partir do cadastro no CRC.',
+    });
+    leadCreated = true;
+  }
+  const fresh = await env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(row.id).first();
+  return { ...clientOut(fresh), leadCreated };
+}
+
+async function patchClient(env, id, b) {
+  const cur = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND deleted_at IS NULL').bind(id).first();
+  if (!cur) throw new HttpError(404, 'Cliente não encontrado.');
+  const sets = [], vals = [], leadSets = [], leadVals = [];
+  const set = (c, v) => { sets.push(`${c} = ?`); vals.push(v); };
+  if (b.name !== undefined) { const n = str(b.name, 'nome', { min: 2, max: 120, required: true }); set('name', n); leadSets.push('name = ?'); leadVals.push(n); }
+  if (b.phone !== undefined) { const p = normPhone(b.phone); set('phone', p); leadSets.push('phone = ?'); leadVals.push(p); }
+  if (b.modality !== undefined) set('modality', oneOf(b.modality, MODALITIES, 'modalidade'));
+  if (b.profile !== undefined) set('profile', oneOf(b.profile, PROFILES, 'perfil'));
+  if (b.regions !== undefined) set('regions', str(b.regions, 'regiões', { max: 200, required: true }));
+  if (b.budget !== undefined) set('budget', str(b.budget, 'orçamento', { max: 120 }) || 'A definir');
+  if (b.preferences !== undefined) set('preferences', str(b.preferences, 'preferências', { max: 1000 }));
+  if (b.next_action !== undefined) set('next_action', str(b.next_action, 'próxima ação', { max: 300 }));
+  if (b.birthday_month !== undefined) set('birthday_month', b.birthday_month ? 1 : 0);
+  if (b.contact_done) { set('pending_followup', 0); set('last_interaction', 'Hoje • Contato de relacionamento realizado'); }
+  if (!sets.length) throw new HttpError(400, 'Nada para atualizar.');
+  set('updated_at', nowIso());
+  const stmts = [env.DB.prepare(`UPDATE clients SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id)];
+  if (leadSets.length) stmts.push(env.DB.prepare(`UPDATE leads SET ${leadSets.join(', ')} WHERE client_id = ?`).bind(...leadVals, id));
+  try { await env.DB.batch(stmts); }
+  catch (e) { if (isUnique(e)) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.'); throw e; }
+  return clientOut(await env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(id).first());
+}
+
+// ---------- Imóveis ----------
+async function resolveImage(url) {
+  // links "ibb.co/xxxx" (página) viram o link direto da imagem (i.ibb.co), sem proxies de terceiros no site
+  try {
+    if (new URL(url).hostname === 'ibb.co') {
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+      const m = (await r.text()).match(/<meta property="og:image" content="([^"]+)"/i);
+      if (m && /^https:\/\//.test(m[1])) return m[1];
+    }
+  } catch (e) { /* mantém o link original */ }
+  return url;
+}
+async function photoField(v, resolve = true) {
+  const u = String(v ?? '').trim();
+  if (!u) return '';
+  if (!/^https:\/\/[^\s]+$/i.test(u) || u.length > 500) throw new HttpError(400, 'URL da foto inválida (use um link https de até 500 caracteres).');
+  return resolve ? resolveImage(u) : u;
+}
+const PROP_FIELDS = {
+  title: (v) => str(v, 'título', { min: 3, max: 150, required: true }),
+  purpose: (v) => oneOf(v, PURPOSES, 'finalidade'),
+  type: (v) => str(v, 'tipo', { max: 40 }) || 'Casa',
+  neighborhood: (v) => str(v, 'bairro', { max: 80, required: true }),
+  city: (v) => str(v, 'cidade', { max: 80 }) || 'Resende - RJ',
+  price: (v) => money(v), area_m2: (v) => intIn(v, 'área', 1e7),
+  bedrooms: (v) => intIn(v, 'quartos', 99), bathrooms: (v) => intIn(v, 'banheiros', 99), parking: (v) => intIn(v, 'vagas', 99),
+  badge: (v) => str(v, 'destaque', { max: 40 }), status: (v) => oneOf(v, PSTATUS, 'status'),
+  description: (v) => str(v, 'descrição', { max: 2000 }),
+};
+async function propValues(b, { resolvePhoto = true, defaults = false } = {}) {
+  const out = {};
+  const src = defaults ? { type: 'Casa', city: 'Resende - RJ', status: 'Disponível', purpose: 'Comprar', ...b } : b;
+  for (const [k, fn] of Object.entries(PROP_FIELDS)) if (src[k] !== undefined) out[k] = fn(src[k]);
+  if (src.photo_url !== undefined) out.photo_url = await photoField(src.photo_url, resolvePhoto);
+  if (defaults && (!out.title || !out.neighborhood)) { PROP_FIELDS.title(src.title); PROP_FIELDS.neighborhood(src.neighborhood); }
+  return out;
+}
+async function insertProperty(env, vals) {
+  const t = nowIso(); const cols = Object.keys(vals);
+  const row = await env.DB.prepare(`INSERT INTO properties (${cols.join(', ')}, created_at, updated_at) VALUES (${cols.map(() => '?').join(', ')}, ?, ?) RETURNING *`)
+    .bind(...cols.map((c) => vals[c]), t, t).first();
+  return propOut(row);
+}
+async function patchProperty(env, id, b) {
+  const vals = await propValues(b);
+  const cols = Object.keys(vals);
+  if (!cols.length) throw new HttpError(400, 'Nada para atualizar.');
+  const row = await env.DB.prepare(`UPDATE properties SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = ? WHERE id = ? AND deleted_at IS NULL RETURNING *`)
+    .bind(...cols.map((c) => vals[c]), nowIso(), id).first();
+  if (!row) throw new HttpError(404, 'Imóvel não encontrado.');
+  return propOut(row);
+}
+async function importProperties(env, b) {
+  const rows = Array.isArray(b.rows) ? b.rows.slice(0, 200) : [];
+  const created = [], skipped = [];
+  for (let i = 0; i < rows.length; i++) {
+    try { created.push(await insertProperty(env, await propValues(rows[i], { resolvePhoto: false, defaults: true }))); }
+    catch (e) { skipped.push({ row: i + 1, error: e.message }); }
+  }
+  return { created: created.length, skipped };
+}
+
+// ---------- Público (site) ----------
 async function publicProperties(env) {
   const rows = (await env.DB.prepare("SELECT * FROM properties WHERE deleted_at IS NULL AND status IN ('Disponível','Reservado') ORDER BY id DESC").all()).results;
-  const neighborhoods = (await env.DB.prepare("SELECT DISTINCT TRIM(neighborhood) AS neighborhood FROM properties WHERE deleted_at IS NULL AND status = 'Disponível' AND TRIM(neighborhood) != '' ORDER BY neighborhood COLLATE NOCASE ASC").all()).results
-    .map((r) => r.neighborhood);
-  return json({ items: rows.map(propPublic), neighborhoods }, 200, { 'Cache-Control': 'public, max-age=60' });
+  return json({ items: rows.map(propPublic) }, 200, { 'Cache-Control': 'public, max-age=60' });
 }
 
-async function publicContact(request, env) {
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  if (!(await rateLimit(env, 'contact:' + ip, 8, 600))) {
-    return json({ error: 'Muitas solicitações. Tente novamente em alguns minutos.' }, 429);
+async function publicContact(env, b) {
+  if (b.website) return json({ ok: true });            // isca anti-robô (campo oculto preenchido)
+  const recent = await env.DB.prepare("SELECT count(*) AS n FROM leads WHERE source = 'Site' AND created_at > ?").bind(new Date(Date.now() - 3600_000).toISOString()).first();
+  if (recent.n >= 40) throw new HttpError(429, 'Muitas solicitações. Tente novamente em instantes.');
+  const name = str(b.name, 'nome', { min: 2, max: 120, required: true });
+  const phone = normPhone(b.phone);
+  const msg = str(b.message, 'mensagem', { max: 600 });
+  let v;
+  if (b.kind === 'proprietario') {
+    const purpose = oneOf(b.purpose, ['Venda', 'Locação', 'Venda ou Locação'], 'finalidade');
+    const what = str(b.what, 'imóvel', { min: 2, max: 200, required: true });
+    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Compra', profile: 'Proprietário', regions: what, property: what, value: 0, temp: 'Morno',
+      note: `Contato pelo site (anunciar imóvel — ${purpose}): ${what}.${msg ? ' Detalhes: ' + msg : ''}` };
+  } else {
+    const code = String(b.property_code || '').trim();
+    const p = code ? await env.DB.prepare("SELECT * FROM properties WHERE id = ? AND deleted_at IS NULL").bind(parseId(code)).first() : null;
+    if (!p) throw new HttpError(400, 'Imóvel não encontrado.');
+    v = { category: 'Interessado', modality: p.purpose === 'Alugar' ? 'Aluguel' : 'Compra', profile: p.purpose === 'Alugar' ? 'Locatário' : 'Comprador',
+      regions: p.neighborhood, property: `${propCode(p.id)} - ${p.title}`.slice(0, 200), value: p.price, temp: 'Quente',
+      note: `Interesse pelo site em ${propCode(p.id)} - ${p.title}.${msg ? ' Mensagem: ' + msg : ''}` };
   }
-  const body = await readJson(request, 8192);
-  if (cleanStr(body.website, 50)) return json({ ok: true });
-
-  const kind = cleanStr(body.kind, 30);
-  const name = cleanStr(body.name, 120);
-  const phone = cleanPhone(body.phone);
-  if (name.length < 2) return json({ error: 'Informe seu nome.' }, 400);
-  if (!phone) return json({ error: 'Informe um WhatsApp válido com DDD.' }, 400);
-
-  const now = nowISO();
-  const isOwner = kind === 'proprietario';
-  const category = isOwner ? 'Captação' : 'Interessado';
-  const rawPurpose = cleanStr(body.purpose, 40);
-  const modality = isOwner
-    ? (rawPurpose.includes('Locação') && !rawPurpose.includes('Venda') ? 'Aluguel' : 'Venda')
-    : (rawPurpose === 'Alugar' ? 'Aluguel' : 'Compra');
-  const code = cleanStr(body.property_code, 30);
-  let propLabel = cleanStr(body.what, 180) || 'Imóvel em Resende e Região';
-  let value = 0;
-
-  if (code) {
-    const prop = await env.DB.prepare('SELECT code, title, neighborhood, price, purpose FROM properties WHERE code = ? AND deleted_at IS NULL').bind(code).first();
-    if (prop) {
-      propLabel = `${prop.code} - ${prop.title} (${prop.neighborhood})`;
-      value = prop.price;
-    }
-  }
-
-  const noteText = isOwner
-    ? `Captação pelo site (${cleanStr(body.purpose, 40)}): ${propLabel}. ${cleanStr(body.message, 600)}`.trim()
-    : `Interesse registrado pelo site${code ? ' no imóvel ' + code : ''}. ${cleanStr(body.message, 600)}`.trim();
-
-  const leadId = 'lead-' + crypto.randomUUID();
-  await env.DB.batch([
-    env.DB.prepare(`INSERT INTO leads (id, name, phone, source, category, modality, stage, property, value, followup_date, created_at, updated_at)
-      VALUES (?, ?, ?, 'Site Yolanda', ?, ?, 'Novo Contato', ?, ?, ?, ?, ?)`).bind(
-      leadId, name, phone, category, modality, propLabel, value, todayBR(), now, now
-    ),
-    env.DB.prepare('INSERT INTO lead_notes (lead_id, text, created_at) VALUES (?, ?, ?)').bind(leadId, noteText, now),
-    env.DB.prepare(`INSERT INTO clients (id, name, phone, profile, modality, regions, budget, notes, last_contact, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'A definir', ?, ?, ?, ?)
-      ON CONFLICT(phone) DO UPDATE SET updated_at = excluded.updated_at, last_contact = excluded.last_contact`).bind(
-      'cli-' + crypto.randomUUID(), name, phone, isOwner ? 'Proprietário' : (modality === 'Aluguel' ? 'Locatário' : 'Comprador'),
-      modality, propLabel, noteText, todayBR(), now, now
-    ),
-  ]);
-
-  return json({ ok: true, id: leadId }, 201);
-}
-
-// ==================== ENDPOINTS AUTENTICADOS (CRC) ====================
-
-async function listLeads(env) {
-  const leads = (await env.DB.prepare('SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY updated_at DESC').all()).results;
-  const notes = (await env.DB.prepare('SELECT id, lead_id, text, created_at FROM lead_notes ORDER BY id DESC').all()).results;
-  const byLead = new Map();
-  for (const n of notes) {
-    if (!byLead.has(n.lead_id)) byLead.set(n.lead_id, []);
-    byLead.get(n.lead_id).push({ id: n.id, date: n.created_at.slice(0, 10), text: n.text });
-  }
-  return json({ items: leads.map((l) => ({ ...l, notes: byLead.get(l.id) || [] })) });
-}
-
-async function createLead(request, env) {
-  const b = await readJson(request);
-  const name = cleanStr(b.name, 120);
-  const phone = cleanPhone(b.phone);
-  if (name.length < 2) throw new HttpError(400, 'Nome obrigatório.');
-  if (!phone) throw new HttpError(400, 'WhatsApp inválido.');
-
-  const category = b.category === 'Captação' ? 'Captação' : 'Interessado';
-  const defaultModality = category === 'Captação' ? 'Venda' : 'Compra';
-  const modality = b.modality ? cleanStr(b.modality, 20) : defaultModality;
-  const catModErr = validateCategoryModality(category, modality);
-  if (catModErr) throw new HttpError(400, catModErr);
-
-  const stage = STAGES.includes(b.stage) ? b.stage : 'Novo Contato';
-  const source = cleanStr(b.source, 60) || 'WhatsApp Direto';
-  const property = cleanStr(b.property, 200) || 'A definir';
-  const value = Math.max(0, Math.round(Number(b.value) || 0));
-  const followup = /^\d{4}-\d{2}-\d{2}$/.test(b.followup_date || '') ? b.followup_date : tomorrowBR();
-  const note = cleanStr(b.note, 1000) || 'Lead cadastrado no funil.';
-  const now = nowISO();
-  const id = 'lead-' + crypto.randomUUID();
-
-  await env.DB.batch([
-    env.DB.prepare(`INSERT INTO leads (id, name, phone, source, category, modality, stage, property, value, followup_date, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
-      id, name, phone, source, category, modality, stage, property, value, followup, now, now
-    ),
-    env.DB.prepare('INSERT INTO lead_notes (lead_id, text, created_at) VALUES (?, ?, ?)').bind(id, note, now),
-    env.DB.prepare(`INSERT INTO clients (id, name, phone, profile, modality, regions, budget, notes, last_contact, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(phone) DO UPDATE SET updated_at = excluded.updated_at`).bind(
-      'cli-' + crypto.randomUUID(), name, phone,
-      category === 'Captação' ? 'Proprietário' : (modality === 'Aluguel' ? 'Locatário' : 'Comprador'),
-      modality, property, value ? 'R$ ' + value.toLocaleString('pt-BR') : 'A definir', note, todayBR(), now, now
-    ),
-  ]);
-  return json({ ok: true, id }, 201);
-}
-
-async function patchLead(id, request, env) {
-  const existing = await env.DB.prepare('SELECT id, category, modality FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
-  if (!existing) throw new HttpError(404, 'Lead não encontrado.');
-  const b = await readJson(request);
-  const fields = [];
-  const vals = [];
-
-  const targetCategory = b.category !== undefined ? (b.category === 'Captação' ? 'Captação' : 'Interessado') : (existing.category || 'Interessado');
-  let targetModality = b.modality !== undefined ? cleanStr(b.modality, 20) : existing.modality;
-
-  if (b.category !== undefined && b.modality === undefined) {
-    const allowed = MODALITIES_BY_CATEGORY[targetCategory] || ['Compra', 'Aluguel'];
-    if (!allowed.includes(targetModality)) {
-      targetModality = allowed[0];
-    }
-  }
-
-  const catModErr = validateCategoryModality(targetCategory, targetModality);
-  if (catModErr) throw new HttpError(400, catModErr);
-
-  if (b.name !== undefined) { const v = cleanStr(b.name, 120); if (v.length < 2) throw new HttpError(400, 'Nome inválido.'); fields.push('name = ?'); vals.push(v); }
-  if (b.phone !== undefined) { const v = cleanPhone(b.phone); if (!v) throw new HttpError(400, 'Telefone inválido.'); fields.push('phone = ?'); vals.push(v); }
-  if (b.source !== undefined) { fields.push('source = ?'); vals.push(cleanStr(b.source, 60)); }
-  if (b.category !== undefined) { fields.push('category = ?'); vals.push(targetCategory); }
-  if (b.modality !== undefined || targetModality !== existing.modality) {
-    fields.push('modality = ?');
-    vals.push(targetModality);
-  }
-  if (b.stage !== undefined) { if (!STAGES.includes(b.stage)) throw new HttpError(400, 'Estágio inválido.'); fields.push('stage = ?'); vals.push(b.stage); }
-  if (b.property !== undefined) { fields.push('property = ?'); vals.push(cleanStr(b.property, 200)); }
-  if (b.value !== undefined) { fields.push('value = ?'); vals.push(Math.max(0, Math.round(Number(b.value) || 0))); }
-  if (b.followup_date !== undefined) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(b.followup_date)) throw new HttpError(400, 'Data inválida.');
-    fields.push('followup_date = ?'); vals.push(b.followup_date);
-  }
-  if (!fields.length) return json({ ok: true });
-  fields.push('updated_at = ?'); vals.push(nowISO(), id);
-  await env.DB.prepare(`UPDATE leads SET ${fields.join(', ')} WHERE id = ?`).bind(...vals).run();
-  return json({ ok: true });
-}
-
-async function addLeadNote(id, request, env) {
-  const existing = await env.DB.prepare('SELECT id FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
-  if (!existing) throw new HttpError(404, 'Lead não encontrado.');
-  const b = await readJson(request);
-  const text = cleanStr(b.text, 1000);
-  if (!text) throw new HttpError(400, 'Anotação vazia.');
-  const now = nowISO();
-  await env.DB.batch([
-    env.DB.prepare('INSERT INTO lead_notes (lead_id, text, created_at) VALUES (?, ?, ?)').bind(id, text, now),
-    env.DB.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').bind(now, id),
-  ]);
+  const { row: client } = await ensureClient(env, { name, phone, modality: v.modality, profile: v.profile, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
+  const open = await openLeadFor(env, phone, v.modality, v.category);
+  if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);   // não duplica lead aberto
+  else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, note: v.note });
   return json({ ok: true }, 201);
 }
 
-async function deleteLead(id, env) {
-  await env.DB.prepare('UPDATE leads SET deleted_at = ?, updated_at = ? WHERE id = ?').bind(nowISO(), nowISO(), id).run();
-  return json({ ok: true });
+// ---------- Exportação (CSV com ; e BOM: abre direto no Excel em português) ----------
+function csvEsc(v) {
+  if (v === null || v === undefined) return '""';
+  if (typeof v === 'number') return String(v);
+  let t = String(v);
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;          // evita execução de fórmula
+  return '"' + t.replace(/"/g, '""') + '"';
+}
+const toCsv = (headers, rows) => '\uFEFF' + [headers, ...rows].map((r) => r.map(csvEsc).join(';')).join('\r\n') + '\r\n';
+
+async function exportCsv(env, base) {
+  const q = (sql) => env.DB.prepare(sql).all().then((r) => r.results);
+  let headers, rows;
+  if (base === 'leads') {
+    headers = ['codigo', 'nome', 'telefone', 'categoria', 'modalidade', 'etapa', 'temperatura', 'imovel_interesse', 'valor', 'proximo_followup', 'origem', 'codigo_cliente', 'criado_em', 'atualizado_em', 'fechado_em', 'excluido_em'];
+    rows = (await q('SELECT * FROM leads ORDER BY id')).map((r) => [leadCode(r.id), r.name, r.phone, r.category, r.modality, r.stage, r.temp, r.property, r.value, r.followup_at, r.source, r.client_id ? clientCode(r.client_id) : '', r.created_at, r.updated_at, r.closed_at, r.deleted_at]);
+  } else if (base === 'clientes') {
+    headers = ['codigo', 'nome', 'telefone', 'modalidade', 'perfil', 'regioes_interesse', 'faixa_orcamento', 'preferencias', 'ultima_interacao', 'proxima_acao', 'aniversariante_do_mes', 'follow_up_pendente', 'origem', 'criado_em', 'atualizado_em', 'excluido_em'];
+    rows = (await q('SELECT * FROM clients ORDER BY id')).map((r) => [clientCode(r.id), r.name, r.phone, r.modality, r.profile, r.regions, r.budget, r.preferences, r.last_interaction, r.next_action, r.birthday_month ? 'Sim' : 'Não', r.pending_followup ? 'Sim' : 'Não', r.source, r.created_at, r.updated_at, r.deleted_at]);
+  } else if (base === 'imoveis') {
+    headers = ['codigo', 'titulo', 'finalidade', 'tipo', 'bairro', 'cidade', 'valor', 'area_m2', 'quartos', 'banheiros', 'vagas', 'foto_url', 'destaque', 'status', 'descricao', 'criado_em', 'atualizado_em', 'excluido_em'];
+    rows = (await q('SELECT * FROM properties ORDER BY id')).map((r) => [propCode(r.id), r.title, r.purpose, r.type, r.neighborhood, r.city, r.price, r.area_m2, r.bedrooms, r.bathrooms, r.parking, r.photo_url, r.badge, r.status, r.description, r.created_at, r.updated_at, r.deleted_at]);
+  } else if (base === 'historico') {
+    headers = ['codigo_lead', 'tipo', 'texto', 'data'];
+    rows = (await q('SELECT * FROM lead_events ORDER BY lead_id, created_at, id')).map((r) => [leadCode(r.lead_id), r.kind, r.text, r.created_at]);
+  } else throw new HttpError(404, 'Base desconhecida.');
+  return new Response(toCsv(headers, rows), { headers: {
+    'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store',
+    'Content-Disposition': `attachment; filename="yolanda_${base}_${todayBR()}.csv"`,
+  } });
 }
 
-async function listClients(env) {
-  const rows = (await env.DB.prepare('SELECT * FROM clients WHERE deleted_at IS NULL ORDER BY updated_at DESC').all()).results;
-  return json({ items: rows });
-}
-
-async function createClient(request, env) {
-  const b = await readJson(request);
-  const name = cleanStr(b.name, 120);
-  const phone = cleanPhone(b.phone);
-  if (name.length < 2) throw new HttpError(400, 'Nome obrigatório.');
-  if (!phone) throw new HttpError(400, 'Telefone inválido.');
-  const profile = CLIENT_PROFILES.includes(b.profile) ? b.profile : 'Comprador';
-  const modality = MODALITIES.includes(b.modality) ? b.modality : 'Compra';
-  const now = nowISO();
-  const id = 'cli-' + crypto.randomUUID();
-  await env.DB.prepare(`INSERT INTO clients (id, name, phone, profile, modality, birthday, regions, budget, notes, last_contact, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
-    id, name, phone, profile, modality, cleanStr(b.birthday, 10) || '-',
-    cleanStr(b.regions, 200), cleanStr(b.budget, 80) || 'A definir', cleanStr(b.notes, 1000), todayBR(), now, now
-  ).run();
-  return json({ ok: true, id }, 201);
-}
-
-async function patchClient(id, request, env) {
-  const b = await readJson(request);
-  const fields = [];
-  const vals = [];
-  if (b.name !== undefined) { const v = cleanStr(b.name, 120); if (v.length < 2) throw new HttpError(400, 'Nome inválido.'); fields.push('name = ?'); vals.push(v); }
-  if (b.phone !== undefined) { const v = cleanPhone(b.phone); if (!v) throw new HttpError(400, 'Telefone inválido.'); fields.push('phone = ?'); vals.push(v); }
-  if (b.profile !== undefined && CLIENT_PROFILES.includes(b.profile)) { fields.push('profile = ?'); vals.push(b.profile); }
-  if (b.modality !== undefined && MODALITIES.includes(b.modality)) { fields.push('modality = ?'); vals.push(b.modality); }
-  if (b.birthday !== undefined) { fields.push('birthday = ?'); vals.push(cleanStr(b.birthday, 10) || '-'); }
-  if (b.regions !== undefined) { fields.push('regions = ?'); vals.push(cleanStr(b.regions, 200)); }
-  if (b.budget !== undefined) { fields.push('budget = ?'); vals.push(cleanStr(b.budget, 80)); }
-  if (b.notes !== undefined) { fields.push('notes = ?'); vals.push(cleanStr(b.notes, 1000)); }
-  if (b.last_contact !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(b.last_contact)) { fields.push('last_contact = ?'); vals.push(b.last_contact); }
-  if (!fields.length) return json({ ok: true });
-  fields.push('updated_at = ?'); vals.push(nowISO(), id);
-  await env.DB.prepare(`UPDATE clients SET ${fields.join(', ')} WHERE id = ? AND deleted_at IS NULL`).bind(...vals).run();
-  return json({ ok: true });
-}
-
-async function deleteClient(id, env) {
-  await env.DB.prepare('UPDATE clients SET deleted_at = ?, updated_at = ? WHERE id = ?').bind(nowISO(), nowISO(), id).run();
-  return json({ ok: true });
-}
-
-async function listProperties(env) {
-  const rows = (await env.DB.prepare('SELECT * FROM properties WHERE deleted_at IS NULL ORDER BY id DESC').all()).results;
-  return json({ items: rows });
-}
-
-async function nextPropertyCode(env) {
-  const row = await env.DB.prepare("SELECT code FROM properties WHERE code GLOB 'YTI-[0-9]*' ORDER BY CAST(SUBSTR(code, 5) AS INTEGER) DESC LIMIT 1").first();
-  const n = row ? (parseInt(row.code.slice(4), 10) || 0) + 1 : 1;
-  return 'YTI-' + String(n).padStart(4, '0');
-}
-
-function validPhotoUrl(v) {
-  const s = cleanStr(v, 500);
-  if (!s) return '';
-  if (s.startsWith('/img/')) return s;
+// ---------- Roteador ----------
+export async function onRequest({ request, env, params }) {
+  let authed = false;
   try {
-    const u = new URL(s);
-    return (u.protocol === 'https:' || u.protocol === 'http:') ? s : '';
-  } catch { return ''; }
-}
+    const method = request.method;
+    const parts = [].concat(params.route || []);
+    if (method !== 'GET') {
+      const origin = request.headers.get('Origin');
+      if (origin && origin !== new URL(request.url).origin) throw new HttpError(403, 'Origem não permitida.');
+      if (!(request.headers.get('Content-Type') || '').includes('application/json')) throw new HttpError(415, 'Use application/json.');
+    }
+    const body = method === 'GET' || method === 'DELETE' ? {} : await request.json().catch(() => { throw new HttpError(400, 'JSON inválido.'); });
 
-async function createProperty(request, env) {
-  const b = await readJson(request);
-  const title = cleanStr(b.title, 180);
-  const neighborhood = cleanStr(b.neighborhood, 100);
-  if (title.length < 3) throw new HttpError(400, 'Título obrigatório.');
-  if (!neighborhood) throw new HttpError(400, 'Bairro obrigatório.');
-  const rawCode = cleanStr(b.code, 20).toUpperCase();
-  const code = /^[A-Z0-9-]{3,20}$/.test(rawCode) ? rawCode : await nextPropertyCode(env);
-  const purpose = PROP_PURPOSES.includes(b.purpose) ? b.purpose : 'Comprar';
-  const status = PROP_STATUS.includes(b.status) ? b.status : 'Disponível';
-  const now = nowISO();
+    if (parts[0] === 'public') {                                   // sem login
+      if (parts[1] === 'properties' && method === 'GET') return await publicProperties(env);
+      if (parts[1] === 'contact' && method === 'POST') return await publicContact(env, body);
+      throw new HttpError(404, 'Rota não encontrada.');
+    }
 
-  await env.DB.prepare(`INSERT INTO properties
-    (code, purpose, type, title, neighborhood, city, price, area_m2, bedrooms, bathrooms, parking, highlight, photo_url, description, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
-    code, purpose, cleanStr(b.type, 50) || 'Casa', title, neighborhood,
-    cleanStr(b.city, 80) || 'Resende',
-    Math.max(0, Math.round(Number(b.price) || 0)),
-    Math.max(0, Math.round(Number(b.area_m2) || 0)),
-    Math.max(0, Math.round(Number(b.bedrooms) || 0)),
-    Math.max(0, Math.round(Number(b.bathrooms) || 0)),
-    Math.max(0, Math.round(Number(b.parking) || 0)),
-    cleanStr(b.highlight, 60), validPhotoUrl(b.photo_url), cleanStr(b.description, 2000),
-    status, now, now
-  ).run();
-  return json({ ok: true, code }, 201);
-}
-
-async function patchProperty(code, request, env) {
-  const b = await readJson(request);
-  const fields = [];
-  const vals = [];
-  if (b.purpose !== undefined && PROP_PURPOSES.includes(b.purpose)) { fields.push('purpose = ?'); vals.push(b.purpose); }
-  if (b.type !== undefined) { fields.push('type = ?'); vals.push(cleanStr(b.type, 50)); }
-  if (b.title !== undefined) { const v = cleanStr(b.title, 180); if (v.length < 3) throw new HttpError(400, 'Título inválido.'); fields.push('title = ?'); vals.push(v); }
-  if (b.neighborhood !== undefined) { fields.push('neighborhood = ?'); vals.push(cleanStr(b.neighborhood, 100)); }
-  if (b.city !== undefined) { fields.push('city = ?'); vals.push(cleanStr(b.city, 80)); }
-  for (const numCol of ['price', 'area_m2', 'bedrooms', 'bathrooms', 'parking']) {
-    if (b[numCol] !== undefined) { fields.push(`${numCol} = ?`); vals.push(Math.max(0, Math.round(Number(b[numCol]) || 0))); }
-  }
-  if (b.highlight !== undefined) { fields.push('highlight = ?'); vals.push(cleanStr(b.highlight, 60)); }
-  if (b.photo_url !== undefined) { fields.push('photo_url = ?'); vals.push(validPhotoUrl(b.photo_url)); }
-  if (b.description !== undefined) { fields.push('description = ?'); vals.push(cleanStr(b.description, 2000)); }
-  if (b.status !== undefined) {
-    if (!PROP_STATUS.includes(b.status)) throw new HttpError(400, 'Status inválido.');
-    fields.push('status = ?'); vals.push(b.status);
-  }
-  if (!fields.length) return json({ ok: true });
-  fields.push('updated_at = ?'); vals.push(nowISO(), code);
-  await env.DB.prepare(`UPDATE properties SET ${fields.join(', ')} WHERE code = ? AND deleted_at IS NULL`).bind(...vals).run();
-  return json({ ok: true });
-}
-
-async function deleteProperty(code, env) {
-  await env.DB.prepare('UPDATE properties SET deleted_at = ?, updated_at = ? WHERE code = ?').bind(nowISO(), nowISO(), code).run();
-  return json({ ok: true });
-}
-
-const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-
-async function uploadImage(request, env) {
-  if (!env.IMAGES) throw new HttpError(503, 'Armazenamento de imagens não configurado.');
-  const mime = (request.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  const ext = IMAGE_TYPES[mime];
-  if (!ext) throw new HttpError(400, 'Envie uma imagem JPG, PNG ou WebP.');
-  const bytes = await request.arrayBuffer();
-  if (!bytes.byteLength || bytes.byteLength > 8 * 1024 * 1024) throw new HttpError(400, 'Imagem deve ter até 8 MB.');
-  const key = `properties/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
-  await env.IMAGES.put(key, bytes, { httpMetadata: { contentType: mime, cacheControl: 'public, max-age=31536000, immutable' } });
-  return json({ ok: true, url: '/img/' + key }, 201);
-}
-
-// ==================== ROTEADOR ====================
-
-export async function onRequest(context) {
-  const { request, env, data } = context;
-  const url = new URL(request.url);
-  const path = url.pathname.replace(/\/+$/, '');
-  const method = request.method.toUpperCase();
-
-  try {
-    if (path === '/api/public/properties' && method === 'GET') return await publicProperties(env);
-    if (path === '/api/public/contact' && method === 'POST') return await publicContact(request, env);
-
-    if (!data?.user?.email) return json({ error: 'Não autenticado.' }, 401);
-
-    if (path === '/api/me' && method === 'GET') return json({ user: data.user });
-
-    if (path === '/api/leads' && method === 'GET') return await listLeads(env);
-    if (path === '/api/leads' && method === 'POST') return await createLead(request, env);
-    let m = path.match(/^\/api\/leads\/([^/]+)$/);
-    if (m && method === 'PATCH') return await patchLead(decodeURIComponent(m[1]), request, env);
-    if (m && method === 'DELETE') return await deleteLead(decodeURIComponent(m[1]), env);
-    m = path.match(/^\/api\/leads\/([^/]+)\/notes$/);
-    if (m && method === 'POST') return await addLeadNote(decodeURIComponent(m[1]), request, env);
-
-    if (path === '/api/clients' && method === 'GET') return await listClients(env);
-    if (path === '/api/clients' && method === 'POST') return await createClient(request, env);
-    m = path.match(/^\/api\/clients\/([^/]+)$/);
-    if (m && method === 'PATCH') return await patchClient(decodeURIComponent(m[1]), request, env);
-    if (m && method === 'DELETE') return await deleteClient(decodeURIComponent(m[1]), env);
-
-    if (path === '/api/properties' && method === 'GET') return await listProperties(env);
-    if (path === '/api/properties' && method === 'POST') return await createProperty(request, env);
-    m = path.match(/^\/api\/properties\/([^/]+)$/);
-    if (m && method === 'PATCH') return await patchProperty(decodeURIComponent(m[1]), request, env);
-    if (m && method === 'DELETE') return await deleteProperty(decodeURIComponent(m[1]), env);
-
-    if (path === '/api/images' && method === 'POST') return await uploadImage(request, env);
-
-    return json({ error: 'Rota não encontrada.' }, 404);
-  } catch (err) {
-    if (err instanceof HttpError) return json({ error: err.message }, err.status);
-    console.error('API error:', err);
-    return json({ error: 'Erro interno.' }, 500);
+    await authenticate(request, env);                              // tudo abaixo exige Access
+    authed = true;
+    const [res, id, sub] = parts;
+    if (res === 'export' && method === 'GET' && id) return await exportCsv(env, id.replace(/\.csv$/, ''));
+    if (res === 'leads') {
+      if (!id) { if (method === 'GET') return json(await listLeads(env)); if (method === 'POST') return json(await createLead(env, body), 201); }
+      else if (!sub) {
+        if (method === 'PATCH') return json(await patchLead(env, parseId(id, 100), body));
+        if (method === 'DELETE') return json(await softDelete(env, 'leads', parseId(id, 100)));
+      } else if (sub === 'notes' && method === 'POST') return json(await addNote(env, parseId(id, 100), body), 201);
+    }
+    if (res === 'clients') {
+      if (!id) {
+        if (method === 'GET') return json({ items: (await env.DB.prepare('SELECT * FROM clients WHERE deleted_at IS NULL ORDER BY updated_at DESC').all()).results.map(clientOut) });
+        if (method === 'POST') return json(await createClient(env, body), 201);
+      } else if (!sub) {
+        if (method === 'PATCH') return json(await patchClient(env, parseId(id), body));
+        if (method === 'DELETE') return json(await softDelete(env, 'clients', parseId(id)));
+      }
+    }
+    if (res === 'properties') {
+      if (!id) {
+        if (method === 'GET') return json({ items: (await env.DB.prepare('SELECT * FROM properties WHERE deleted_at IS NULL ORDER BY id DESC').all()).results.map(propOut) });
+        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true })), 201);
+      } else if (id === 'import' && method === 'POST') return json(await importProperties(env, body));
+      else if (!sub) {
+        if (method === 'PATCH') return json(await patchProperty(env, parseId(id), body));
+        if (method === 'DELETE') return json(await softDelete(env, 'properties', parseId(id)));
+      }
+    }
+    throw new HttpError(404, 'Rota não encontrada.');
+  } catch (e) {
+    if (e instanceof HttpError) return json({ error: e.message, ...(e.extra || {}) }, e.status);
+    if (isUnique(e)) return json({ error: 'Registro duplicado.' }, 409);
+    console.error(e);
+    // quem está logado no CRC vê o motivo real (ajuda a diagnosticar banco/migração); o público nunca vê
+    return json({ error: authed ? 'Erro interno: ' + String((e && e.message) || e).slice(0, 300) : 'Erro interno.' }, 500);
   }
 }

@@ -1,6 +1,0 @@
-@"
-node_modules/
-.wrangler/
-.dev.vars
-*.zip
-"@ | Out-File -FilePath .gitignore -Encoding utf8
