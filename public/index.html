@@ -1029,6 +1029,19 @@
                 return "https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg);
             }
 
+            function getSharePropertyWhatsAppLink(prop) {
+                const pageUrl = window.location.origin + window.location.pathname + "#imoveis";
+                const msg =
+                    "Olha este imóvel que encontrei na *Yolanda Transações Imobiliárias*:\n\n" +
+                    "*" + prop.titulo + "* (Cód.: " + prop.codigo + ")\n" +
+                    "• *Finalidade:* " + prop.finalidade + "\n" +
+                    "• *Localização:* " + prop.bairro + " - " + prop.cidade + "\n" +
+                    "• *Valor:* " + formatCurrency(prop.valor, prop.finalidade) + "\n\n" +
+                    "Veja mais detalhes no site: " + pageUrl;
+
+                return "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
+            }
+
             function renderProperties(list) {
                 const grid = document.getElementById("properties-grid");
                 const counter = document.getElementById("results-counter");
@@ -1045,6 +1058,22 @@
                             '<p class="text-xs sm:text-sm text-charcoal/70">Tente limpar os filtros ou fale diretamente com a Iêda Holanda para opções fora do catálogo.</p>' +
                             '<div class="pt-2">' +
                                 '<button type="button" onclick="resetFilters()" class="px-5 py-2.5 rounded-xl bg-moss text-white font-heading font-bold text-xs">Limpar Filtros</button>' +
+                            '</div>' +
+                            '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
+                                '<button type="button" onclick="openPropertyModal(\'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
+                                        'class="flex-1 py-3 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs transition-colors">' +
+                                    'Ver Detalhes' +
+                                '</button>' +
+                                '<button type="button" onclick="openPropertyModal(\'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
+                                   'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
+                                    '<i data-lucide="message-circle" class="w-4 h-4"></i>' +
+                                    '<span>Tenho Interesse</span>' +
+                                '</button>' +
+                                '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                                   'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
+                                   'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border inline-flex items-center justify-center shrink-0 transition-colors">' +
+                                    '<i data-lucide="share-2" class="w-4 h-4"></i>' +
+                                '</a>' +
                             '</div>' +
                         '</div>';
                     return;
@@ -1207,7 +1236,19 @@
                             '<span class="px-3 py-1 rounded-full bg-charcoal/85 text-white font-mono text-xs font-bold">' + esc(prop.codigo) + '</span>' +
                         '</div>' +
                     '</div>' +
-
+                    '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">' +
+                            '<div>' +
+                                '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
+                                '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
+                                '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
+                            '</div>' +
+                            '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                               'title="Encaminhar este anúncio para um contato no WhatsApp" ' +
+                               'class="self-start shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
+                                '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
+                                '<span>Encaminhar</span>' +
+                            '</a>' +
+                        '</div>' +
                     '<div class="p-5 sm:p-7 space-y-5">' +
                         '<div>' +
                             '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
