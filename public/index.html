@@ -986,37 +986,41 @@
                 showToast(res.ok ? "Contato registrado! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o contato agora).");
             }
 
-            // ==================== FILTROS & RENDERIZAÇÃO DO PORTFÓLIO ====================
+// ==================== FILTROS & RENDERIZAÇÃO DO PORTFÓLIO ====================
             function populateLocationDropdown() {
                 const select = document.getElementById("filter-location");
                 if (!select) return;
                 const previousVal = select.value;
 
-                const regionalBase = [
-                    "Resende",
-                    "Manejo",
-                    "Campos Elíseos",
-                    "Jardim Jalisco",
-                    "Cidade Alegria",
-                    "Itatiaia",
-                    "Penedo",
-                    "Porto Real"
-                ];
-                const locationsSet = new Set(regionalBase);
+                // Extrai exclusivamente os bairros/localidades de imóveis ativos e com status 'Disponível'
+                const locationsMap = new Map();
 
                 properties.forEach(function (p) {
-                    if (p.bairro) locationsSet.add(p.bairro);
-                    if (p.cidade) locationsSet.add(p.cidade);
+                    const isAvailable = normalizeText(p.status) === "disponivel";
+                    if (!isAvailable) return;
+
+                    const bairro = String(p.bairro || "").trim();
+                    if (bairro) {
+                        const key = normalizeText(bairro);
+                        if (!locationsMap.has(key)) {
+                            locationsMap.set(key, bairro);
+                        }
+                    }
                 });
 
-                const sorted = Array.from(locationsSet).sort();
+                const sorted = Array.from(locationsMap.values()).sort(function (a, b) {
+                    return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+                });
+
                 select.innerHTML = '<option value="Todos">Todas as localidades</option>' +
                     sorted.map(function (loc) {
-                        return '<option value="' + loc.replace(/"/g, "&quot;") + '">' + loc + '</option>';
+                        return '<option value="' + esc(loc) + '">' + esc(loc) + '</option>';
                     }).join("");
 
                 if (sorted.indexOf(previousVal) !== -1) {
                     select.value = previousVal;
+                } else {
+                    select.value = "Todos";
                 }
             }
 
