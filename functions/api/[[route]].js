@@ -151,10 +151,9 @@ async function ensureClient(env, v) {
   const found = await env.DB.prepare('SELECT * FROM clients WHERE phone = ? AND deleted_at IS NULL').bind(v.phone).first();
   if (found) return { row: found, created: false };
   const t = nowIso();
-  const defaultProfile = v.profile || (v.modality === 'Venda' ? 'Proprietário' : v.modality === 'Aluguel' ? 'Locatário' : 'Comprador');
   try {
-    const row = await env.DB.prepare('INSERT INTO clients (name, phone, modality, profile, regions, budget, preferences, next_action, birthday_month, pending_followup, last_interaction, source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,0,1,?,?,?,?) RETURNING *')
-      .bind(v.name, v.phone, v.modality, defaultProfile, v.regions || 'A definir', v.budget || 'A definir', v.preferences || '', v.nextAction || '',
+    const row = await env.DB.prepare('INSERT INTO clients (name, phone, modality, regions, budget, preferences, next_action, birthday_month, pending_followup, last_interaction, source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,0,1,?,?,?,?) RETURNING *')
+      .bind(v.name, v.phone, v.modality, v.regions || 'A definir', v.budget || 'A definir', v.preferences || '', v.nextAction || '',
         v.lastInteraction || 'Hoje • Cadastro inicial', v.source, t, t).first();
     return { row, created: true };
   } catch (e) {
@@ -210,7 +209,6 @@ async function createLead(env, b) {
   }
   const { row: client, created } = await ensureClient(env, {
     name: v.name, phone: v.phone, modality: v.modality,
-    profile: v.category === 'Captação' ? 'Proprietário' : v.modality === 'Compra' ? 'Comprador' : 'Locatário',
     regions: v.property, source: 'Lead', lastInteraction: 'Hoje • Lead criado no funil',
   });
   v.clientId = client.id;
@@ -307,9 +305,8 @@ async function createClient(env, b) {
   if (dup) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.');
   const isVenda = modality === 'Venda';
   const category = isVenda ? 'Captação' : 'Interessado';
-  const legacyProfile = isVenda ? 'Proprietário' : modality === 'Aluguel' ? 'Locatário' : 'Comprador';
   const { row } = await ensureClient(env, {
-    name, phone, modality, profile: legacyProfile,
+    name, phone, modality,
     regions: str(b.regions, 'regiões', { max: 200, required: true }), budget: str(b.budget, 'orçamento', { max: 120 }),
     preferences: str(b.preferences, 'preferências', { max: 1000 }), nextAction: str(b.next_action, 'próxima ação', { max: 300 }),
     lastInteraction: 'Hoje • Cadastro inicial no CRC', source: 'Painel',
@@ -338,7 +335,6 @@ async function patchClient(env, id, b) {
   if (b.modality !== undefined) {
     const m = oneOf(b.modality, CLIENT_MODALITIES, 'modalidade');
     set('modality', m);
-    set('profile', m === 'Venda' ? 'Proprietário' : m === 'Aluguel' ? 'Locatário' : 'Comprador');
   }
   if (b.regions !== undefined) set('regions', str(b.regions, 'regiões', { max: 200, required: true }));
   if (b.budget !== undefined) set('budget', str(b.budget, 'orçamento', { max: 120 }) || 'A definir');
@@ -433,19 +429,18 @@ async function publicContact(env, b) {
   if (b.kind === 'proprietario') {
     const purpose = oneOf(b.purpose, ['Venda', 'Locação', 'Venda ou Locação'], 'finalidade');
     const what = str(b.what, 'imóvel', { min: 2, max: 200, required: true });
-    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Venda', clientModality: purpose === 'Locação' ? 'Aluguel' : 'Venda', profile: 'Proprietário', regions: what, property: what, value: 0, temp: 'Morno',
+    v = { category: 'Captação', modality: purpose === 'Locação' ? 'Aluguel' : 'Venda', clientModality: purpose === 'Locação' ? 'Aluguel' : 'Venda', regions: what, property: what, value: 0, temp: 'Morno',
       note: `Contato pelo site (anunciar imóvel — ${purpose}): ${what}.${msg ? ' Detalhes: ' + msg : ''}` };
   } else {
     const code = String(b.property_code || '').trim();
     const p = code ? await env.DB.prepare("SELECT * FROM properties WHERE id = ? AND deleted_at IS NULL").bind(parseId(code)).first() : null;
     if (!p) throw new HttpError(400, 'Imóvel não encontrado.');
     const m = p.purpose === 'Alugar' ? 'Aluguel' : 'Compra';
-    v = { category: 'Interessado', modality: m, clientModality: m, profile: p.purpose === 'Alugar' ? 'Locatário' : 'Comprador',
+    v = { category: 'Interessado', modality: m, clientModality: m,
       regions: p.neighborhood, property: `${propCode(p.id)} - ${p.title}`.slice(0, 200), value: p.price, temp: 'Quente',
       note: `Interesse pelo site em ${propCode(p.id)} - ${p.title}.${msg ? ' Mensagem: ' + msg : ''}` };
   }
-  const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, profile: v.profile, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
-  const open = await openLeadFor(env, phone, v.modality, v.category);
+  const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });const open = await openLeadFor(env, phone, v.modality, v.category);
   if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);
   else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, note: v.note });
   return json({ ok: true }, 201);
