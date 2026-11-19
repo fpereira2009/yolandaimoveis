@@ -13,8 +13,3 @@ binding = "DB"
 database_name = "yolanda-crm-dev"
 database_id = "23514b9c-5c0e-464c-8c85-1342b4fae522"
 migrations_dir = "migrations"
-
-# Variáveis (Pages > Settings > Variables):
-#   ACCESS_TEAM_DOMAIN = "SEU-TIME.cloudflareaccess.com"
-#   ACCESS_AUD         = "<Application Audience (AUD) tag da aplicação no Access>"
-#   DEV_BYPASS         = "1"   # APENAS em .dev.vars local, nunca em produção
