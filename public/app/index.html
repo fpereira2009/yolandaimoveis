@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yolanda Transações Imobiliárias | Funil & CRC</title>
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="theme-color" content="#2C4A3E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Yolanda CRM">
+    <link rel="manifest" href="/app/manifest.json">
+    <link rel="icon" type="image/png" href="/img/logo.png">
+    <link rel="apple-touch-icon" href="/img/logo.png">
+
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Configuração de Tema Personalizado ('Moderno & Acolhedor') -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sand: {
+                            DEFAULT: '#F5F2EB',
+                            light: '#FAF8F4',
+                            border: '#E2DDD2'
+                        },
+                        moss: {
+                            DEFAULT: '#2C4A3E',
+                            light: '#3B6152',
+                            dark: '#1E352C',
+                            soft: '#EBF0EE'
+                        },
+                        terracotta: {
+                            DEFAULT: '#C86D51',
+                            hover: '#B55C41',
+                            soft: '#F8EBE7'
+                        },
+                        charcoal: '#232825',
+                        whatsapp: '#25D366'
+                    },
+                    fontFamily: {
+                        heading: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        sans: ['"Inter"', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'card': '0 4px 20px -2px rgba(44, 74, 62, 0.07)',
+                        'float': '0 10px 25px -5px rgba(200, 109, 81, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F5F2EB;
+            color: #232825;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .modal-backdrop {
+            background-color: rgba(35, 40, 37, 0.65);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row antialiased selection:bg-moss selection:text-white">
+
+    <!-- ==================== SIDEBAR DESKTOP ==================== -->
+    <aside class="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-moss text-sand z-30 shadow-xl">
+        <div class="p-6 border-b border-moss-light/40">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-white/95 p-1.5 flex items-center justify-center shrink-0">
+                    <img src="/img/logo.png" alt="Yolanda" class="w-full h-full object-contain">
+                </div>
+                <div class="min-w-0">
+                    <p class="font-heading font-bold text-white text-base truncate">Yolanda Imobiliária</p>
+                    <p class="text-[11px] text-sand/75 truncate">Funil & CRC Mobile</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <button onclick="switchTab('hoje')" data-nav="hoje" class="nav-btn-desktop w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-heading font-semibold text-sm transition-all bg-moss-light text-white shadow-sm">
+                <i data-lucide="calendar-check-2" class="w-5 h-5 text-terracotta"></i>
+                <span>Hoje & Follow-ups</span>
+                <span id="badge-hoje-desktop" class="ml-auto bg-terracotta text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+            </button>
+
+            <button onclick="switchTab('funil')" data-nav="funil" class="nav-btn-desktop w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-heading font-semibold text-sm transition-all text-sand/80 hover:bg-moss-light/50 hover:text-white">
+                <i data-lucide="kanban" class="w-5 h-5"></i>
+                <span>Funil de Vendas</span>
+            </button>
+
+            <button onclick="switchTab('crc')" data-nav="crc" class="nav-btn-desktop w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-heading font-semibold text-sm transition-all text-sand/80 hover:bg-moss-light/50 hover:text-white">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span>Clientes (CRC)</span>
+            </button>
+
+            <button onclick="switchTab('imoveis')" data-nav="imoveis" class="nav-btn-desktop w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-heading font-semibold text-sm transition-all text-sand/80 hover:bg-moss-light/50 hover:text-white">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span>Imóveis</span>
+                <span id="badge-imoveis-desktop" class="ml-auto bg-white/15 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-moss-light/40">
+            <div class="bg-moss-dark/60 rounded-2xl p-4">
+                <p class="text-xs font-semibold text-white">Iêda Holanda</p>
+                <p class="text-[11px] text-sand/70 mt-0.5">CRECI-RJ 112406 • Resende/RJ</p>
+                <a href="https://yolandaimoveis.com.br" class="mt-3 w-full py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white flex items-center justify-center gap-1.5 transition">
+                    <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                    <span>Abrir vitrine pública</span>
+                </a>
+                <a href="/cdn-cgi/access/logout" class="mt-2 w-full py-1.5 px-3 rounded-lg text-[11px] text-sand/70 hover:text-white flex items-center justify-center gap-1.5 transition">
+                    <i data-lucide="log-out" class="w-3 h-3"></i>
+                    <span>Sair</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
+    <div class="flex-1 md:pl-72 flex flex-col min-h-screen pb-24 md:pb-8">
+        
+        <!-- Top Header Mobile / Desktop -->
+        <header class="sticky top-0 z-20 bg-sand/95 backdrop-blur-md border-b border-sand-border px-4 py-3.5 md:px-8 md:py-5">
+            <div class="max-w-5xl mx-auto flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="md:hidden w-10 h-10 rounded-xl bg-white border border-sand-border p-1.5 flex items-center justify-center shrink-0">
+                        <img src="/img/logo.png" alt="Yolanda" class="w-full h-full object-contain">
+                    </div>
+                    <div class="min-w-0">
+                        <h1 id="header-title" class="font-heading font-bold text-moss text-lg md:text-2xl truncate">Agenda de Hoje</h1>
+                        <p id="header-subtitle" class="text-xs text-charcoal/70 truncate">Resende & Região • Bom dia, Iêda</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="openNewLeadModal()" class="bg-terracotta hover:bg-terracotta-hover text-white font-heading font-semibold text-xs md:text-sm px-3.5 py-2.5 md:px-4 md:py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition active:scale-95">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Novo Lead</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Banner de Aviso de Autenticação / Sessão Expirada (Anti-Loop) -->
+        <div id="auth-warning-banner" class="hidden max-w-5xl w-full mx-auto px-4 md:px-8 pt-4">
+            <div class="bg-terracotta-soft border border-terracotta/40 text-charcoal rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-card">
+                <div class="flex items-start gap-3">
+                    <i data-lucide="shield-alert" class="w-5 h-5 text-terracotta shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-heading font-bold text-sm text-moss">Sessão não autenticada ou expirada (401)</p>
+                        <p class="text-xs text-charcoal/75 mt-0.5">A API bloqueou o carregamento dos dados neste ambiente. Faça login novamente ou verifique a autenticação de teste.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="retryLoadAll()" class="px-3.5 py-2 rounded-xl bg-white border border-sand-border text-moss font-heading font-bold text-xs hover:bg-sand transition">
+                        Tentar Novamente
+                    </button>
+                    <a href="/cdn-cgi/access/login" class="px-3.5 py-2 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs transition">
+                        Fazer Login
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área Dinâmica das Telas -->
+        <main class="flex-1 px-4 py-5 md:px-8 md:py-6 max-w-5xl w-full mx-auto">
+            
+            <!-- ==================== ABA 1: HOJE & FOLLOW-UPS ==================== -->
+            <section id="tab-hoje" class="space-y-6">
+                
+                <!-- Resumo Rápido KPI -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-white p-4 rounded-2xl border border-sand-border shadow-card">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-charcoal/60">Para Hoje</p>
+                        <p id="kpi-hoje" class="font-heading font-extrabold text-2xl text-terracotta mt-1">0</p>
+                        <p class="text-[11px] text-charcoal/60 mt-0.5">Follow-ups pendentes</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-sand-border shadow-card">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-charcoal/60">Leads Ativos</p>
+                        <p id="kpi-ativos" class="font-heading font-extrabold text-2xl text-moss mt-1">0</p>
+                        <p class="text-[11px] text-charcoal/60 mt-0.5">Em negociação</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-sand-border shadow-card">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-charcoal/60">Visitas</p>
+                        <p id="kpi-visitas" class="font-heading font-extrabold text-2xl text-moss mt-1">0</p>
+                        <p class="text-[11px] text-charcoal/60 mt-0.5">Agendadas</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-sand-border shadow-card">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-charcoal/60">Base CRC</p>
+                        <p id="kpi-clientes" class="font-heading font-extrabold text-2xl text-moss mt-1">0</p>
+                        <p class="text-[11px] text-charcoal/60 mt-0.5">Clientes ativos</p>
+                    </div>
+                </div>
+
+                <!-- Lista de Tarefas / Follow-ups Prioritários -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="font-heading font-bold text-moss text-base md:text-lg flex items-center gap-2">
+                            <i data-lucide="bell-ring" class="w-4 h-4 text-terracotta"></i>
+                            <span>Contatos Prioritários de Hoje</span>
+                        </h2>
+                        <span id="today-date-label" class="text-xs font-medium text-charcoal/60 bg-white px-2.5 py-1 rounded-lg border border-sand-border"></span>
+                    </div>
+
+                    <div id="followup-list" class="space-y-3">
+                        <!-- Cards injetados via JS -->
+                    </div>
+                </div>
+
+                <!-- Aniversariantes & Pós-Venda CRC -->
+                <div class="bg-moss text-sand rounded-2xl p-5 shadow-card">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-terracotta bg-white/10 px-2.5 py-1 rounded-full">Relacionamento CRC</span>
+                            <h3 class="font-heading font-bold text-white text-base md:text-lg mt-2">Clientes para Reativar ou Parabenizar</h3>
+                            <p class="text-xs text-sand/80 mt-0.5">Toque para enviar uma mensagem personalizada de relacionamento no WhatsApp.</p>
+                        </div>
+                        <i data-lucide="sparkles" class="w-6 h-6 text-terracotta shrink-0"></i>
+                    </div>
+                    <div id="crc-highlights" class="mt-4 space-y-2.5">
+                        <!-- Destaques CRC injetados via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== ABA 2: FUNIL DE VENDAS ==================== -->
+            <section id="tab-funil" class="hidden space-y-4">
+                
+                <!-- Filtro de Modalidade do Funil (Todos / Compra / Aluguel / Captação) -->
+                <div class="flex items-center justify-between gap-2 flex-wrap bg-white p-2.5 rounded-2xl border border-sand-border">
+                    <span class="text-xs font-heading font-bold text-moss pl-2">Filtrar Funil:</span>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="setFunnelModalityFilter('Todos')" data-mod-filter="Todos" class="mod-filter-pill px-3 py-1.5 rounded-xl text-xs font-heading font-bold bg-moss text-white transition">Todos</button>
+                        <button onclick="setFunnelModalityFilter('Compra')" data-mod-filter="Compra" class="mod-filter-pill px-3 py-1.5 rounded-xl text-xs font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition">🏡 Compra</button>
+                        <button onclick="setFunnelModalityFilter('Aluguel')" data-mod-filter="Aluguel" class="mod-filter-pill px-3 py-1.5 rounded-xl text-xs font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition">🔑 Aluguel</button>
+                        <button onclick="setFunnelModalityFilter('Captação')" data-mod-filter="Captação" class="mod-filter-pill px-3 py-1.5 rounded-xl text-xs font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition">🏷️ Captação</button>
+                    </div>
+                </div>
+
+                <!-- Seletor Horizontal de Estágios (Mobile-First) -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1" id="funnel-stage-pills">
+                    <!-- Pills geradas via JS -->
+                </div>
+
+                <!-- Lista de Cards do Estágio Selecionado -->
+                <div id="funnel-cards-container" class="space-y-3">
+                    <!-- Cards do Funil gerados via JS -->
+                </div>
+            </section>
+
+            <!-- ==================== ABA 3: CLIENTES (CRC) ==================== -->
+            <section id="tab-crc" class="hidden space-y-4">
+                
+                <!-- Barra de Busca e Filtros -->
+                <div class="bg-white p-3.5 rounded-2xl border border-sand-border shadow-card space-y-3">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 text-charcoal/45 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="crc-search" oninput="renderCRC()" placeholder="Buscar cliente por nome, bairro (Manejo, Penedo...) ou telefone..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss">
+                    </div>
+
+                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar">
+                        <button onclick="setCrcFilter('Todos')" data-crc-filter="Todos" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-moss text-white">Todos</button>
+                        <button onclick="setCrcFilter('Compra')" data-crc-filter="Compra" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss">🏡 Compra</button>
+                        <button onclick="setCrcFilter('Aluguel')" data-crc-filter="Aluguel" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss">🔑 Aluguel</button>
+                        <button onclick="setCrcFilter('Comprador')" data-crc-filter="Comprador" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss">Compradores</button>
+                        <button onclick="setCrcFilter('Proprietário')" data-crc-filter="Proprietário" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss">Proprietários</button>
+                        <button onclick="setCrcFilter('Locatário')" data-crc-filter="Locatário" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss">Locatários</button>
+                        <button onclick="setCrcFilter('Investidor')" data-crc-filter="Investidor" class="crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss">Investidores</button>
+                    </div>
+                </div>
+
+                <!-- Lista de Clientes CRC -->
+                <div id="crc-list" class="space-y-3">
+                    <!-- Clientes renderizados via JS -->
+                </div>
+            </section>
+
+            <!-- ==================== ABA 4: IMÓVEIS ==================== -->
+            <section id="tab-imoveis" class="hidden space-y-4">
+                <div class="bg-white p-3.5 rounded-2xl border border-sand-border shadow-card flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 text-charcoal/45 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="prop-search" oninput="renderProps()" placeholder="Buscar imóvel por código, bairro, cidade ou título..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss">
+                    </div>
+                    <select id="prop-status-filter" onchange="renderProps()" class="px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-medium text-moss">
+                        <option value="Todos">Todos os status</option>
+                        <option value="Disponível">Disponíveis</option>
+                        <option value="Reservado">Reservados</option>
+                        <option value="Vendido">Vendidos</option>
+                        <option value="Alugado">Alugados</option>
+                        <option value="Inativo">Inativos</option>
+                    </select>
+                    <button type="button" onclick="openNewPropertyModal()" class="bg-moss hover:bg-moss-light text-white font-heading font-semibold text-xs md:text-sm px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shrink-0">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Novo Imóvel</span>
+                    </button>
+                </div>
+
+                <div id="props-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==================== NAVEGAÇÃO INFERIOR MOBILE ==================== -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-sand-border z-30 px-2 py-2 shadow-lg">
+        <div class="grid grid-cols-4 gap-1">
+            <button onclick="switchTab('hoje')" data-nav-mobile="hoje" class="nav-btn-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-moss font-bold bg-moss-soft">
+                <div class="relative">
+                    <i data-lucide="calendar-check-2" class="w-5 h-5 text-terracotta"></i>
+                    <span id="badge-hoje-mobile" class="absolute -top-1.5 -right-2.5 bg-terracotta text-white text-[10px] font-bold px-1.5 rounded-full">0</span>
+                </div>
+                <span class="text-[11px] mt-1">Hoje</span>
+            </button>
+
+            <button onclick="switchTab('funil')" data-nav-mobile="funil" class="nav-btn-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-charcoal/60 font-medium">
+                <i data-lucide="kanban" class="w-5 h-5"></i>
+                <span class="text-[11px] mt-1">Funil</span>
+            </button>
+
+            <button onclick="switchTab('crc')" data-nav-mobile="crc" class="nav-btn-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-charcoal/60 font-medium">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="text-[11px] mt-1">Clientes</span>
+            </button>
+
+            <button onclick="switchTab('imoveis')" data-nav-mobile="imoveis" class="nav-btn-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-charcoal/60 font-medium">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[11px] mt-1">Imóveis</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ==================== MODAL: DETALHES DO LEAD & HISTÓRICO CRC ==================== -->
+    <div id="lead-detail-modal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-end md:items-center justify-center p-0 md:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl md:rounded-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-5 bg-moss text-white flex items-center justify-between">
+                <div>
+                    <span id="modal-lead-stage" class="text-[11px] uppercase tracking-wider font-bold bg-terracotta px-2.5 py-0.5 rounded-full">Estágio</span>
+                    <h3 id="modal-lead-name" class="font-heading font-bold text-lg mt-1">Nome do Cliente</h3>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button id="modal-lead-edit-btn" type="button" class="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white" title="Editar dados do lead">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="closeLeadModal()" class="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white" title="Fechar">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="modal-lead-body" class="p-5 overflow-y-auto space-y-5 flex-1">
+                <!-- Conteúdo dinâmico do lead -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: NOVO / EDITAR LEAD ==================== -->
+    <div id="new-lead-modal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-end md:items-center justify-center p-0 md:p-4">
+        <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-5 bg-moss text-white flex items-center justify-between">
+                <h3 id="lead-modal-title" class="font-heading font-bold text-lg">Cadastrar Novo Lead</h3>
+                <button type="button" onclick="closeNewLeadModal()" class="p-1.5 rounded-full bg-white/10 hover:bg-white/20">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="saveNewLead(event)" class="p-5 space-y-3.5 max-h-[82vh] overflow-y-auto">
+                <input type="hidden" id="lead-edit-id" value="">
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Nome do Cliente *</label>
+                    <input type="text" id="lead-name" required placeholder="Ex: Mariana Costa" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">WhatsApp (com DDD) *</label>
+                        <input type="tel" id="lead-phone" required placeholder="24999999999" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Origem</label>
+                        <select id="lead-source" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option value="WhatsApp Direto">WhatsApp Direto</option>
+                            <option value="Instagram / Redes">Instagram / Redes</option>
+                            <option value="Site Yolanda">Site Yolanda</option>
+                            <option value="Indicação">Indicação</option>
+                            <option value="Placa no Imóvel">Placa no Imóvel</option>
+                            <option value="Portal Imobiliário">Portal Imobiliário</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Categoria *</label>
+                    <select id="lead-category" onchange="syncLeadModalityOptions()" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <option value="Interessado">Interessado (comprador / locatário)</option>
+                        <option value="Captação">Captação (proprietário que quer anunciar)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
+                        <select id="lead-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-semibold text-moss">
+                            <option value="Compra">🏡 Compra</option>
+                            <option value="Aluguel">🔑 Aluguel</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Estágio Inicial</label>
+                        <select id="lead-stage" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option value="Novo Contato">Novo Contato</option>
+                            <option value="Em Atendimento">Em Atendimento</option>
+                            <option value="Visita Agendada">Visita Agendada</option>
+                            <option value="Proposta / Negociação">Proposta / Negociação</option>
+                            <option value="Fechado / Ganho">Fechado / Ganho</option>
+                            <option value="Perdido">Perdido</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Interesse / Bairro / Região *</label>
+                    <input type="text" id="lead-property" required placeholder="Ex: Casa 3 quartos - Manejo / Resende" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Valor Estimado (R$)</label>
+                        <input type="number" id="lead-value" placeholder="450000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Data do Próximo Follow-up *</label>
+                        <input type="date" id="lead-followup-date" required class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Anotação Inicial (CRC)</label>
+                    <textarea id="lead-note" rows="2" placeholder="Preferências, forma de pagamento, FGTS, prazo de mudança..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></textarea>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <button id="lead-delete-btn" type="button" onclick="deleteEditingLead()" class="hidden px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-heading font-bold text-sm">
+                        Excluir
+                    </button>
+                    <button id="lead-submit-btn" type="submit" class="flex-1 py-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm shadow-md transition">
+                        Salvar no Funil
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: NOVO / EDITAR CLIENTE CRC ==================== -->
+    <div id="client-modal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-end md:items-center justify-center p-0 md:p-4">
+        <div class="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-5 bg-moss text-white flex items-center justify-between">
+                <h3 id="client-modal-title" class="font-heading font-bold text-lg">Editar Cliente CRC</h3>
+                <button type="button" onclick="closeClientModal()" class="p-1.5 rounded-full bg-white/10 hover:bg-white/20">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="saveClientForm(event)" class="p-5 space-y-3.5 max-h-[82vh] overflow-y-auto">
+                <input type="hidden" id="client-edit-id" value="">
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Nome Completo *</label>
+                    <input type="text" id="client-name" required class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">WhatsApp (com DDD) *</label>
+                        <input type="tel" id="client-phone" required class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Perfil *</label>
+                        <select id="client-profile" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option value="Comprador">Comprador</option>
+                            <option value="Locatário">Locatário</option>
+                            <option value="Proprietário">Proprietário</option>
+                            <option value="Investidor">Investidor</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
+                        <select id="client-modality" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option value="Compra">🏡 Compra</option>
+                            <option value="Aluguel">🔑 Aluguel</option>
+                            <option value="Venda">🏷️ Venda</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Aniversário</label>
+                        <input type="text" id="client-birthday" placeholder="DD/MM" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Regiões / Bairros de Interesse</label>
+                    <input type="text" id="client-regions" placeholder="Ex: Manejo, Penedo, Campos Elíseos" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Faixa de Valor / Orçamento</label>
+                    <input type="text" id="client-budget" placeholder="Ex: R$ 400 mil - R$ 550 mil" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Observações & Histórico</label>
+                    <textarea id="client-notes" rows="3" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></textarea>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <button id="client-delete-btn" type="button" onclick="deleteEditingClient()" class="px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-heading font-bold text-sm">
+                        Excluir
+                    </button>
+                    <button type="submit" class="flex-1 py-3 rounded-xl bg-moss hover:bg-moss-light text-white font-heading font-bold text-sm shadow-md transition">
+                        Salvar Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: NOVO / EDITAR IMÓVEL ==================== -->
+    <div id="prop-modal" class="fixed inset-0 z-50 hidden modal-backdrop flex items-end md:items-center justify-center p-0 md:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-5 bg-moss text-white flex items-center justify-between">
+                <h3 id="prop-modal-title" class="font-heading font-bold text-lg">Novo Imóvel</h3>
+                <button type="button" onclick="closePropertyModal()" class="p-1.5 rounded-full bg-white/10 hover:bg-white/20">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="savePropertyForm(event)" class="p-5 space-y-3 max-h-[82vh] overflow-y-auto">
+                <input type="hidden" id="prop-edit-code" value="">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Código</label>
+                        <input type="text" id="prop-code" placeholder="YTI-0006 (auto)" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Finalidade *</label>
+                        <select id="prop-purpose" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option value="Comprar">Venda (Comprar)</option>
+                            <option value="Alugar">Locação (Alugar)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Status *</label>
+                        <select id="prop-status" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option value="Disponível">Disponível</option>
+                            <option value="Reservado">Reservado</option>
+                            <option value="Vendido">Vendido</option>
+                            <option value="Alugado">Alugado</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Título do Anúncio *</label>
+                    <input type="text" id="prop-title" required placeholder="Ex: Casa Moderna 3 Quartos com Piscina no Manejo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Tipo *</label>
+                        <select id="prop-type" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <option>Casa</option>
+                            <option>Apartamento</option>
+                            <option>Terreno</option>
+                            <option>Comercial</option>
+                            <option>Chácara/Sítio</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Bairro *</label>
+                        <input type="text" id="prop-neighborhood" required placeholder="Manejo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Cidade *</label>
+                        <input type="text" id="prop-city" required value="Resende" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="block text-xs font-bold text-moss mb-1">Valor (R$) *</label>
+                        <input type="number" id="prop-price" required min="0" step="1" placeholder="680000" class="w-full px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Área m²</label>
+                        <input type="number" id="prop-area" min="0" step="1" value="0" class="w-full px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Quartos</label>
+                        <input type="number" id="prop-bedrooms" min="0" step="1" value="0" class="w-full px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Banh.</label>
+                        <input type="number" id="prop-bathrooms" min="0" step="1" value="0" class="w-full px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Vagas</label>
+                        <input type="number" id="prop-parking" min="0" step="1" value="0" class="w-full px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Selo de Destaque</label>
+                    <input type="text" id="prop-highlight" placeholder="Ex: Destaque, Oportunidade, Alto Padrão..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Foto principal</label>
+                    <div class="flex items-center gap-2">
+                        <label class="cursor-pointer px-3.5 py-2.5 rounded-xl bg-moss text-white font-heading font-semibold text-xs inline-flex items-center gap-1.5 shrink-0 hover:bg-moss-light">
+                            <i data-lucide="camera" class="w-4 h-4"></i>
+                            <span id="prop-photo-upload-label">Enviar do celular / PC</span>
+                            <input type="file" id="prop-photo-file" accept="image/jpeg,image/png,image/webp" onchange="uploadPropertyPhoto(this)" class="hidden">
+                        </label>
+                        <input type="url" id="prop-photo" oninput="updatePropPhotoPreview()" placeholder="ou cole um link https://..." class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs">
+                    </div>
+                    <img id="prop-photo-preview" src="" alt="Prévia" class="hidden mt-2 w-full h-36 object-cover rounded-xl border border-sand-border">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1">Descrição</label>
+                    <textarea id="prop-description" rows="3" placeholder="Diferenciais, acabamento, documentação, localização..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></textarea>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <button id="prop-delete-btn" type="button" onclick="deleteEditingProperty()" class="hidden px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-heading font-bold text-sm">
+                        Excluir
+                    </button>
+                    <button type="submit" class="flex-1 py-3 rounded-xl bg-moss hover:bg-moss-light text-white font-heading font-bold text-sm shadow-md transition">
+                        Salvar Imóvel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Feedback -->
+    <div id="toast" class="fixed bottom-24 md:bottom-6 right-4 md:right-8 z-50 hidden bg-charcoal text-white text-xs md:text-sm font-medium px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-whatsapp"></i>
+        <span id="toast-msg">Ação concluída!</span>
+    </div>
+
+    <!-- ==================== LÓGICA DA APLICAÇÃO ==================== -->
+    <script>
+        const STAGES = [
+            'Novo Contato',
+            'Em Atendimento',
+            'Visita Agendada',
+            'Proposta / Negociação',
+            'Fechado / Ganho',
+            'Perdido'
+        ];
+
+        const STAGE_COLORS = {
+            'Novo Contato': 'bg-blue-100 text-blue-800',
+            'Em Atendimento': 'bg-amber-100 text-amber-800',
+            'Visita Agendada': 'bg-purple-100 text-purple-800',
+            'Proposta / Negociação': 'bg-terracotta-soft text-terracotta',
+            'Fechado / Ganho': 'bg-emerald-100 text-emerald-800',
+            'Perdido': 'bg-gray-200 text-gray-700'
+        };
+
+        const LEAD_MODALITIES_BY_CATEGORY = {
+            Interessado: [
+                { value: 'Compra', label: '🏡 Compra' },
+                { value: 'Aluguel', label: '🔑 Aluguel' }
+            ],
+            'Captação': [
+                { value: 'Venda', label: '🏷️ Venda' },
+                { value: 'Aluguel', label: '🔑 Aluguel' }
+            ]
+        };
+
+        function syncLeadModalityOptions(preferredModality) {
+            const catEl = document.getElementById('lead-category');
+            const modEl = document.getElementById('lead-modality');
+            if (!catEl || !modEl) return;
+
+            const category = catEl.value || 'Interessado';
+            const options = LEAD_MODALITIES_BY_CATEGORY[category] || LEAD_MODALITIES_BY_CATEGORY.Interessado;
+            const currentVal = preferredModality !== undefined ? preferredModality : modEl.value;
+
+            modEl.innerHTML = options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+            modEl.value = options.some(opt => opt.value === currentVal) ? currentVal : options[0].value;
+        }
+
+        function esc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function todayBR() {
+            const d = new Date(Date.now() - 3 * 3600 * 1000);
+            return d.toISOString().slice(0, 10);
+        }
+        function tomorrowBR() {
+            const d = new Date(Date.now() - 3 * 3600 * 1000 + 86400 * 1000);
+            return d.toISOString().slice(0, 10);
+        }
+
+        // Controle anti-loop para respostas 401
+        let authReloadTriggered = false;
+        const RELOAD_GUARD_KEY = 'yolanda_crm_last_401_reload';
+
+        function handleUnauthorized() {
+            const banner = document.getElementById('auth-warning-banner');
+            if (banner) banner.classList.remove('hidden');
+
+            if (authReloadTriggered) return;
+
+            const now = Date.now();
+            let lastReload = 0;
+            try {
+                lastReload = Number(sessionStorage.getItem(RELOAD_GUARD_KEY) || 0);
+            } catch {}
+
+            // Só recarrega uma vez a cada 15 segundos para evitar loop infinito
+            if (now - lastReload > 15000) {
+                authReloadTriggered = true;
+                try {
+                    sessionStorage.setItem(RELOAD_GUARD_KEY, String(now));
+                } catch {}
+                location.reload();
+            }
+        }
+
+        function clearUnauthorizedBanner() {
+            const banner = document.getElementById('auth-warning-banner');
+            if (banner) banner.classList.add('hidden');
+            try {
+                sessionStorage.removeItem(RELOAD_GUARD_KEY);
+            } catch {}
+        }
+
+        async function retryLoadAll() {
+            try {
+                sessionStorage.removeItem(RELOAD_GUARD_KEY);
+            } catch {}
+            authReloadTriggered = false;
+            try {
+                await loadAll();
+                showToast('Conexão restabelecida!');
+            } catch (e) {
+                showToast(e.message);
+            }
+        }
+
+        async function api(path, opts = {}) {
+            const r = await fetch(path, {
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+                ...opts
+            });
+            if (r.status === 401) {
+                handleUnauthorized();
+                throw new Error('Sessão expirada ou não autenticada.');
+            }
+            let d = null;
+            try { d = await r.json(); } catch {}
+            if (!r.ok) throw new Error((d && d.error) || `Erro ${r.status}`);
+            return d;
+        }
+
+        let leads = [];
+        let crcClients = [];
+        let crmProps = [];
+        let currentFunnelStage = 'Novo Contato';
+        let funnelModalityFilter = 'Todos';
+        let currentCrcFilter = 'Todos';
+
+        async function loadAll() {
+            const [l, c, p] = await Promise.all([
+                api('/api/leads'),
+                api('/api/clients'),
+                api('/api/properties')
+            ]);
+            clearUnauthorizedBanner();
+            leads = l.items || [];
+            crcClients = c.items || [];
+            crmProps = p.items || [];
+            const availableCount = crmProps.filter(x => x.status === 'Disponível').length;
+            const b = document.getElementById('badge-imoveis-desktop');
+            if (b) b.textContent = availableCount;
+            refreshAllViews();
+        }
+
+        function formatBRL(val) {
+            return Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+        }
+
+        function formatDateBR(isoDate) {
+            if (!isoDate) return 'Sem data';
+            const today = todayBR();
+            if (isoDate === today) return 'Hoje';
+            if (isoDate < today) return 'Atrasado (' + isoDate.split('-').reverse().join('/') + ')';
+            const [y, m, d] = isoDate.split('-');
+            return `${d}/${m}`;
+        }
+
+        function getWhatsAppLink(phone, text) {
+            const clean = String(phone).replace(/\D/g, '');
+            const full = clean.startsWith('55') ? clean : '55' + clean;
+            return `https://wa.me/${full}?text=${encodeURIComponent(text)}`;
+        }
+
+        function getModalityBadge(modality) {
+            if (modality === 'Aluguel') {
+                return `<span class="px-2 py-0.5 rounded-md bg-terracotta text-white text-[11px] font-bold">🔑 Aluguel</span>`;
+            }
+            if (modality === 'Venda') {
+                return `<span class="px-2 py-0.5 rounded-md bg-amber-700 text-white text-[11px] font-bold">🏷️ Venda</span>`;
+            }
+            return `<span class="px-2 py-0.5 rounded-md bg-moss text-white text-[11px] font-bold">🏡 Compra</span>`;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function switchTab(tabName) {
+            ['hoje', 'funil', 'crc', 'imoveis'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
+            });
+
+            const titles = {
+                hoje: ['Agenda de Hoje', 'Resende & Região • Prioridades comerciais'],
+                funil: ['Funil de Vendas', 'Acompanhe Compra, Aluguel e Captação por etapa'],
+                crc: ['Relacionamento CRC', 'Base ativa de clientes, perfil e preferências'],
+                imoveis: ['Carteira de Imóveis', 'Cadastre e publique direto na vitrine do site']
+            };
+            document.getElementById('header-title').textContent = titles[tabName][0];
+            document.getElementById('header-subtitle').textContent = titles[tabName][1];
+
+            document.querySelectorAll('.nav-btn-desktop').forEach(btn => {
+                const active = btn.dataset.nav === tabName;
+                btn.className = active
+                    ? 'nav-btn-desktop w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-heading font-semibold text-sm transition-all bg-moss-light text-white shadow-sm'
+                    : 'nav-btn-desktop w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-heading font-semibold text-sm transition-all text-sand/80 hover:bg-moss-light/50 hover:text-white';
+            });
+
+            document.querySelectorAll('.nav-btn-mobile').forEach(btn => {
+                const active = btn.dataset.navMobile === tabName;
+                btn.className = active
+                    ? 'nav-btn-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-moss font-bold bg-moss-soft'
+                    : 'nav-btn-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-charcoal/60 font-medium';
+            });
+
+            if (tabName === 'funil') renderFunnel();
+            if (tabName === 'crc') renderCRC();
+            if (tabName === 'hoje') renderHoje();
+            if (tabName === 'imoveis') renderProps();
+            lucide.createIcons();
+        }
+
+        function renderHoje() {
+            const today = todayBR();
+            const dueLeads = leads.filter(l => l.stage !== 'Fechado / Ganho' && l.stage !== 'Perdido' && l.followup_date <= today);
+            const activeLeads = leads.filter(l => l.stage !== 'Fechado / Ganho' && l.stage !== 'Perdido');
+            const visits = leads.filter(l => l.stage === 'Visita Agendada');
+
+            document.getElementById('kpi-hoje').textContent = dueLeads.length;
+            document.getElementById('kpi-ativos').textContent = activeLeads.length;
+            document.getElementById('kpi-visitas').textContent = visits.length;
+            document.getElementById('kpi-clientes').textContent = crcClients.length;
+            document.getElementById('badge-hoje-desktop').textContent = dueLeads.length;
+            document.getElementById('badge-hoje-mobile').textContent = dueLeads.length;
+
+            const listEl = document.getElementById('followup-list');
+            if (dueLeads.length === 0) {
+                listEl.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center border border-sand-border">
+                        <p class="font-heading font-bold text-moss text-base">Tudo em dia por aqui!</p>
+                        <p class="text-xs text-charcoal/65 mt-1">Nenhum follow-up atrasado ou pendente para hoje.</p>
+                    </div>`;
+            } else {
+                listEl.innerHTML = dueLeads.map(lead => {
+                    const lastNote = (lead.notes && lead.notes[0]) ? lead.notes[0].text : 'Sem observações';
+                    const isOverdue = lead.followup_date < today;
+                    const verb = lead.modality === 'Aluguel' ? 'a locação de' : 'a compra de';
+                    const wppMsg = `Olá ${lead.name}, tudo bem? Aqui é a Iêda Holanda da Yolanda Transações Imobiliárias. Estou passando para dar continuidade ao nosso atendimento sobre ${verb} ${lead.property}.`;
+
+                    return `
+                    <div class="bg-white rounded-2xl p-4 border ${isOverdue ? 'border-terracotta/50' : 'border-sand-border'} shadow-card space-y-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div onclick="openLeadDetail('${esc(lead.id)}')" class="cursor-pointer flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    ${getModalityBadge(lead.modality)}
+                                    <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${STAGE_COLORS[lead.stage]}">${esc(lead.stage)}</span>
+                                    <span class="text-[11px] font-semibold ${isOverdue ? 'text-terracotta' : 'text-moss'}">${formatDateBR(lead.followup_date)}</span>
+                                </div>
+                                <h3 class="font-heading font-bold text-charcoal text-base mt-1.5 truncate">${esc(lead.name)}</h3>
+                                <p class="text-xs font-medium text-moss truncate">${esc(lead.property)}</p>
+                            </div>
+                            <span class="font-heading font-bold text-sm text-charcoal shrink-0">${formatBRL(lead.value)}${lead.modality === 'Aluguel' ? '/mês' : ''}</span>
+                        </div>
+
+                        <p class="text-xs text-charcoal/75 bg-sand/70 p-2.5 rounded-xl line-clamp-2">
+                            "${esc(lastNote)}"
+                        </p>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            <a href="${getWhatsAppLink(lead.phone, wppMsg)}" target="_blank" onclick="registerQuickContact('${esc(lead.id)}')" class="flex-1 bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                <span>Chamar no WhatsApp</span>
+                            </a>
+                            <button onclick="openLeadDetail('${esc(lead.id)}')" class="px-3.5 py-2.5 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-semibold text-xs transition">
+                                Detalhes
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            const highlightsEl = document.getElementById('crc-highlights');
+            highlightsEl.innerHTML = crcClients.slice(0, 3).map(c => {
+                const actionText = c.modality === 'Aluguel' ? 'locação' : 'compra/venda';
+                const msg = `Olá ${c.name}! Aqui é a Iêda Holanda (Yolanda Transações Imobiliárias). Lembrei de você hoje pois surgiram novidades interessantes para ${actionText} na região de ${c.regions.split(',')[0]}. Como estão os planos?`;
+                return `
+                <div class="bg-moss-dark/70 rounded-xl p-3 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <p class="font-heading font-bold text-white text-sm truncate">${esc(c.name)}</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/15 text-sand font-semibold">${esc(c.modality)}</span>
+                        </div>
+                        <p class="text-[11px] text-sand/75 truncate">${esc(c.profile)} • ${esc(c.regions)}</p>
+                    </div>
+                    <a href="${getWhatsAppLink(c.phone, msg)}" target="_blank" class="shrink-0 bg-terracotta hover:bg-terracotta-hover text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        <span>Relacionar</span>
+                    </a>
+                </div>`;
+            }).join('');
+        }
+
+        function setFunnelModalityFilter(modality) {
+            funnelModalityFilter = modality;
+            document.querySelectorAll('.mod-filter-pill').forEach(btn => {
+                const active = btn.dataset.modFilter === modality;
+                btn.className = active
+                    ? 'mod-filter-pill px-3 py-1.5 rounded-xl text-xs font-heading font-bold bg-moss text-white transition'
+                    : 'mod-filter-pill px-3 py-1.5 rounded-xl text-xs font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition';
+            });
+            renderFunnel();
+            lucide.createIcons();
+        }
+
+        function renderFunnel() {
+            const pillsEl = document.getElementById('funnel-stage-pills');
+            const filteredByMod = funnelModalityFilter === 'Todos'
+                ? leads
+                : funnelModalityFilter === 'Captação'
+                    ? leads.filter(l => l.category === 'Captação')
+                    : leads.filter(l => l.modality === funnelModalityFilter && l.category !== 'Captação');
+
+            pillsEl.innerHTML = STAGES.map(stage => {
+                const count = filteredByMod.filter(l => l.stage === stage).length;
+                const active = stage === currentFunnelStage;
+                return `
+                <button onclick="selectFunnelStage('${stage}')" class="shrink-0 px-3.5 py-2 rounded-xl text-xs font-heading font-bold transition flex items-center gap-2 ${active ? 'bg-moss text-white shadow-sm' : 'bg-white text-moss border border-sand-border'}">
+                    <span>${stage}</span>
+                    <span class="px-1.5 py-0.5 rounded-full text-[10px] ${active ? 'bg-terracotta text-white' : 'bg-sand text-moss'}">${count}</span>
+                </button>`;
+            }).join('');
+
+            const stageLeads = filteredByMod.filter(l => l.stage === currentFunnelStage);
+            const container = document.getElementById('funnel-cards-container');
+
+            if (stageLeads.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center border border-sand-border">
+                        <p class="font-heading font-bold text-moss text-sm">Nenhum lead nesta etapa (${funnelModalityFilter})</p>
+                        <p class="text-xs text-charcoal/60 mt-1">Altere o filtro acima ou avance leads das etapas anteriores.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = stageLeads.map(lead => {
+                const stageIdx = STAGES.indexOf(lead.stage);
+                const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
+                const lastNote = (lead.notes && lead.notes[0]) ? lead.notes[0].text : '';
+
+                return `
+                <div class="bg-white rounded-2xl p-4 border border-sand-border shadow-card space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div onclick="openLeadDetail('${esc(lead.id)}')" class="cursor-pointer min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${getModalityBadge(lead.modality)}
+                                ${lead.category === 'Captação' ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">Captação</span>` : ''}
+                                <span class="text-[11px] font-semibold text-charcoal/55 bg-sand px-2 py-0.5 rounded">${esc(lead.source)}</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-charcoal text-base mt-1.5">${esc(lead.name)}</h3>
+                            <p class="text-xs text-moss font-medium mt-0.5">${esc(lead.property)}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="font-heading font-bold text-sm text-charcoal">${formatBRL(lead.value)}${lead.modality === 'Aluguel' ? '/mês' : ''}</p>
+                            <p class="text-[11px] text-terracotta font-semibold mt-0.5">Follow-up: ${formatDateBR(lead.followup_date)}</p>
+                        </div>
+                    </div>
+
+                    ${lastNote ? `<p class="text-xs text-charcoal/70 bg-sand/60 px-3 py-2 rounded-xl">${esc(lastNote)}</p>` : ''}
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <a href="${getWhatsAppLink(lead.phone, `Olá ${lead.name}! Aqui é a Iêda Holanda.`)}" target="_blank" class="p-2.5 rounded-xl bg-whatsapp/15 text-moss hover:bg-whatsapp hover:text-white transition" title="WhatsApp">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        </a>
+                        <button onclick="openLeadDetail('${esc(lead.id)}')" class="px-3 py-2 rounded-xl bg-sand text-moss font-heading font-semibold text-xs">
+                            Anotar / Histórico
+                        </button>
+                        ${nextStage ? `
+                        <button onclick="advanceLeadStage('${esc(lead.id)}', '${nextStage}')" class="ml-auto px-3 py-2 rounded-xl bg-moss text-white font-heading font-semibold text-xs flex items-center gap-1 hover:bg-moss-light transition">
+                            <span>Avançar</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function selectFunnelStage(stage) {
+            currentFunnelStage = stage;
+            renderFunnel();
+            lucide.createIcons();
+        }
+
+        function setCrcFilter(filter) {
+            currentCrcFilter = filter;
+            document.querySelectorAll('.crc-filter-btn').forEach(btn => {
+                const active = btn.dataset.crcFilter === filter;
+                btn.className = active
+                    ? 'crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-moss text-white'
+                    : 'crc-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sand text-moss';
+            });
+            renderCRC();
+            lucide.createIcons();
+        }
+
+        function renderCRC() {
+            const query = (document.getElementById('crc-search').value || '').toLowerCase();
+            const filtered = crcClients.filter(c => {
+                const matchFilter = currentCrcFilter === 'Todos'
+                    || c.profile === currentCrcFilter
+                    || c.modality === currentCrcFilter;
+                const matchQuery = c.name.toLowerCase().includes(query)
+                    || c.regions.toLowerCase().includes(query)
+                    || c.phone.includes(query);
+                return matchFilter && matchQuery;
+            });
+
+            const listEl = document.getElementById('crc-list');
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-sand-border text-sm text-charcoal/65">Nenhum cliente encontrado com esse filtro.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(c => {
+                const wppMsg = `Olá ${c.name}, tudo bem? Aqui é a Iêda Holanda da Yolanda Transações Imobiliárias.`;
+                return `
+                <div class="bg-white rounded-2xl p-4 border border-sand-border shadow-card space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${getModalityBadge(c.modality)}
+                                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-moss-soft text-moss">${esc(c.profile)}</span>
+                                <span class="text-[11px] text-charcoal/55">Aniv: ${esc(c.birthday)}</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-charcoal text-base mt-1.5">${esc(c.name)}</h3>
+                            <p class="text-xs text-terracotta font-semibold mt-0.5">${esc(c.regions)} • ${esc(c.budget)}</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-charcoal/75 bg-sand/70 p-2.5 rounded-xl leading-relaxed">
+                        ${esc(c.notes)}
+                    </p>
+
+                    <div class="flex items-center justify-between pt-1 gap-2 flex-wrap">
+                        <span class="text-[11px] text-charcoal/55">Último contato: ${esc(c.last_contact)}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="openEditClient('${esc(c.id)}')" class="p-2 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss transition" title="Editar cliente">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="openLeadFromCrc('${esc(c.id)}')" class="bg-moss hover:bg-moss-light text-white text-xs font-heading font-bold px-3 py-2 rounded-xl flex items-center gap-1.5">
+                                <i data-lucide="kanban" class="w-3.5 h-3.5 text-terracotta"></i>
+                                <span>Funil</span>
+                            </button>
+                            <a href="${getWhatsAppLink(c.phone, wppMsg)}" target="_blank" class="bg-whatsapp hover:brightness-105 text-white text-xs font-heading font-bold px-3 py-2 rounded-xl flex items-center gap-1.5">
+                                <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                                <span>WhatsApp</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function openLeadDetail(leadId) {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+
+            document.getElementById('modal-lead-stage').textContent = `${lead.modality} • ${lead.stage}`;
+            document.getElementById('modal-lead-name').textContent = lead.name;
+            document.getElementById('modal-lead-edit-btn').onclick = () => {
+                closeLeadModal();
+                openEditLead(lead.id);
+            };
+
+            const notesHtml = (lead.notes || []).map(n => `
+                <div class="bg-sand/70 p-3 rounded-xl border border-sand-border">
+                    <div class="flex justify-between text-[11px] text-charcoal/55 mb-1">
+                        <span class="font-semibold text-moss">Registro CRC</span>
+                        <span>${esc(n.date)}</span>
+                    </div>
+                    <p class="text-xs text-charcoal leading-relaxed">${esc(n.text)}</p>
+                </div>
+            `).join('');
+
+            const stageOptions = STAGES.map(s => `<option value="${s}" ${s === lead.stage ? 'selected' : ''}>${s}</option>`).join('');
+            const allowedMods = LEAD_MODALITIES_BY_CATEGORY[lead.category || 'Interessado'] || LEAD_MODALITIES_BY_CATEGORY.Interessado;
+
+            document.getElementById('modal-lead-body').innerHTML = `
+                <div class="flex items-center justify-between gap-2 bg-sand/60 px-4 py-2.5 rounded-2xl border border-sand-border">
+                    <span class="text-xs font-heading font-bold text-moss">Modalidade do Atendimento:</span>
+                    <div class="flex gap-1.5">
+                        ${allowedMods.map(opt => {
+                            const active = lead.modality === opt.value;
+                            const activeClass = opt.value === 'Aluguel' ? 'bg-terracotta text-white' : 'bg-moss text-white';
+                            const inactiveClass = opt.value === 'Aluguel' ? 'bg-white text-terracotta border border-sand-border' : 'bg-white text-moss border border-sand-border';
+                            return `<button onclick="changeLeadModality('${esc(lead.id)}', '${opt.value}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${active ? activeClass : inactiveClass}">${opt.label}</button>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="bg-sand p-3.5 rounded-2xl space-y-1.5">
+                    <p class="text-xs text-charcoal/65">Imóvel / Interesse</p>
+                    <p class="font-heading font-bold text-moss text-sm">${esc(lead.property)}</p>
+                    <div class="flex items-center justify-between pt-2 text-xs">
+                        <span class="font-semibold">Valor: ${formatBRL(lead.value)}${lead.modality === 'Aluguel' ? '/mês' : ''}</span>
+                        <span class="text-terracotta font-bold">Follow-up: ${formatDateBR(lead.followup_date)}</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Mover Estágio</label>
+                        <select onchange="advanceLeadStage('${esc(lead.id)}', this.value)" class="w-full px-3 py-2.5 rounded-xl bg-sand border border-sand-border text-xs font-semibold text-moss">
+                            ${stageOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Reagendar Follow-up</label>
+                        <input type="date" value="${esc(lead.followup_date)}" onchange="updateFollowupDate('${esc(lead.id)}', this.value)" class="w-full px-3 py-2 rounded-xl bg-sand border border-sand-border text-xs font-semibold text-moss">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-moss mb-1.5">Nova Anotação de Atendimento (CRC)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-note-input" placeholder="Ex: Cliente gostou da planta, vai simular financiamento..." class="flex-1 px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs">
+                        <button onclick="addNoteToLead('${esc(lead.id)}')" class="px-4 py-2.5 rounded-xl bg-moss text-white font-heading font-bold text-xs shrink-0">Salvar</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-heading font-bold text-moss text-xs uppercase tracking-wider">Histórico de Relacionamento</h4>
+                    ${notesHtml}
+                </div>
+
+                <a href="${getWhatsAppLink(lead.phone, `Olá ${lead.name}! Aqui é a Iêda Holanda.`)}" target="_blank" class="w-full py-3.5 rounded-xl bg-whatsapp text-white font-heading font-bold text-sm flex items-center justify-center gap-2 shadow-md">
+                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    <span>Abrir Conversa no WhatsApp</span>
+                </a>
+            `;
+
+            document.getElementById('lead-detail-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeLeadModal() {
+            document.getElementById('lead-detail-modal').classList.add('hidden');
+        }
+
+        async function changeLeadModality(leadId, newModality) {
+            try {
+                await api(`/api/leads/${leadId}`, { method: 'PATCH', body: JSON.stringify({ modality: newModality }) });
+                await loadAll();
+                openLeadDetail(leadId);
+                showToast(`Modalidade alterada para ${newModality}!`);
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function advanceLeadStage(leadId, newStage) {
+            try {
+                await api(`/api/leads/${leadId}`, { method: 'PATCH', body: JSON.stringify({ stage: newStage }) });
+                await loadAll();
+                if (!document.getElementById('lead-detail-modal').classList.contains('hidden')) openLeadDetail(leadId);
+                showToast(`Lead movido para "${newStage}"!`);
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function updateFollowupDate(leadId, newDate) {
+            try {
+                await api(`/api/leads/${leadId}`, { method: 'PATCH', body: JSON.stringify({ followup_date: newDate }) });
+                await loadAll();
+                showToast('Follow-up reagendado!');
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function addNoteToLead(leadId) {
+            const input = document.getElementById('new-note-input');
+            const text = input.value.trim();
+            if (!text) return;
+            try {
+                await api(`/api/leads/${leadId}/notes`, { method: 'POST', body: JSON.stringify({ text }) });
+                await loadAll();
+                openLeadDetail(leadId);
+                showToast('Anotação registrada no CRC!');
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function registerQuickContact(leadId) {
+            try {
+                await api(`/api/leads/${leadId}`, { method: 'PATCH', body: JSON.stringify({ followup_date: tomorrowBR() }) });
+                await api(`/api/leads/${leadId}/notes`, { method: 'POST', body: JSON.stringify({ text: 'Contato de follow-up iniciado via WhatsApp.' }) });
+                await loadAll();
+            } catch {}
+        }
+
+        function openNewLeadModal() {
+            openNewLeadModalClean();
+            document.getElementById('new-lead-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeNewLeadModal() {
+            document.getElementById('new-lead-modal').classList.add('hidden');
+            openNewLeadModalClean();
+        }
+
+        function openNewLeadModalClean() {
+            const f = document.getElementById('lead-name').closest('form');
+            f.reset();
+            document.getElementById('lead-edit-id').value = '';
+            document.getElementById('lead-modal-title').textContent = 'Cadastrar Novo Lead';
+            document.getElementById('lead-submit-btn').textContent = 'Salvar no Funil';
+            document.getElementById('lead-delete-btn').classList.add('hidden');
+            document.getElementById('lead-category').value = 'Interessado';
+            syncLeadModalityOptions('Compra');
+            document.getElementById('lead-followup-date').value = tomorrowBR();
+            document.getElementById('lead-note').closest('div').classList.remove('hidden');
+        }
+
+        function openEditLead(leadId) {
+            const l = leads.find(x => x.id === leadId);
+            if (!l) return;
+            document.getElementById('lead-edit-id').value = l.id;
+            document.getElementById('lead-modal-title').textContent = 'Editar Lead';
+            document.getElementById('lead-submit-btn').textContent = 'Salvar Alterações';
+            document.getElementById('lead-delete-btn').classList.remove('hidden');
+            document.getElementById('lead-name').value = l.name || '';
+            document.getElementById('lead-phone').value = String(l.phone || '').replace(/^55/, '');
+            document.getElementById('lead-source').value = l.source || 'WhatsApp Direto';
+            const cat = l.category || 'Interessado';
+            document.getElementById('lead-category').value = cat;
+            syncLeadModalityOptions(l.modality);
+            document.getElementById('lead-stage').value = l.stage || 'Novo Contato';
+            document.getElementById('lead-property').value = l.property || '';
+            document.getElementById('lead-value').value = l.value || '';
+            document.getElementById('lead-followup-date').value = l.followup_date || tomorrowBR();
+            document.getElementById('lead-note').closest('div').classList.add('hidden');
+            document.getElementById('new-lead-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function deleteEditingLead() {
+            const id = document.getElementById('lead-edit-id').value;
+            if (!id || !confirm('Excluir este lead e todo o histórico de anotações dele?')) return;
+            try {
+                await api(`/api/leads/${id}`, { method: 'DELETE' });
+                closeNewLeadModal();
+                await loadAll();
+                showToast('Lead excluído.');
+            } catch (e) { showToast(e.message); }
+        }
+
+        function openLeadFromCrc(clientId) {
+            const client = crcClients.find(c => c.id === clientId);
+            if (!client) return;
+
+            const cleanPhone = String(client.phone).replace(/\D/g, '');
+            const matchedLeads = leads.filter(l => String(l.phone).replace(/\D/g, '').endsWith(cleanPhone.slice(-8)));
+
+            if (matchedLeads.length === 0) {
+                openNewLeadModal();
+                const targetCategory = client.profile === 'Proprietário' ? 'Captação' : 'Interessado';
+                document.getElementById('lead-name').value = client.name || '';
+                document.getElementById('lead-phone').value = String(client.phone || '').replace(/^55/, '');
+                document.getElementById('lead-category').value = targetCategory;
+                syncLeadModalityOptions(client.modality);
+                document.getElementById('lead-property').value = client.regions || '';
+                showToast(`Dados de ${client.name} preenchidos para novo lead.`);
+                return;
+            }
+
+            if (matchedLeads.length === 1) {
+                openLeadDetail(matchedLeads[0].id);
+                return;
+            }
+
+            switchTab('funil');
+            currentFunnelStage = matchedLeads[0].stage;
+            setFunnelModalityFilter('Todos');
+            showToast(`${matchedLeads.length} atendimentos encontrados para ${client.name}.`);
+        }
+
+        function openEditClient(clientId) {
+            const c = crcClients.find(x => x.id === clientId);
+            if (!c) return;
+            document.getElementById('client-edit-id').value = c.id;
+            document.getElementById('client-name').value = c.name || '';
+            document.getElementById('client-phone').value = String(c.phone || '').replace(/^55/, '');
+            document.getElementById('client-profile').value = c.profile || 'Comprador';
+            document.getElementById('client-modality').value = c.modality || 'Compra';
+            document.getElementById('client-birthday').value = c.birthday === '-' ? '' : (c.birthday || '');
+            document.getElementById('client-regions').value = c.regions || '';
+            document.getElementById('client-budget').value = c.budget === 'A definir' ? '' : (c.budget || '');
+            document.getElementById('client-notes').value = c.notes || '';
+            document.getElementById('client-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeClientModal() {
+            document.getElementById('client-modal').classList.add('hidden');
+        }
+
+        async function saveClientForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('client-edit-id').value;
+            if (!id) return;
+            const body = {
+                name: document.getElementById('client-name').value.trim(),
+                phone: document.getElementById('client-phone').value.trim(),
+                profile: document.getElementById('client-profile').value,
+                modality: document.getElementById('client-modality').value,
+                birthday: document.getElementById('client-birthday').value.trim(),
+                regions: document.getElementById('client-regions').value.trim(),
+                budget: document.getElementById('client-budget').value.trim(),
+                notes: document.getElementById('client-notes').value.trim()
+            };
+            try {
+                await api(`/api/clients/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+                closeClientModal();
+                await loadAll();
+                showToast('Cliente CRC atualizado!');
+            } catch (err) { showToast(err.message); }
+        }
+
+        async function deleteEditingClient() {
+            const id = document.getElementById('client-edit-id').value;
+            if (!id || !confirm('Excluir este cliente da base CRC?')) return;
+            try {
+                await api(`/api/clients/${id}`, { method: 'DELETE' });
+                closeClientModal();
+                await loadAll();
+                showToast('Cliente removido da base CRC.');
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function saveNewLead(e) {
+            e.preventDefault();
+            const editId = document.getElementById('lead-edit-id').value;
+            const body = {
+                name: document.getElementById('lead-name').value.trim(),
+                phone: document.getElementById('lead-phone').value.trim(),
+                source: document.getElementById('lead-source').value,
+                category: document.getElementById('lead-category').value,
+                modality: document.getElementById('lead-modality').value,
+                stage: document.getElementById('lead-stage').value,
+                property: document.getElementById('lead-property').value.trim(),
+                value: Number(document.getElementById('lead-value').value) || 0,
+                followup_date: document.getElementById('lead-followup-date').value,
+                note: document.getElementById('lead-note').value.trim()
+            };
+            try {
+                if (editId) {
+                    delete body.note;
+                    await api(`/api/leads/${editId}`, { method: 'PATCH', body: JSON.stringify(body) });
+                } else {
+                    await api('/api/leads', { method: 'POST', body: JSON.stringify(body) });
+                }
+                closeNewLeadModal();
+                await loadAll();
+                showToast(editId ? 'Lead atualizado!' : 'Novo lead salvo no funil e CRC!');
+            } catch (err) { showToast(err.message); }
+        }
+
+        // ==================== IMÓVEIS (CRUD + CARD SOCIAL 1080x1350) ====================
+        const PROP_STATUS = ['Disponível', 'Reservado', 'Vendido', 'Alugado', 'Inativo'];
+        const PROP_BADGE = {
+            'Disponível': 'bg-emerald-100 text-emerald-800',
+            'Reservado': 'bg-amber-100 text-amber-800',
+            'Vendido': 'bg-blue-100 text-blue-800',
+            'Alugado': 'bg-purple-100 text-purple-800',
+            'Inativo': 'bg-gray-200 text-gray-700'
+        };
+
+        function renderProps() {
+            const q = (document.getElementById('prop-search')?.value || '').toLowerCase();
+            const st = document.getElementById('prop-status-filter')?.value || 'Todos';
+            const list = crmProps.filter(p => {
+                const okSt = st === 'Todos' || p.status === st;
+                const okQ = !q || [p.code, p.title, p.neighborhood, p.city, p.type].some(v => String(v || '').toLowerCase().includes(q));
+                return okSt && okQ;
+            });
+            const el = document.getElementById('props-list');
+            if (!el) return;
+            if (list.length === 0) {
+                el.innerHTML = `<div class="col-span-full bg-white rounded-2xl p-8 text-center border border-sand-border text-sm text-charcoal/65">Nenhum imóvel encontrado. Clique em <strong>Novo Imóvel</strong> para cadastrar o primeiro.</div>`;
+                return;
+            }
+            el.innerHTML = list.map(p => {
+                const isRental = p.purpose === 'Alugar';
+                const img = p.photo_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80';
+                return `
+                <div class="bg-white rounded-2xl border border-sand-border shadow-card overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="relative aspect-[16/9] bg-moss-soft">
+                            <img src="${esc(img)}" onerror="this.onerror=null;this.src='https://placehold.co/900x506/EAF0ED/2C4A3E?text=Yolanda+Im%C3%B3veis';" alt="${esc(p.title)}" class="w-full h-full object-cover">
+                            <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-heading font-bold ${isRental ? 'bg-terracotta text-white' : 'bg-moss text-white'}">${isRental ? 'Alugar' : 'Comprar'}</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${PROP_BADGE[p.status] || 'bg-gray-100 text-gray-800'}">${esc(p.status)}</span>
+                            </div>
+                            <span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-charcoal/85 text-white font-mono text-[11px] font-bold">${esc(p.code)}</span>
+                        </div>
+                        <div class="p-4 space-y-1.5">
+                            <p class="text-[11px] font-bold text-terracotta">${esc(p.type)} • ${esc(p.neighborhood)}, ${esc(p.city)}</p>
+                            <h3 class="font-heading font-bold text-moss text-base leading-snug line-clamp-2">${esc(p.title)}</h3>
+                            <p class="font-heading font-extrabold text-charcoal text-lg">${formatBRL(p.price)}${isRental ? '/mês' : ''}</p>
+                            <p class="text-[11px] text-charcoal/65">${p.area_m2 || '-'} m² • ${p.bedrooms || 0} qtos • ${p.bathrooms || 0} banh • ${p.parking || 0} vagas</p>
+                        </div>
+                    </div>
+                    <div class="p-3 border-t border-sand-border flex items-center gap-2">
+                        <select onchange="changePropStatus('${esc(p.code)}', this.value)" class="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-sand/70 border border-sand-border text-xs font-semibold text-moss">
+                            ${PROP_STATUS.map(o => `<option${o === p.status ? ' selected' : ''}>${o}</option>`).join('')}
+                        </select>
+                        <button type="button" onclick="downloadPropertyCard('${esc(p.code)}')" title="Salvar card 1080x1350 para redes sociais" class="px-3 py-2 rounded-xl bg-terracotta-soft hover:bg-terracotta hover:text-white text-terracotta font-heading font-bold text-xs shrink-0 transition-colors">
+                            Salvar Card
+                        </button>
+                        <button type="button" onclick="openEditProperty('${esc(p.code)}')" class="px-3.5 py-2 rounded-xl bg-moss text-white font-heading font-bold text-xs shrink-0">
+                            Editar
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function loadImageForCanvas(url, useCors = true) {
+            return new Promise((resolve) => {
+                if (!url) return resolve(null);
+                const img = new Image();
+                if (useCors) img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+
+        function drawRoundedRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        function wrapCanvasLines(ctx, text, maxWidth, maxLines) {
+            const words = String(text || '').trim().split(/\s+/);
+            const lines = [];
+            let line = '';
+            for (const word of words) {
+                const test = line ? line + ' ' + word : word;
+                if (ctx.measureText(test).width <= maxWidth) {
+                    line = test;
+                } else {
+                    if (line) lines.push(line);
+                    line = word;
+                    if (lines.length === maxLines) break;
+                }
+            }
+            if (line && lines.length < maxLines) lines.push(line);
+            if (lines.length === maxLines && words.length > 0) {
+                while (ctx.measureText(lines[maxLines - 1] + '…').width > maxWidth && lines[maxLines - 1].length > 3) {
+                    lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1);
+                }
+            }
+            return lines;
+        }
+
+        async function downloadPropertyCard(code) {
+            const prop = crmProps.find(p => p.code === code);
+            if (!prop) return;
+            showToast(`Gerando card de ${prop.code}...`);
+
+            const W = 1080, H = 1350;
+            const canvas = document.createElement('canvas');
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            // Fundo Areia (#F5F2EB)
+            ctx.fillStyle = '#F5F2EB';
+            ctx.fillRect(0, 0, W, H);
+
+            // Cabeçalho Verde Musgo (#2C4A3E)
+            ctx.fillStyle = '#2C4A3E';
+            ctx.fillRect(0, 0, W, 168);
+
+            // Logotipo oficial (/img/logo.png)
+            const logoImg = await loadImageForCanvas('/img/logo.png', true);
+            if (logoImg) {
+                const maxH = 92, maxW = 140;
+                const scale = Math.min(maxW / logoImg.width, maxH / logoImg.height);
+                const lw = logoImg.width * scale;
+                const lh = logoImg.height * scale;
+                ctx.drawImage(logoImg, 64, (168 - lh) / 2, lw, lh);
+            }
+
+            const brandX = logoImg ? 225 : 64;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 36px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('Yolanda', brandX, 82);
+            ctx.fillStyle = '#E5DFD3';
+            ctx.font = '600 20px "Inter", sans-serif';
+            ctx.fillText('TRANSAÇÕES IMOBILIÁRIAS', brandX, 118);
+
+            // Selo Finalidade (Venda / Aluguel) no topo direito
+            const isRental = prop.purpose === 'Alugar';
+            const purposeText = isRental ? 'ALUGUEL' : 'VENDA';
+            ctx.fillStyle = isRental ? '#C86D51' : '#3B6152';
+            drawRoundedRect(ctx, W - 264, 52, 200, 64, 32);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(purposeText, W - 164, 93);
+            ctx.textAlign = 'left';
+
+            // Área da Foto Principal (com tratamento CORS e fallback seguro)
+            const photoX = 64, photoY = 204, photoW = W - 128, photoH = 540;
+            ctx.save();
+            drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 32);
+            ctx.clip();
+
+            let photoImg = await loadImageForCanvas(prop.photo_url, true);
+            if (!photoImg) {
+                photoImg = await loadImageForCanvas('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1080&q=80', true);
+            }
+
+            if (photoImg) {
+                const ratio = Math.max(photoW / photoImg.width, photoH / photoImg.height);
+                const dw = photoImg.width * ratio;
+                const dh = photoImg.height * ratio;
+                ctx.drawImage(photoImg, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
+            } else {
+                const grad = ctx.createLinearGradient(photoX, photoY, photoX + photoW, photoY + photoH);
+                grad.addColorStop(0, '#2C4A3E');
+                grad.addColorStop(1, '#3B6152');
+                ctx.fillStyle = grad;
+                ctx.fillRect(photoX, photoY, photoW, photoH);
+                ctx.fillStyle = '#F5F2EB';
+                ctx.font = '700 32px "Plus Jakarta Sans", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Yolanda Transações Imobiliárias', W / 2, photoY + photoH / 2);
+                ctx.textAlign = 'left';
+            }
+            ctx.restore();
+
+            // Badge do Código YTI-XXXX sobre a foto
+            ctx.fillStyle = 'rgba(35, 40, 37, 0.88)';
+            drawRoundedRect(ctx, photoX + 24, photoY + photoH - 76, 190, 52, 16);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 24px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(prop.code, photoX + 119, photoY + photoH - 42);
+            ctx.textAlign = 'left';
+
+            // Cartão de Informações
+            const cardY = 776;
+            ctx.fillStyle = '#FFFFFF';
+            drawRoundedRect(ctx, 64, cardY, W - 128, 410, 32);
+            ctx.fill();
+            ctx.strokeStyle = '#E5DFD3';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Localização (Tipo • Bairro • Cidade)
+            ctx.fillStyle = '#C86D51';
+            ctx.font = '700 24px "Inter", sans-serif';
+            ctx.fillText(`${prop.type || 'Imóvel'} • ${prop.neighborhood} • ${prop.city}`, 104, cardY + 56);
+
+            // Título do Imóvel (até 2 linhas)
+            ctx.fillStyle = '#2C4A3E';
+            ctx.font = '800 38px "Plus Jakarta Sans", sans-serif';
+            const titleLines = wrapCanvasLines(ctx, prop.title, W - 208, 2);
+            titleLines.forEach((ln, idx) => {
+                ctx.fillText(ln, 104, cardY + 110 + idx * 48);
+            });
+
+            // Valor em destaque
+            const priceLabel = formatBRL(prop.price) + (isRental ? '/mês' : '');
+            ctx.fillStyle = '#232825';
+            ctx.font = '800 50px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(priceLabel, 104, cardY + 236);
+
+            // Grid de Características (Quartos, Banheiros, Vagas, m²)
+            const specs = [
+                { label: 'Quartos', val: String(prop.bedrooms || 0) },
+                { label: 'Banheiros', val: String(prop.bathrooms || 0) },
+                { label: 'Vagas', val: String(prop.parking || 0) },
+                { label: 'Área', val: `${prop.area_m2 || '-'} m²` }
+            ];
+            const boxW = (W - 208 - 48) / 4;
+            specs.forEach((sp, i) => {
+                const bx = 104 + i * (boxW + 16);
+                const by = cardY + 272;
+                ctx.fillStyle = '#F5F2EB';
+                drawRoundedRect(ctx, bx, by, boxW, 104, 20);
+                ctx.fill();
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#2C4A3E';
+                ctx.font = '800 30px "Plus Jakarta Sans", sans-serif';
+                ctx.fillText(sp.val, bx + boxW / 2, by + 48);
+
+                ctx.fillStyle = '#5A6660';
+                ctx.font = '600 20px "Inter", sans-serif';
+                ctx.fillText(sp.label, bx + boxW / 2, by + 82);
+            });
+            ctx.textAlign = 'left';
+
+            // Rodapé Institucional / CRECI
+            ctx.fillStyle = '#1E352C';
+            ctx.fillRect(0, H - 124, W, 124);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 24px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('Iêda Holanda • Corretora de Imóveis', 64, H - 70);
+            ctx.fillStyle = '#C86D51';
+            ctx.font = '700 22px "Inter", sans-serif';
+            ctx.fillText('CRECI-RJ 112406  |  WhatsApp: (24) 99904-0775', 64, H - 34);
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#F5F2EB';
+            ctx.font = '600 20px "Inter", sans-serif';
+            ctx.fillText('yolandaimoveis.com.br', W - 64, H - 52);
+            ctx.textAlign = 'left';
+
+            // Download automático do PNG
+            const link = document.createElement('a');
+            link.download = `card-${prop.code}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast(`Card card-${prop.code}.png baixado!`);
+        }
+
+        function openNewPropertyModal() {
+            document.getElementById('prop-edit-code').value = '';
+            document.getElementById('prop-modal-title').textContent = 'Novo Imóvel';
+            document.getElementById('prop-code').value = '';
+            document.getElementById('prop-code').disabled = false;
+            document.getElementById('prop-purpose').value = 'Comprar';
+            document.getElementById('prop-status').value = 'Disponível';
+            document.getElementById('prop-title').value = '';
+            document.getElementById('prop-type').value = 'Casa';
+            document.getElementById('prop-neighborhood').value = '';
+            document.getElementById('prop-city').value = 'Resende';
+            document.getElementById('prop-price').value = '';
+            document.getElementById('prop-area').value = 0;
+            document.getElementById('prop-bedrooms').value = 0;
+            document.getElementById('prop-bathrooms').value = 0;
+            document.getElementById('prop-parking').value = 0;
+            document.getElementById('prop-highlight').value = '';
+            document.getElementById('prop-photo').value = '';
+            updatePropPhotoPreview();
+            document.getElementById('prop-description').value = '';
+            document.getElementById('prop-delete-btn').classList.add('hidden');
+            document.getElementById('prop-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function openEditProperty(code) {
+            const p = crmProps.find(x => x.code === code);
+            if (!p) return;
+            document.getElementById('prop-edit-code').value = p.code;
+            document.getElementById('prop-modal-title').textContent = `Editar ${p.code}`;
+            document.getElementById('prop-code').value = p.code;
+            document.getElementById('prop-code').disabled = true;
+            document.getElementById('prop-purpose').value = p.purpose;
+            document.getElementById('prop-status').value = p.status;
+            document.getElementById('prop-title').value = p.title;
+            document.getElementById('prop-type').value = p.type;
+            document.getElementById('prop-neighborhood').value = p.neighborhood;
+            document.getElementById('prop-city').value = p.city;
+            document.getElementById('prop-price').value = p.price;
+            document.getElementById('prop-area').value = p.area_m2 || 0;
+            document.getElementById('prop-bedrooms').value = p.bedrooms || 0;
+            document.getElementById('prop-bathrooms').value = p.bathrooms || 0;
+            document.getElementById('prop-parking').value = p.parking || 0;
+            document.getElementById('prop-highlight').value = p.highlight || '';
+            document.getElementById('prop-photo').value = p.photo_url || '';
+            updatePropPhotoPreview();
+            document.getElementById('prop-description').value = p.description || '';
+            document.getElementById('prop-delete-btn').classList.remove('hidden');
+            document.getElementById('prop-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closePropertyModal() {
+            document.getElementById('prop-modal').classList.add('hidden');
+        }
+
+        async function savePropertyForm(e) {
+            e.preventDefault();
+            const editCode = document.getElementById('prop-edit-code').value;
+            const body = {
+                code: document.getElementById('prop-code').value.trim(),
+                purpose: document.getElementById('prop-purpose').value,
+                status: document.getElementById('prop-status').value,
+                title: document.getElementById('prop-title').value.trim(),
+                type: document.getElementById('prop-type').value,
+                neighborhood: document.getElementById('prop-neighborhood').value.trim(),
+                city: document.getElementById('prop-city').value.trim(),
+                price: Number(document.getElementById('prop-price').value) || 0,
+                area_m2: Number(document.getElementById('prop-area').value) || 0,
+                bedrooms: Number(document.getElementById('prop-bedrooms').value) || 0,
+                bathrooms: Number(document.getElementById('prop-bathrooms').value) || 0,
+                parking: Number(document.getElementById('prop-parking').value) || 0,
+                highlight: document.getElementById('prop-highlight').value.trim(),
+                photo_url: document.getElementById('prop-photo').value.trim(),
+                description: document.getElementById('prop-description').value.trim()
+            };
+            try {
+                if (editCode) {
+                    delete body.code;
+                    await api(`/api/properties/${encodeURIComponent(editCode)}`, { method: 'PATCH', body: JSON.stringify(body) });
+                } else {
+                    await api('/api/properties', { method: 'POST', body: JSON.stringify(body) });
+                }
+                closePropertyModal();
+                await loadAll();
+                showToast(editCode ? 'Imóvel atualizado!' : 'Imóvel publicado na vitrine!');
+            } catch (err) { showToast(err.message); }
+        }
+
+        function updatePropPhotoPreview() {
+            const url = document.getElementById('prop-photo').value.trim();
+            const img = document.getElementById('prop-photo-preview');
+            if (/^(\/img\/|https?:\/\/)/i.test(url)) { img.src = url; img.classList.remove('hidden'); }
+            else { img.classList.add('hidden'); }
+        }
+
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const objUrl = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(objUrl);
+                    const max = 1600;
+                    const scale = Math.min(1, max / Math.max(img.width, img.height));
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.width * scale);
+                    c.height = Math.round(img.height * scale);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    c.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao processar imagem.')), 'image/jpeg', 0.85);
+                };
+                img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('Imagem inválida.')); };
+                img.src = objUrl;
+            });
+        }
+
+        async function uploadPropertyPhoto(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const lbl = document.getElementById('prop-photo-upload-label');
+            lbl.textContent = 'Enviando...';
+            try {
+                const blob = await compressImage(file);
+                const r = await fetch('/api/images', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'image/jpeg' },
+                    body: blob
+                });
+                if (r.status === 401) {
+                    handleUnauthorized();
+                    throw new Error('Sessão expirada ou não autenticada.');
+                }
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.error || 'Falha no envio');
+                document.getElementById('prop-photo').value = d.url;
+                updatePropPhotoPreview();
+                showToast('Foto enviada!');
+            } catch (e) { showToast(e.message); }
+            finally { lbl.textContent = 'Enviar do celular / PC'; input.value = ''; }
+        }
+
+        async function changePropStatus(code, status) {
+            try {
+                await api(`/api/properties/${encodeURIComponent(code)}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+                await loadAll();
+                showToast(`${code}: ${status}`);
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function deleteEditingProperty() {
+            const code = document.getElementById('prop-edit-code').value;
+            if (!code || !confirm(`Remover ${code} da vitrine e do painel?`)) return;
+            try {
+                await api(`/api/properties/${encodeURIComponent(code)}`, { method: 'DELETE' });
+                closePropertyModal();
+                await loadAll();
+                showToast(`${code} removido.`);
+            } catch (e) { showToast(e.message); }
+        }
+
+        function refreshAllViews() {
+            renderHoje();
+            renderFunnel();
+            renderCRC();
+            renderProps();
+            lucide.createIcons();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const options = { weekday: 'short', day: '2-digit', month: 'short' };
+            document.getElementById('today-date-label').textContent = new Date().toLocaleDateString('pt-BR', options);
+            syncLeadModalityOptions('Compra');
+            lucide.createIcons();
+            loadAll().catch(e => showToast(e.message));
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/app/sw.js').catch(() => {});
+            }
+        });
+    </script>
+</body>
+</html>

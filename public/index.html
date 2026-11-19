@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yolanda Transações Imobiliárias | Iêda Holanda - CRECI-RJ 112406</title>
+    <meta name="description" content="Compra, venda e locação de imóveis em Resende, Itatiaia, Penedo, Quatis e Porto Real com atendimento personalizado por Iêda Holanda (CRECI-RJ 112406).">
+    <link rel="icon" type="image/png" href="/img/logo.png">
+    <link rel="apple-touch-icon" href="/img/logo.png">
+
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+
+    <!-- Configuração da Paleta 'Moderno & Acolhedor' -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sand: {
+                            DEFAULT: '#F5F2EB',
+                            warm: '#FCFBF8',
+                            border: '#E5DFD3'
+                        },
+                        moss: {
+                            DEFAULT: '#2C4A3E',
+                            light: '#3B6152',
+                            dark: '#1E352C',
+                            soft: '#EAF0ED'
+                        },
+                        terracotta: {
+                            DEFAULT: '#C86D51',
+                            hover: '#B55C41',
+                            soft: '#F8EBE7'
+                        },
+                        charcoal: '#232825',
+                        whatsapp: '#25D366'
+                    },
+                    fontFamily: {
+                        heading: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        sans: ['"Inter"', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 30px -10px rgba(44, 74, 62, 0.08)',
+                        'card': '0 4px 20px -2px rgba(44, 74, 62, 0.07)',
+                        'float': '0 12px 28px rgba(37, 211, 102, 0.34)'
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        body {
+            background-color: #F5F2EB;
+            color: #232825;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-moss selection:text-white overflow-x-hidden">
+
+    <!-- ==================== 1. NAVBAR FIXA ==================== -->
+    <header class="sticky top-0 z-40 bg-sand/95 backdrop-blur-md border-b border-sand-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+            
+            <!-- Marca + Logotipo Oficial -->
+            <a href="#inicio" class="flex items-center gap-2.5 sm:gap-3 min-w-0 group">
+                <img src="/img/logo.png"
+                     alt="Logotipo Yolanda Transações Imobiliárias"
+                     class="h-9 sm:h-10 w-auto object-contain shrink-0">
+                <div class="min-w-0">
+                    <span class="block font-heading font-extrabold text-moss text-base sm:text-lg leading-tight tracking-tight truncate">
+                        Yolanda
+                    </span>
+                    <span class="block text-[10px] sm:text-[11px] font-semibold text-moss/75 tracking-wider uppercase truncate">
+                        Transações Imobiliárias
+                    </span>
+                </div>
+            </a>
+
+            <!-- Links de Navegação (Desktop) -->
+            <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-charcoal/85">
+                <a href="#imoveis" class="hover:text-terracotta transition-colors">Imóveis</a>
+                <a href="#sobre" class="hover:text-terracotta transition-colors">Sobre</a>
+                <a href="#anunciar" class="hover:text-terracotta transition-colors">Anunciar</a>
+            </nav>
+
+            <!-- Botões de Ação -->
+            <div class="flex items-center gap-2 shrink-0">
+                <a href="https://crc.yolandaimoveis.com.br" target="_blank" rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2.5 rounded-xl bg-white hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 text-terracotta"></i>
+                    <span class="hidden sm:inline">Área da Corretora</span>
+                    <span class="sm:hidden">Corretora</span>
+                </a>
+
+                <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Vim%20pelo%20site%20da%20Yolanda%20Transa%C3%A7%C3%B5es%20Imobili%C3%A1rias%20e%20gostaria%20de%20um%20atendimento."
+                   target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs sm:text-sm shadow-xs transition-all">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">WhatsApp</span>
+                </a>
+
+                <button type="button" onclick="toggleMobileMenu()" aria-label="Abrir menu"
+                        class="md:hidden p-2.5 rounded-xl bg-white border border-sand-border text-moss">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu Mobile Expansível -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-sand-border px-4 py-3 space-y-2">
+            <a href="#imoveis" onclick="toggleMobileMenu()" class="block py-2.5 px-3 rounded-xl font-heading font-bold text-sm text-moss hover:bg-sand">Imóveis Disponíveis</a>
+            <a href="#sobre" onclick="toggleMobileMenu()" class="block py-2.5 px-3 rounded-xl font-heading font-bold text-sm text-moss hover:bg-sand">Sobre Iêda Holanda</a>
+            <a href="#anunciar" onclick="toggleMobileMenu()" class="block py-2.5 px-3 rounded-xl font-heading font-bold text-sm text-moss hover:bg-sand">Anuncie seu Imóvel</a>
+        </div>
+    </header>
+
+    <!-- ==================== 2. HERO SECTION ==================== -->
+    <section id="inicio" class="pt-8 pb-12 sm:pt-14 sm:pb-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+            
+            <!-- Coluna de Texto e Proposta de Valor -->
+            <div class="lg:col-span-7 space-y-6">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-sand-border shadow-xs">
+                    <span class="w-2 h-2 rounded-full bg-terracotta"></span>
+                    <span class="text-xs font-bold text-moss tracking-wide">Resende • Itatiaia • Penedo • Quatis • Porto Real</span>
+                </div>
+
+                <h1 class="font-heading font-extrabold text-moss text-3xl sm:text-4xl lg:text-5xl leading-[1.15] tracking-tight">
+                    Encontre o imóvel ideal em Resende e região com <span class="text-terracotta">segurança e acolhimento.</span>
+                </h1>
+
+                <p class="text-charcoal/80 text-base sm:text-lg leading-relaxed max-w-2xl">
+                    Assessoria imobiliária personalizada para compra, venda e locação em <strong>Resende e Região</strong>. Transparência jurídica, avaliação criteriosa e acompanhamento completo até a entrega das chaves.
+                </p>
+
+                <!-- Botões Principais -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+                    <a href="#imoveis"
+                       class="px-6 py-4 rounded-2xl bg-moss hover:bg-moss-light text-white font-heading font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-soft transition-all">
+                        <i data-lucide="search" class="w-5 h-5 text-terracotta"></i>
+                        <span>Explorar Portfólio</span>
+                    </a>
+
+                    <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20agendar%20uma%20conversa%20sobre%20im%C3%B3veis%20em%20Resende%20e%20Regi%C3%A3o."
+                       target="_blank" rel="noopener noreferrer"
+                       class="px-6 py-4 rounded-2xl bg-white hover:bg-terracotta-soft text-moss border border-sand-border font-heading font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="message-circle" class="w-5 h-5 text-whatsapp"></i>
+                        <span>(24) 99904-0775</span>
+                    </a>
+                </div>
+
+                <!-- Diferenciais Rápidos -->
+                <div class="grid grid-cols-3 gap-3 pt-2 max-w-xl">
+                    <div class="bg-white/80 p-3.5 rounded-2xl border border-sand-border">
+                        <p class="font-heading font-extrabold text-moss text-sm sm:text-base">CRECI-RJ</p>
+                        <p class="text-xs font-semibold text-terracotta">112406 Ativo</p>
+                    </div>
+                    <div class="bg-white/80 p-3.5 rounded-2xl border border-sand-border">
+                        <p class="font-heading font-extrabold text-moss text-sm sm:text-base">4 Cidades</p>
+                        <p class="text-xs text-charcoal/70">Atuação regional</p>
+                    </div>
+                    <div class="bg-white/80 p-3.5 rounded-2xl border border-sand-border">
+                        <p class="font-heading font-extrabold text-moss text-sm sm:text-base">100% Direto</p>
+                        <p class="text-xs text-charcoal/70">Sem intermediários</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Destaque Arquitetônico + Cartão Flutuante da Corretora -->
+            <div class="lg:col-span-5">
+                <div class="bg-white p-4 sm:p-5 rounded-3xl border border-sand-border shadow-soft space-y-4">
+                    <div class="relative rounded-2xl overflow-hidden aspect-[16/10] bg-moss-soft">
+                        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80"
+                             onerror="this.onerror=null;this.src='https://placehold.co/800x500/2C4A3E/F5F2EB?text=Yolanda+Transa%C3%A7%C3%B5es+Imobili%C3%A1rias';"
+                             alt="Residência contemporânea em Resende e Região"
+                             class="w-full h-full object-cover">
+                        <div class="absolute top-3 left-3 px-3 py-1 rounded-full bg-moss/90 backdrop-blur-xs text-white text-xs font-bold">
+                            Curadoria Exclusiva
+                        </div>
+                    </div>
+
+                    <!-- Cartão Flutuante da Corretora com Foto 1:1 -->
+                    <div class="bg-sand rounded-2xl p-4 border border-sand-border flex items-center gap-4">
+                        <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                             onerror="this.onerror=null;this.src='https://placehold.co/240x240/2C4A3E/F5F2EB?text=I%C3%AAda+Holanda';"
+                             alt="Iêda Holanda - Corretora de Imóveis"
+                             class="w-24 h-24 sm:w-28 sm:h-28 aspect-square rounded-2xl object-cover object-top shrink-0 border-2 border-white shadow-sm">
+
+                        <div class="min-w-0 flex-1 space-y-1.5">
+                            <span class="inline-block px-2.5 py-0.5 rounded-md bg-moss-soft text-moss text-[11px] font-bold">
+                                CRECI-RJ 112406
+                            </span>
+                            <h2 class="font-heading font-extrabold text-moss text-lg sm:text-xl truncate">
+                                Iêda Holanda
+                            </h2>
+                            <p class="text-xs text-charcoal/75 leading-snug">
+                                Especialista em imóveis residenciais, condomínios e investimentos em Resende e Região.
+                            </p>
+                            <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20falar%20com%20voc%C3%AA%20sobre%20um%20im%C3%B3vel."
+                               target="_blank" rel="noopener noreferrer"
+                               class="inline-flex items-center gap-1.5 text-xs font-heading font-bold text-terracotta hover:text-terracotta-hover pt-0.5">
+                                <span>Falar diretamente no WhatsApp</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==================== 3. PORTFÓLIO DE IMÓVEIS & FILTROS ==================== -->
+    <section id="imoveis" class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 border-t border-sand-border/80">
+        <div class="max-w-7xl mx-auto space-y-6">
+            
+            <!-- Cabeçalho da Seção + Barra Sutil de Status & Acesso da Corretora -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-terracotta">Carteira Selecionada</span>
+                    <h2 class="font-heading font-extrabold text-moss text-2xl sm:text-3xl mt-1">
+                        Imóveis Disponíveis
+                    </h2>
+                    <p class="text-xs sm:text-sm text-charcoal/75 mt-1">
+                        Filtre por finalidade, bairro ou código e solicite atendimento imediato pelo WhatsApp.
+                    </p>
+                </div>
+
+                <!-- Barra Sutil Acima do Portfólio -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div id="sheets-live-badge" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-sand-border text-xs font-semibold text-moss">
+                        <span id="sheets-live-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span id="sheets-live-text">Catálogo ao vivo</span>
+                    </div>
+
+                    <button type="button" onclick="loadCatalog(true)" title="Atualizar imóveis agora"
+                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">
+                        <i data-lucide="refresh-cw" id="sync-icon" class="w-3.5 h-3.5 text-terracotta"></i>
+                        <span>Sincronizar</span>
+                    </button>
+
+                    <a href="https://crc.yolandaimoveis.com.br" target="_blank" rel="noopener noreferrer"
+                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-moss hover:bg-moss-light text-white font-heading font-bold text-xs transition-colors">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-terracotta"></i>
+                        <span>Área da Corretora</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Barra de Filtros Interativos -->
+            <div class="bg-white p-4 sm:p-5 rounded-3xl border border-sand-border shadow-card space-y-4">
+                
+                <!-- Abas Rápidas de Finalidade + Contagem -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-sand-border">
+                    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        <button type="button" onclick="setFinalidadeFilter('Todos')" data-fin="Todos"
+                                class="fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-bold bg-moss text-white transition-all">
+                            Todos os Imóveis
+                        </button>
+                        <button type="button" onclick="setFinalidadeFilter('Comprar')" data-fin="Comprar"
+                                class="fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition-all">
+                            Comprar
+                        </button>
+                        <button type="button" onclick="setFinalidadeFilter('Alugar')" data-fin="Alugar"
+                                class="fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition-all">
+                            Alugar
+                        </button>
+                    </div>
+
+                    <span id="results-counter" class="text-xs font-bold text-moss/75">
+                        Exibindo 0 imóveis
+                    </span>
+                </div>
+
+                <!-- Inputs de Filtro Detalhado -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                    
+                    <!-- Localidade / Bairro (populado dinamicamente apenas com bairros disponíveis) -->
+                    <div class="lg:col-span-3">
+                        <label for="filter-location" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
+                            Localidade / Bairro
+                        </label>
+                        <select id="filter-location" onchange="applyFilters()"
+                                class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
+                            <option value="Todos">Todas as localidades</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Imóvel -->
+                    <div class="lg:col-span-3">
+                        <label for="filter-type" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
+                            Tipo de Imóvel
+                        </label>
+                        <select id="filter-type" onchange="applyFilters()"
+                                class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
+                            <option value="Todos">Todos os tipos</option>
+                            <option value="Apartamento">Apartamento</option>
+                            <option value="Casa">Casa</option>
+                            <option value="Terreno">Terreno</option>
+                            <option value="Comercial">Comercial</option>
+                            <option value="Chácara/Sítio">Chácara/Sítio</option>
+                        </select>
+                    </div>
+
+                    <!-- Dormitórios -->
+                    <div class="lg:col-span-2">
+                        <label for="filter-bedrooms" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
+                            Dormitórios
+                        </label>
+                        <select id="filter-bedrooms" onchange="applyFilters()"
+                                class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
+                            <option value="0">Qualquer</option>
+                            <option value="1">1+ quarto</option>
+                            <option value="2">2+ quartos</option>
+                            <option value="3">3+ quartos</option>
+                            <option value="4">4+ quartos</option>
+                        </select>
+                    </div>
+
+                    <!-- Busca por Código ou Palavra-chave -->
+                    <div class="lg:col-span-4">
+                        <label for="filter-search" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
+                            Código ou Palavra-chave
+                        </label>
+                        <div class="relative flex gap-2">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 text-moss/50 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                <input type="text" id="filter-search" oninput="applyFilters()"
+                                       placeholder="Ex: YTI-001, condomínio, piscina..."
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
+                            </div>
+                            <button type="button" onclick="resetFilters()" title="Limpar filtros"
+                                    class="px-3 py-2.5 rounded-xl bg-sand hover:bg-terracotta-soft text-moss hover:text-terracotta border border-sand-border text-xs font-bold shrink-0 transition-colors">
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Grid Responsivo de Cards de Imóveis -->
+            <div id="properties-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Cards renderizados dinamicamente -->
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==================== 4. SOBRE A CORRETORA ==================== -->
+    <section id="sobre" class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto bg-moss text-sand rounded-3xl p-6 sm:p-10 lg:p-12 shadow-soft relative overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                
+                <!-- Moldura 1:1 Sem Cortes + Faixa CRECI Acoplada Diretamente -->
+                <div class="lg:col-span-5">
+                    <div class="w-full max-w-md mx-auto bg-moss-dark rounded-3xl border border-white/15 overflow-hidden shadow-2xl">
+                        <div class="w-full aspect-square overflow-hidden bg-moss-dark">
+                            <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                                 onerror="this.onerror=null;this.src='https://placehold.co/600x600/1E352C/F5F2EB?text=I%C3%AAda+Holanda';"
+                                 alt="Iêda Holanda - Corretora de Imóveis"
+                                 class="w-full h-full aspect-square object-cover object-top block">
+                        </div>
+                        <div class="bg-moss-dark px-5 py-3.5 border-t border-white/10 flex items-center justify-between gap-2">
+                            <span class="text-xs font-medium text-sand/80">Registro Profissional</span>
+                            <span class="px-3 py-1 rounded-full bg-white text-moss font-heading font-extrabold text-xs">
+                                CRECI-RJ 112406
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biografia & Diferenciais -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-terracotta text-xs font-bold uppercase tracking-wider">
+                        Sobre a Corretora
+                    </div>
+
+                    <h2 class="font-heading font-extrabold text-white text-3xl sm:text-4xl">
+                        Iêda Holanda
+                    </h2>
+
+                    <div class="space-y-4 text-sand/90 text-sm sm:text-base leading-relaxed">
+                        <p>
+                            À frente da <strong class="text-white">Yolanda Transações Imobiliárias</strong>, atuo com foco total na realização segura de negócios imobiliários em <strong class="text-white">Resende, Itatiaia, Penedo, Quatis e Porto Real</strong>.
+                        </p>
+                        <p>
+                            Acredito que comprar, vender ou alugar um imóvel vai muito além de metros quadrados: trata-se de ouvir a história de cada família, entender seu momento de vida e conduzir cada etapa — da visita à escritura — com clareza, ética e agilidade.
+                        </p>
+                    </div>
+
+                    <!-- Cards de Destaque -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <div class="bg-moss-dark/80 p-4 rounded-2xl border border-white/10 flex items-start gap-3">
+                            <div class="p-2.5 rounded-xl bg-white/10 text-terracotta shrink-0">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-white text-sm">Segurança Documental</h3>
+                                <p class="text-xs text-sand/75 mt-1 leading-relaxed">
+                                    Análise criteriosa de certidões e suporte completo no financiamento bancário.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-moss-dark/80 p-4 rounded-2xl border border-white/10 flex items-start gap-3">
+                            <div class="p-2.5 rounded-xl bg-white/10 text-terracotta shrink-0">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-white text-sm">Conhecimento Local</h3>
+                                <p class="text-xs text-sand/75 mt-1 leading-relaxed">
+                                    Avaliação realista de mercado nos principais bairros e condomínios da região.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Vi%20seu%20perfil%20no%20site%20da%20Yolanda%20Transa%C3%A7%C3%B5es%20Imobili%C3%A1rias%20e%20gostaria%20de%20conversar."
+                           target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm sm:text-base shadow-md transition-all">
+                            <i data-lucide="message-circle" class="w-5 h-5"></i>
+                            <span>Conversar diretamente com a Iêda</span>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 5. ANUNCIE SEU IMÓVEL (CAPTAÇÃO DE PROPRIETÁRIOS) ==================== -->
+    <section id="anunciar" class="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto bg-white rounded-3xl border border-sand-border shadow-soft p-6 sm:p-10">
+            <div class="max-w-2xl mb-7">
+                <span class="text-xs font-bold uppercase tracking-widest text-terracotta">Proprietários</span>
+                <h2 class="font-heading font-extrabold text-moss text-2xl sm:text-3xl mt-1">
+                    Quer vender ou alugar seu imóvel com segurança?
+                </h2>
+                <p class="text-xs sm:text-sm text-charcoal/75 mt-2 leading-relaxed">
+                    Preencha os dados básicos abaixo para iniciar uma avaliação personalizada e divulgação qualificada na carteira da <strong>Yolanda Transações Imobiliárias</strong>.
+                </p>
+            </div>
+
+            <form onsubmit="handleOwnerSubmit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" id="owner-website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">
+                <div>
+                    <label for="owner-name" class="block text-xs font-bold text-moss mb-1">Seu Nome *</label>
+                    <input type="text" id="owner-name" required placeholder="Ex: Carlos Eduardo"
+                           class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss">
+                </div>
+
+                <div>
+                    <label for="owner-phone" class="block text-xs font-bold text-moss mb-1">Seu WhatsApp *</label>
+                    <input type="tel" id="owner-phone" required placeholder="(24) 99999-9999"
+                           class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss">
+                </div>
+
+                <div>
+                    <label for="owner-purpose" class="block text-xs font-bold text-moss mb-1">Finalidade *</label>
+                    <select id="owner-purpose"
+                            class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss">
+                        <option value="Venda">Quero Vender</option>
+                        <option value="Locação">Quero Alugar</option>
+                        <option value="Venda ou Locação">Venda ou Locação</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="owner-type" class="block text-xs font-bold text-moss mb-1">Tipo e Bairro/Cidade *</label>
+                    <input type="text" id="owner-type" required placeholder="Ex: Casa 3 quartos no Manejo, Resende"
+                           class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="owner-notes" class="block text-xs font-bold text-moss mb-1">Detalhes ou Valor Pretendido (opcional)</label>
+                    <textarea id="owner-notes" rows="2" placeholder="Informe metragem aproximada, diferenciais ou valor estimado..."
+                              class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:border-moss"></textarea>
+                </div>
+
+                <!-- Rodapé do Formulário com Avatar 1:1 da Iêda Holanda -->
+                <div class="sm:col-span-2 pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-sand-warm p-4 rounded-2xl border border-sand-border">
+                    <div class="flex items-center gap-3">
+                        <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                             onerror="this.onerror=null;this.src='https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH';"
+                             alt="Iêda Holanda"
+                             class="w-12 h-12 aspect-square rounded-full object-cover object-top border-2 border-terracotta shrink-0">
+                        <div>
+                            <p class="font-heading font-bold text-moss text-sm">Atendimento direto com Iêda Holanda</p>
+                            <p class="text-xs text-charcoal/70">CRECI-RJ 112406 • Resende e Região</p>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="px-6 py-3.5 rounded-xl bg-moss hover:bg-moss-light text-white font-heading font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="send" class="w-4 h-4 text-terracotta"></i>
+                        <span>Enviar pelo WhatsApp</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- ==================== 6. FOOTER ==================== -->
+    <footer class="bg-moss-dark text-sand/85 pt-12 pb-24 sm:pb-12 px-4 sm:px-6 lg:px-8 border-t border-white/10">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
+            
+            <div class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <img src="https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+                         onerror="this.onerror=null;this.src='https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH';"
+                         alt="Iêda Holanda"
+                         class="w-10 h-10 aspect-square rounded-full object-cover object-top border-2 border-terracotta shrink-0">
+                    <div>
+                        <p class="font-heading font-extrabold text-white text-base">Yolanda Transações Imobiliárias</p>
+                        <p class="text-xs text-terracotta font-semibold">Iêda Holanda • CRECI-RJ 112406</p>
+                    </div>
+                </div>
+                <p class="text-xs text-sand/70 leading-relaxed">
+                    Compra, venda e locação de imóveis residenciais, comerciais e terrenos em Resende, Itatiaia, Penedo, Quatis e Porto Real.
+                </p>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <p class="font-heading font-bold text-white text-sm mb-2">Regiões de Atuação</p>
+                <p>Resende (Manejo, Campos Elíseos, Jardim Jalisco, Cidade Alegria, Boa Vista I e II, Mirante da Serra, Mirante da Colina e outros )</p>
+                <p>Penedo & Itatiaia</p>
+                <p>Porto Real & Quatis</p>
+            </div>
+
+            <div class="space-y-2.5 text-xs">
+                <p class="font-heading font-bold text-white text-sm mb-2">Contato Direto</p>
+                <a href="https://wa.me/5524999040775" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-2 text-white font-bold hover:text-terracotta transition-colors">
+                    <i data-lucide="phone" class="w-4 h-4 text-whatsapp"></i>
+                    <span>(24) 99904-0775</span>
+                </a>
+                <p class="text-sand/70">Atendimento com hora marcada presencial ou por videochamada.</p>
+            </div>
+
+        </div>
+
+        <div class="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-sand/60">
+            <p>© <span id="current-year">2026</span> Yolanda Transações Imobiliárias — Iêda Holanda Ferreira Sousa (CRECI-RJ 112406).</p>
+            <nav aria-label="Documentos legais" class="flex items-center gap-4">
+                <a href="/privacidade" class="hover:text-white underline-offset-2 hover:underline transition-colors">Política de Privacidade</a>
+                <a href="/termos" class="hover:text-white underline-offset-2 hover:underline transition-colors">Termos de Serviço</a>
+            </nav>
+        </div>
+    </footer>
+
+    <!-- BOTÃO FLUTUANTE WHATSAPP -->
+    <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20im%C3%B3veis."
+       target="_blank" rel="noopener noreferrer" aria-label="Conversar com Iêda Holanda no WhatsApp"
+       class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2.5 px-4 py-3.5 rounded-full bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs sm:text-sm shadow-float transition-transform hover:scale-105">
+        <i data-lucide="message-circle" class="w-5 h-5"></i>
+        <span class="hidden sm:inline">Falar com Iêda</span>
+    </a>
+
+    <!-- ==================== 7. MODAL DETALHES DO IMÓVEL ==================== -->
+    <div id="property-modal" class="fixed inset-0 z-50 hidden bg-charcoal/75 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
+        <div class="min-h-full flex items-center justify-center">
+            <div id="property-modal-content" class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-sand-border">
+                <!-- Preenchido dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO TOAST -->
+    <div id="toast" class="fixed top-20 right-4 z-50 hidden max-w-sm bg-moss text-white px-4 py-3.5 rounded-2xl shadow-xl border border-white/15 flex items-center gap-3">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-whatsapp shrink-0"></i>
+        <p id="toast-message" class="text-xs sm:text-sm font-medium"></p>
+    </div>
+
+    <!-- ==================== JAVASCRIPT ==================== -->
+    <script>
+        (function () {
+            "use strict";
+
+            const BROKER_PHONE = "5524999040775";
+            const BROKER_AVATAR = "https://i.ibb.co/RTTfKmBb/fotocorretora.jpg";
+
+            const DEFAULT_ARCH_FALLBACK = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80";
+            const RESOLVING_PLACEHOLDER = "https://placehold.co/900x560/EAF0ED/2C4A3E?text=Carregando+Foto+do+Im%C3%B3vel...";
+            const RESOLVED_IMG_CACHE_KEY = "yti_resolved_img_v1";
+
+            // Mapa instantâneo para links ImgBB conhecidos
+            const KNOWN_IMGBB_MAP = {
+                "https://ibb.co/sd7SvxgQ": "https://i.ibb.co/JwZLR6c2/casa.png",
+                "https://ibb.co/3mvthgsG": "https://i.ibb.co/RTTfKmBb/fotocorretora.jpg"
+            };
+
+            const inFlightImageResolutions = {};
+
+            // Último catálogo válido fica guardado no navegador; nunca se exibem imóveis de exemplo.
+            const CATALOG_CACHE_KEY = "yti_catalog_v2";
+            function readCatalogCache() {
+                try {
+                    const o = JSON.parse(safeGetStorage(CATALOG_CACHE_KEY, "null"));
+                    return o && Array.isArray(o.items) ? o.items : [];
+                } catch (e) { return []; }
+            }
+            function saveCatalogCache(items) {
+                safeSetStorage(CATALOG_CACHE_KEY, JSON.stringify({ at: Date.now(), items: items }));
+            }
+            function esc(v) {
+                return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+                    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+                });
+            }
+            let catalogFailed = false;
+            let properties = readCatalogCache();
+            let apiNeighborhoods = null;
+            let activeFinalidade = "Todos";
+
+            // ==================== HELPERS SEGUROS ====================
+            function safeRefreshIcons() {
+                try {
+                    if (window.lucide && typeof window.lucide.createIcons === "function") {
+                        window.lucide.createIcons();
+                    }
+                } catch (e) {}
+            }
+
+            function safeGetStorage(key, fallback) {
+                try {
+                    const val = window.localStorage.getItem(key);
+                    return val !== null ? val : fallback;
+                } catch (e) {
+                    return fallback;
+                }
+            }
+
+            function safeSetStorage(key, value) {
+                try {
+                    window.localStorage.setItem(key, value);
+                } catch (e) {}
+            }
+
+            function getResolvedImageCache() {
+                try {
+                    const raw = safeGetStorage(RESOLVED_IMG_CACHE_KEY, "{}");
+                    const parsed = JSON.parse(raw);
+                    return parsed && typeof parsed === "object" ? parsed : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            function saveResolvedImageCache(key, directUrl) {
+                try {
+                    const cache = getResolvedImageCache();
+                    cache[key] = directUrl;
+                    safeSetStorage(RESOLVED_IMG_CACHE_KEY, JSON.stringify(cache));
+                } catch (e) {}
+            }
+
+            function normalizeImgbbViewerUrl(url) {
+                const trimmed = String(url || "").trim();
+                const match = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?ibb\.co\/([a-zA-Z0-9]+)\/?$/i);
+                if (!match || !match[1]) return null;
+                return "https://ibb.co/" + match[1];
+            }
+
+            function extractDirectImgbbFromHtml(html) {
+                const text = String(html || "");
+                const ogMatch1 = text.match(/<meta[^>]+property=["']og:image["'][^>]+content=["'](https:\/\/i\.ibb\.co\/[^"']+)["']/i);
+                if (ogMatch1 && ogMatch1[1]) return ogMatch1[1];
+
+                const ogMatch2 = text.match(/<meta[^>]+content=["'](https:\/\/i\.ibb\.co\/[^"']+)["'][^>]+property=["']og:image["']/i);
+                if (ogMatch2 && ogMatch2[1]) return ogMatch2[1];
+
+                const imgRegex = /<img[^>]+src=["'](https:\/\/i\.ibb\.co\/[^"']+)["']/gi;
+                let m;
+                while ((m = imgRegex.exec(text)) !== null) {
+                    if (m[1] && m[1].indexOf("/avatar/") === -1) {
+                        return m[1];
+                    }
+                }
+                return null;
+            }
+
+            function applyResolvedUrlToDom(normalizedKey, directUrl) {
+                properties.forEach(function (p) {
+                    if (normalizeImgbbViewerUrl(p.foto_url) === normalizedKey || p.foto_url === normalizedKey) {
+                        p.resolved_foto_url = directUrl;
+                    }
+                });
+
+                document.querySelectorAll("img[data-raw-img]").forEach(function (imgEl) {
+                    if (imgEl.getAttribute("data-raw-img") === normalizedKey) {
+                        imgEl.src = directUrl;
+                    }
+                });
+            }
+
+            async function fetchAndCacheImgbbDirectUrl(normalizedKey) {
+                if (inFlightImageResolutions[normalizedKey]) {
+                    return inFlightImageResolutions[normalizedKey];
+                }
+
+                const proxies = [
+                    "https://api.allorigins.win/raw?url=" + encodeURIComponent(normalizedKey),
+                    "https://corsproxy.io/?" + encodeURIComponent(normalizedKey)
+                ];
+
+                const task = (async function () {
+                    for (let i = 0; i < proxies.length; i++) {
+                        try {
+                            const resp = await fetch(proxies[i]);
+                            if (!resp.ok) continue;
+                            const html = await resp.text();
+                            const directUrl = extractDirectImgbbFromHtml(html);
+                            if (directUrl) {
+                                saveResolvedImageCache(normalizedKey, directUrl);
+                                applyResolvedUrlToDom(normalizedKey, directUrl);
+                                return directUrl;
+                            }
+                        } catch (err) {}
+                    }
+                    applyResolvedUrlToDom(normalizedKey, DEFAULT_ARCH_FALLBACK);
+                    return DEFAULT_ARCH_FALLBACK;
+                })().finally(function () {
+                    delete inFlightImageResolutions[normalizedKey];
+                });
+
+                inFlightImageResolutions[normalizedKey] = task;
+                return task;
+            }
+
+            function resolvePropertyImageUrl(rawUrl, imgElement) {
+                const clean = String(rawUrl || "").trim();
+                if (!clean) {
+                    if (imgElement) imgElement.src = DEFAULT_ARCH_FALLBACK;
+                    return DEFAULT_ARCH_FALLBACK;
+                }
+
+                const driveMatch = clean.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i);
+                if (driveMatch && driveMatch[1]) {
+                    const driveDirect = "https://drive.google.com/thumbnail?id=" + driveMatch[1] + "&sz=w1200";
+                    if (imgElement) imgElement.src = driveDirect;
+                    return driveDirect;
+                }
+
+                const normalizedImgbb = normalizeImgbbViewerUrl(clean);
+                if (normalizedImgbb) {
+                    if (imgElement) {
+                        imgElement.setAttribute("data-raw-img", normalizedImgbb);
+                    }
+
+                    if (KNOWN_IMGBB_MAP[normalizedImgbb]) {
+                        const mapped = KNOWN_IMGBB_MAP[normalizedImgbb];
+                        if (imgElement) imgElement.src = mapped;
+                        return mapped;
+                    }
+
+                    const cache = getResolvedImageCache();
+                    if (cache[normalizedImgbb]) {
+                        const cachedUrl = cache[normalizedImgbb];
+                        if (imgElement) imgElement.src = cachedUrl;
+                        return cachedUrl;
+                    }
+
+                    if (imgElement) imgElement.src = RESOLVING_PLACEHOLDER;
+                    fetchAndCacheImgbbDirectUrl(normalizedImgbb);
+                    return RESOLVING_PLACEHOLDER;
+                }
+
+                if (imgElement) imgElement.src = clean;
+                return clean;
+            }
+
+            function handlePropertyImgError(imgEl) {
+                if (!imgEl || imgEl.dataset.fallbackApplied === "1") return;
+                imgEl.dataset.fallbackApplied = "1";
+                imgEl.onerror = null;
+                imgEl.src = DEFAULT_ARCH_FALLBACK;
+            }
+
+            function normalizeText(str) {
+                return String(str || "")
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .trim();
+            }
+
+            function formatCurrency(value, finalidade) {
+                const num = Number(value) || 0;
+                const formatted = num.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                    maximumFractionDigits: 0
+                });
+                return finalidade === "Alugar" ? formatted + "/mês" : formatted;
+            }
+
+            function showToast(msg) {
+                const toast = document.getElementById("toast");
+                const textEl = document.getElementById("toast-message");
+                if (!toast || !textEl) return;
+                textEl.textContent = msg;
+                toast.classList.remove("hidden");
+                clearTimeout(window.__yolandaToastTimer);
+                window.__yolandaToastTimer = setTimeout(function () {
+                    toast.classList.add("hidden");
+                }, 3800);
+            }
+
+            function updateSyncStatusUI(state, label) {
+                const dot = document.getElementById("sheets-live-dot");
+                const text = document.getElementById("sheets-live-text");
+
+                let dotColor = "bg-emerald-500";
+                if (state === "loading") dotColor = "bg-amber-500 animate-pulse";
+                else if (state === "empty") dotColor = "bg-terracotta";
+                else if (state === "error") dotColor = "bg-amber-600";
+
+                if (dot) dot.className = "w-2 h-2 rounded-full " + dotColor;
+                if (text) text.textContent = label;
+            }
+
+            // ==================== CARREGAMENTO DO CATÁLOGO ====================
+            async function loadCatalog(manualTrigger) {
+                const syncIcon = document.getElementById("sync-icon");
+                if (syncIcon) syncIcon.classList.add("animate-spin");
+                updateSyncStatusUI("loading", "Atualizando catálogo...");
+                try {
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(function () { ctrl.abort(); }, 8000);
+                    const resp = await fetch("/api/public/properties", { signal: ctrl.signal });
+                    clearTimeout(timer);
+                    if (!resp.ok) throw new Error("HTTP " + resp.status);
+                    const data = await resp.json();
+                    const items = (data.items || []).map(function (p) {
+                        const raw = /^https?:\/\//i.test(p.foto_url || "") ? p.foto_url : DEFAULT_ARCH_FALLBACK;
+                        p.foto_url = raw;
+                        p.resolved_foto_url = resolvePropertyImageUrl(raw);
+                        return p;
+                    });
+                    properties = items;
+                    apiNeighborhoods = Array.isArray(data.neighborhoods) ? data.neighborhoods : null;
+                    catalogFailed = false;
+                    saveCatalogCache(items);
+                    const nowStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                    updateSyncStatusUI("connected", "Atualizado • " + items.length + (items.length === 1 ? " imóvel (" : " imóveis (") + nowStr + ")");
+                    if (manualTrigger) showToast(items.length + (items.length === 1 ? " imóvel disponível." : " imóveis disponíveis."));
+                } catch (err) {
+                    properties = readCatalogCache();
+                    apiNeighborhoods = null;
+                    catalogFailed = properties.length === 0;
+                    updateSyncStatusUI("error", "Sem conexão com o catálogo • exibindo última versão salva");
+                    if (manualTrigger) showToast("Não foi possível atualizar agora. Tente novamente em instantes.");
+                } finally {
+                    if (syncIcon) syncIcon.classList.remove("animate-spin");
+                    populateLocationDropdown();
+                    applyFilters();
+                    openPropertyFromUrlIfPresent();
+                }
+            }
+
+            // ==================== CONTATO & WHATSAPP ====================
+            async function sendContactAsync(payload) {
+                try {
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(function () { ctrl.abort(); }, 8000);
+                    const r = await fetch("/api/public/contact", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                        signal: ctrl.signal
+                    });
+                    clearTimeout(timer);
+                    let d = null; try { d = await r.json(); } catch (e) {}
+                    if (r.ok) return { ok: true };
+                    return { ok: false, status: r.status, error: (d && d.error) || "Não foi possível registrar o seu contato." };
+                } catch (e) {
+                    return { ok: false, status: 0, error: "Sem conexão para registrar o seu contato." };
+                }
+            }
+
+            function openBlankWindow() {
+                const w = window.open("about:blank", "_blank");
+                try { if (w) w.opener = null; } catch (e) {}
+                return w;
+            }
+
+            function goToWhatsApp(url, w) {
+                if (w && !w.closed) w.location.href = url; else window.location.href = url;
+            }
+
+            function setBusy(btn, busy) {
+                if (!btn) return;
+                btn.disabled = busy;
+                btn.classList.toggle("opacity-60", busy);
+            }
+
+            async function submitInterest(event, codigo) {
+                event.preventDefault();
+                const prop = properties.find(function (p) { return p.codigo === codigo; });
+                if (!prop) return;
+                const name = document.getElementById("interest-name").value.trim();
+                const phone = document.getElementById("interest-phone").value.trim();
+                const digits = phone.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+                if (name.length < 2 || digits.length < 10 || digits.length > 11) {
+                    showToast("Informe seu nome e seu WhatsApp com DDD, ex.: (24) 99999-9999.");
+                    return;
+                }
+                const btn = document.getElementById("interest-submit");
+                const w = openBlankWindow();
+                setBusy(btn, true);
+                const res = await sendContactAsync({
+                    kind: "interesse",
+                    name: name,
+                    phone: phone,
+                    property_code: codigo,
+                    website: (document.getElementById("interest-website") || {}).value || ""
+                });
+                setBusy(btn, false);
+                if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
+                goToWhatsApp(getWhatsAppPropertyLink(prop, name), w);
+                showToast(res.ok ? "Contato registrado! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o contato agora).");
+            }
+
+            // ==================== FILTRO DINÂMICO DE LOCALIDADE / BAIRRO ====================
+            function populateLocationDropdown() {
+                const select = document.getElementById("filter-location");
+                if (!select) return;
+                const previousVal = select.value;
+
+                // Extrai exclusivamente bairros de imóveis ativos e disponíveis (sem lista fixa)
+                const availableNeighborhoods = properties
+                    .filter(function (p) {
+                        return normalizeText(p.status) === "disponivel" && String(p.bairro || "").trim() !== "";
+                    })
+                    .map(function (p) {
+                        return String(p.bairro).trim();
+                    });
+
+                const sourceList = availableNeighborhoods.length > 0
+                    ? availableNeighborhoods
+                    : (Array.isArray(apiNeighborhoods) ? apiNeighborhoods.map(function (b) { return String(b || "").trim(); }).filter(Boolean) : []);
+
+                const uniqueByNorm = new Map();
+                sourceList.forEach(function (bairro) {
+                    const key = normalizeText(bairro);
+                    if (key && !uniqueByNorm.has(key)) {
+                        uniqueByNorm.set(key, bairro);
+                    }
+                });
+
+                const sorted = Array.from(uniqueByNorm.values()).sort(function (a, b) {
+                    return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+                });
+
+                select.innerHTML = '<option value="Todos">Todas as localidades</option>' +
+                    sorted.map(function (loc) {
+                        return '<option value="' + esc(loc) + '">' + esc(loc) + '</option>';
+                    }).join("");
+
+                if (sorted.indexOf(previousVal) !== -1) {
+                    select.value = previousVal;
+                } else {
+                    select.value = "Todos";
+                }
+            }
+
+            function getWhatsAppPropertyLink(prop, name) {
+                const msg = "Olá Iêda Holanda! Tenho interesse no imóvel *" + prop.codigo + " - " + prop.titulo + "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias." + (name ? " Meu nome é " + name + "." : "");
+                return "https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg);
+            }
+
+            // ==================== ENCAMINHAR ANÚNCIO VIA WHATSAPP (SEM NÚMERO FIXO) ====================
+            function getPropertyDirectShareUrl(prop) {
+                const base = window.location.origin + window.location.pathname;
+                return base + "?imovel=" + encodeURIComponent(prop.codigo) + "#imoveis";
+            }
+
+            function getWhatsAppForwardUrl(prop) {
+                const finalidadeLabel = prop.finalidade === "Alugar" ? "Locação" : "Venda";
+                const valorFormatado = formatCurrency(prop.valor, prop.finalidade);
+                const linkDireto = getPropertyDirectShareUrl(prop);
+                const text =
+                    "Olha este imóvel que encontrei na *Yolanda Transações Imobiliárias*:\n\n" +
+                    "*" + prop.titulo + "*\n" +
+                    "• Código: " + prop.codigo + "\n" +
+                    "• Finalidade: " + finalidadeLabel + "\n" +
+                    "• Localização: " + prop.bairro + " - " + prop.cidade + "\n" +
+                    "• Valor: " + valorFormatado + "\n\n" +
+                    "Veja os detalhes aqui:\n" + linkDireto;
+                return "https://api.whatsapp.com/send?text=" + encodeURIComponent(text);
+            }
+
+            function sharePropertyWhatsApp(codigo) {
+                const prop = properties.find(function (p) { return p.codigo === codigo; });
+                if (!prop) return;
+                window.open(getWhatsAppForwardUrl(prop), "_blank", "noopener,noreferrer");
+            }
+
+            function renderProperties(list) {
+                const grid = document.getElementById("properties-grid");
+                const counter = document.getElementById("results-counter");
+                if (!grid) return;
+
+                if (counter) {
+                    counter.textContent = "Exibindo " + list.length + (list.length === 1 ? " imóvel" : " imóveis");
+                }
+
+                if (list.length === 0) {
+                    grid.innerHTML =
+                        '<div class="col-span-full bg-white rounded-3xl border border-sand-border p-10 text-center space-y-3">' +
+                            '<p class="font-heading font-bold text-moss text-lg">' + (catalogFailed ? "Catálogo temporariamente indisponível" : "Nenhum imóvel encontrado com esses filtros") + '</p>' +
+                            '<p class="text-xs sm:text-sm text-charcoal/70">Tente limpar os filtros ou fale diretamente com a Iêda Holanda para opções fora do catálogo.</p>' +
+                            '<div class="pt-2">' +
+                                '<button type="button" onclick="resetFilters()" class="px-5 py-2.5 rounded-xl bg-moss text-white font-heading font-bold text-xs">Limpar Filtros</button>' +
+                            '</div>' +
+                        '</div>';
+                    return;
+                }
+
+                grid.innerHTML = list.map(function (prop) {
+                    const isRental = prop.finalidade === "Alugar";
+                    const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
+                    const destaqueHtml = prop.destaque
+                        ? '<span class="px-2.5 py-1 rounded-full bg-white/95 text-moss font-heading font-bold text-[11px] shadow-xs">' + esc(prop.destaque) + '</span>'
+                        : "";
+
+                    const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
+                    const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
+                    const safeCodeAttr = prop.codigo.replace(/'/g, "\\'");
+
+                    return (
+                        '<article class="bg-white rounded-3xl border border-sand-border shadow-card overflow-hidden flex flex-col justify-between group hover:border-moss/35 transition-all">' +
+                            '<div>' +
+                                '<div class="relative aspect-[16/10] bg-moss-soft overflow-hidden">' +
+                                    '<img src="' + esc(resolvedImg) + '" ' +
+                                         'data-raw-img="' + esc(normalizedRawKey) + '" ' +
+                                         'onerror="handlePropertyImgError(this, \'' + safeCodeAttr + '\')" ' +
+                                         'alt="' + esc(prop.titulo) + '" ' +
+                                         'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">' +
+                                    '<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">' +
+                                        '<span class="px-3 py-1 rounded-full text-[11px] font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
+                                        destaqueHtml +
+                                    '</div>' +
+                                    '<span class="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-charcoal/80 text-white font-mono text-[11px] font-bold">' + esc(prop.codigo) + '</span>' +
+                                '</div>' +
+
+                                '<div class="p-5 space-y-3">' +
+                                    '<div>' +
+                                        '<p class="text-xs font-semibold text-terracotta flex items-center gap-1">' +
+                                            '<i data-lucide="map-pin" class="w-3.5 h-3.5"></i>' +
+                                            '<span>' + esc(prop.bairro) + ' • ' + esc(prop.cidade) + '</span>' +
+                                        '</p>' +
+                                        '<h3 class="font-heading font-bold text-moss text-base sm:text-lg leading-snug mt-1 line-clamp-2">' + esc(prop.titulo) + '</h3>' +
+                                    '</div>' +
+
+                                    '<p class="font-heading font-extrabold text-charcoal text-xl sm:text-2xl">' +
+                                        formatCurrency(prop.valor, prop.finalidade) +
+                                    '</p>' +
+
+                                    '<div class="grid grid-cols-4 gap-2 pt-2 border-t border-sand-border text-center">' +
+                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
+                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.area_m2 || "-") + ' m²</span>' +
+                                            '<span class="block text-[10px] text-charcoal/65">Área</span>' +
+                                        '</div>' +
+                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
+                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.quartos || 0) + '</span>' +
+                                            '<span class="block text-[10px] text-charcoal/65">Quartos</span>' +
+                                        '</div>' +
+                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
+                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.banheiros || 0) + '</span>' +
+                                            '<span class="block text-[10px] text-charcoal/65">Banh.</span>' +
+                                        '</div>' +
+                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
+                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.vagas || 0) + '</span>' +
+                                            '<span class="block text-[10px] text-charcoal/65">Vagas</span>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
+
+                            '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
+                                '<button type="button" onclick="openPropertyModal(\'' + safeCodeAttr + '\')" ' +
+                                        'class="flex-1 py-3 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs transition-colors">' +
+                                    'Ver Detalhes' +
+                                '</button>' +
+                                '<button type="button" onclick="openPropertyModal(\'' + safeCodeAttr + '\')" ' +
+                                   'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
+                                    '<i data-lucide="message-circle" class="w-4 h-4"></i>' +
+                                    '<span>Tenho Interesse</span>' +
+                                '</button>' +
+                                '<button type="button" onclick="sharePropertyWhatsApp(\'' + safeCodeAttr + '\')" ' +
+                                        'title="Encaminhar anúncio via WhatsApp" aria-label="Encaminhar anúncio via WhatsApp" ' +
+                                        'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border transition-colors shrink-0">' +
+                                    '<i data-lucide="share-2" class="w-4 h-4"></i>' +
+                                '</button>' +
+                            '</div>' +
+                        '</article>'
+                    );
+                }).join("");
+
+                safeRefreshIcons();
+            }
+
+            function setFinalidadeFilter(fin) {
+                activeFinalidade = fin;
+                document.querySelectorAll(".fin-pill").forEach(function (btn) {
+                    const isSelected = btn.getAttribute("data-fin") === fin;
+                    btn.className = isSelected
+                        ? "fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-bold bg-moss text-white transition-all"
+                        : "fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition-all";
+                });
+                applyFilters();
+            }
+
+            function applyFilters() {
+                const locVal = document.getElementById("filter-location") ? document.getElementById("filter-location").value : "Todos";
+                const typeVal = document.getElementById("filter-type") ? document.getElementById("filter-type").value : "Todos";
+                const bedsVal = Number(document.getElementById("filter-bedrooms") ? document.getElementById("filter-bedrooms").value : 0);
+                const searchVal = normalizeText(document.getElementById("filter-search") ? document.getElementById("filter-search").value : "");
+
+                const filtered = properties.filter(function (p) {
+                    const matchFin = activeFinalidade === "Todos" || p.finalidade === activeFinalidade;
+                    const matchLoc = locVal === "Todos" ||
+                        normalizeText(p.bairro) === normalizeText(locVal);
+                    const matchType = typeVal === "Todos" || normalizeText(p.tipo).includes(normalizeText(typeVal));
+                    const matchBeds = bedsVal === 0 || Number(p.quartos) >= bedsVal;
+                    const matchSearch = !searchVal ||
+                        normalizeText(p.codigo).includes(searchVal) ||
+                        normalizeText(p.titulo).includes(searchVal) ||
+                        normalizeText(p.bairro).includes(searchVal) ||
+                        normalizeText(p.cidade).includes(searchVal) ||
+                        normalizeText(p.descricao).includes(searchVal);
+
+                    return matchFin && matchLoc && matchType && matchBeds && matchSearch;
+                });
+
+                renderProperties(filtered);
+            }
+
+            function resetFilters() {
+                activeFinalidade = "Todos";
+                const locEl = document.getElementById("filter-location");
+                const typeEl = document.getElementById("filter-type");
+                const bedsEl = document.getElementById("filter-bedrooms");
+                const searchEl = document.getElementById("filter-search");
+                if (locEl) locEl.value = "Todos";
+                if (typeEl) typeEl.value = "Todos";
+                if (bedsEl) bedsEl.value = "0";
+                if (searchEl) searchEl.value = "";
+                setFinalidadeFilter("Todos");
+            }
+
+            // ==================== MODAL DETALHES DO IMÓVEL ====================
+            function openPropertyModal(codigo) {
+                const prop = properties.find(function (p) { return p.codigo === codigo; });
+                const modal = document.getElementById("property-modal");
+                const content = document.getElementById("property-modal-content");
+                if (!prop || !modal || !content) return;
+
+                const isRental = prop.finalidade === "Alugar";
+                const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
+                const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
+                const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
+                const safeCodeAttr = prop.codigo.replace(/'/g, "\\'");
+
+                content.innerHTML =
+                    '<div class="relative aspect-[16/9] bg-moss-soft">' +
+                        '<img id="modal-property-img" ' +
+                             'src="' + esc(resolvedImg) + '" ' +
+                             'data-raw-img="' + esc(normalizedRawKey) + '" ' +
+                             'onerror="handlePropertyImgError(this, \'' + safeCodeAttr + '\')" ' +
+                             'alt="' + esc(prop.titulo) + '" ' +
+                             'class="w-full h-full object-cover">' +
+                        '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
+                                'class="absolute top-4 right-4 p-2.5 rounded-full bg-white/95 text-charcoal hover:bg-terracotta hover:text-white shadow-md transition-colors">' +
+                            '<i data-lucide="x" class="w-5 h-5"></i>' +
+                        '</button>' +
+                        '<div class="absolute bottom-4 left-4 flex items-center gap-2">' +
+                            '<span class="px-3 py-1 rounded-full text-xs font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
+                            '<span class="px-3 py-1 rounded-full bg-charcoal/85 text-white font-mono text-xs font-bold">' + esc(prop.codigo) + '</span>' +
+                        '</div>' +
+                    '</div>' +
+
+                    '<div class="p-5 sm:p-7 space-y-5">' +
+                        '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">' +
+                            '<div>' +
+                                '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
+                                '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
+                                '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
+                            '</div>' +
+                            '<a href="' + esc(getWhatsAppForwardUrl(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                               'class="self-start inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors shrink-0">' +
+                                '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
+                                '<span>Encaminhar no WhatsApp</span>' +
+                            '</a>' +
+                        '</div>' +
+
+                        '<div class="grid grid-cols-4 gap-2.5 text-center">' +
+                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
+                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.area_m2 || "-") + ' m²</span>' +
+                                '<span class="block text-[11px] text-charcoal/65">Área Total</span>' +
+                            '</div>' +
+                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
+                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.quartos || 0) + '</span>' +
+                                '<span class="block text-[11px] text-charcoal/65">Dormitórios</span>' +
+                            '</div>' +
+                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
+                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.banheiros || 0) + '</span>' +
+                                '<span class="block text-[11px] text-charcoal/65">Banheiros</span>' +
+                            '</div>' +
+                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
+                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.vagas || 0) + '</span>' +
+                                '<span class="block text-[11px] text-charcoal/65">Vagas</span>' +
+                            '</div>' +
+                        '</div>' +
+
+                        '<div class="space-y-1.5">' +
+                            '<h4 class="font-heading font-bold text-moss text-sm">Descrição do Imóvel</h4>' +
+                            '<p class="text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + esc(prop.descricao) + '</p>' +
+                        '</div>' +
+
+                        '<form id="interest-form" onsubmit="submitInterest(event, \'' + safeCodeAttr + '\')" class="space-y-2">' +
+                            '<h4 class="font-heading font-bold text-moss text-sm">Quero falar sobre este imóvel</h4>' +
+                            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+                                '<input type="text" id="interest-name" required minlength="2" maxlength="120" autocomplete="name" placeholder="Seu nome *" class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:ring-2 focus:ring-moss/30">' +
+                                '<input type="tel" id="interest-phone" required autocomplete="tel" placeholder="Seu WhatsApp com DDD *" class="w-full px-4 py-3 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:ring-2 focus:ring-moss/30">' +
+                            '</div>' +
+                            '<input type="text" id="interest-website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">' +
+                            '<p class="text-[11px] text-charcoal/60">Seu contato fica registrado para a Iêda retornar, e o WhatsApp abre em seguida.</p>' +
+                        '</form>' +
+
+                        '<div class="pt-4 border-t border-sand-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-sand p-4 rounded-2xl">' +
+                            '<div class="flex items-center gap-3">' +
+                                '<img src="' + esc(BROKER_AVATAR) + '" ' +
+                                     'onerror="this.onerror=null;this.src=\'https://placehold.co/200x200/2C4A3E/F5F2EB?text=IH\';" ' +
+                                     'alt="Iêda Holanda" ' +
+                                     'class="w-12 h-12 aspect-square rounded-full object-cover object-top border-2 border-terracotta shrink-0">' +
+                                '<div>' +
+                                    '<p class="font-heading font-bold text-moss text-sm">Iêda Holanda</p>' +
+                                    '<p class="text-xs text-charcoal/70">CRECI-RJ 112406 • (24) 99904-0775</p>' +
+                                '</div>' +
+                            '</div>' +
+
+                            '<button type="submit" form="interest-form" id="interest-submit" ' +
+                               'class="py-3.5 px-6 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all">' +
+                                '<i data-lucide="message-circle" class="w-5 h-5"></i>' +
+                                '<span>Enviar e chamar no WhatsApp</span>' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>';
+
+                modal.classList.remove("hidden");
+                document.body.style.overflow = "hidden";
+
+                const modalImgEl = document.getElementById("modal-property-img");
+                if (modalImgEl) {
+                    resolvePropertyImageUrl(prop.foto_url, modalImgEl);
+                }
+
+                safeRefreshIcons();
+            }
+
+            function closePropertyModal() {
+                const modal = document.getElementById("property-modal");
+                if (modal) modal.classList.add("hidden");
+                document.body.style.overflow = "";
+            }
+
+            let deepLinkHandled = false;
+            function openPropertyFromUrlIfPresent() {
+                if (deepLinkHandled) return;
+                const params = new URLSearchParams(window.location.search);
+                const codeParam = (params.get("imovel") || "").trim().toUpperCase();
+                if (!codeParam) return;
+                const found = properties.find(function (p) { return String(p.codigo || "").toUpperCase() === codeParam; });
+                if (found) {
+                    deepLinkHandled = true;
+                    openPropertyModal(found.codigo);
+                }
+            }
+
+            async function handleOwnerSubmit(event) {
+                event.preventDefault();
+                const form = event.target;
+                const btn = form.querySelector('button[type="submit"]');
+                const name = document.getElementById("owner-name").value.trim();
+                const phone = document.getElementById("owner-phone").value.trim();
+                const purpose = document.getElementById("owner-purpose").value;
+                const typeLoc = document.getElementById("owner-type").value.trim();
+                const notes = document.getElementById("owner-notes").value.trim();
+
+                let msg = "Olá Iêda Holanda! Gostaria de anunciar um imóvel com a Yolanda Transações Imobiliárias.\n\n";
+                msg += "• *Proprietário:* " + name + "\n";
+                msg += "• *Contato:* " + phone + "\n";
+                msg += "• *Finalidade:* " + purpose + "\n";
+                msg += "• *Imóvel / Local:* " + typeLoc;
+                if (notes) msg += "\n• *Detalhes:* " + notes;
+
+                const w = openBlankWindow();
+                setBusy(btn, true);
+                const res = await sendContactAsync({
+                    kind: "proprietario",
+                    name: name,
+                    phone: phone,
+                    purpose: purpose,
+                    what: typeLoc,
+                    message: notes,
+                    website: (document.getElementById("owner-website") || {}).value || ""
+                });
+                setBusy(btn, false);
+                if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
+                goToWhatsApp("https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg), w);
+                form.reset();
+                showToast(res.ok ? "Cadastro recebido! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o cadastro agora).");
+            }
+
+            function toggleMobileMenu() {
+                const menu = document.getElementById("mobile-menu");
+                if (menu) menu.classList.toggle("hidden");
+            }
+
+            window.resolvePropertyImageUrl = resolvePropertyImageUrl;
+            window.handlePropertyImgError = handlePropertyImgError;
+            window.loadCatalog = loadCatalog;
+            window.submitInterest = submitInterest;
+            window.setFinalidadeFilter = setFinalidadeFilter;
+            window.applyFilters = applyFilters;
+            window.resetFilters = resetFilters;
+            window.openPropertyModal = openPropertyModal;
+            window.closePropertyModal = closePropertyModal;
+            window.sharePropertyWhatsApp = sharePropertyWhatsApp;
+            window.handleOwnerSubmit = handleOwnerSubmit;
+            window.toggleMobileMenu = toggleMobileMenu;
+
+            function initApp() {
+                try {
+                    const yearEl = document.getElementById("current-year");
+                    if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+                    populateLocationDropdown();
+                    renderProperties(properties);
+                    safeRefreshIcons();
+
+                    loadCatalog(false);
+                } catch (err) {}
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", initApp);
+            } else {
+                initApp();
+            }
+        })();
+    </script>
+</body>
+</html>
