@@ -1,1 +1,101 @@
 PRAGMA defer_foreign_keys=TRUE;
+CREATE TABLE IF NOT EXISTS "d1_migrations"(
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		name       TEXT UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+INSERT INTO "d1_migrations" ("id","name","applied_at") VALUES(1,'0001_init.sql','2026-11-17 20:38:02');
+CREATE TABLE leads (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,   -- código público: LD-(100+id)
+  name         TEXT    NOT NULL CHECK (length(name) BETWEEN 2 AND 120),
+  phone        TEXT    NOT NULL CHECK (phone GLOB '55[0-9][0-9]*' AND length(phone) IN (12, 13)),
+  modality     TEXT    NOT NULL CHECK (modality IN ('Compra', 'Aluguel')),
+  stage        TEXT    NOT NULL CHECK (stage IN ('Novo Lead','Qualificação','Visita Agendada',
+                                                  'Proposta Enviada','Documentação/Crédito','Fechado')),
+  temp         TEXT    NOT NULL CHECK (temp IN ('Quente', 'Morno', 'Frio')),
+  property     TEXT    NOT NULL DEFAULT '' CHECK (length(property) <= 200),
+  value        INTEGER NOT NULL DEFAULT 0 CHECK (value BETWEEN 0 AND 1000000000),  -- em reais
+  followup_at  TEXT    CHECK (followup_at IS NULL OR followup_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  created_at   TEXT    NOT NULL,   -- ISO 8601 UTC
+  updated_at   TEXT    NOT NULL,
+  closed_at    TEXT,               -- preenchido ao entrar em "Fechado"
+  deleted_at   TEXT                -- exclusão lógica (permite desfazer)
+, client_id INTEGER REFERENCES clients(id), source TEXT NOT NULL DEFAULT 'Painel' CHECK (source IN ('Painel', 'Site', 'CRC')), category TEXT NOT NULL DEFAULT 'Interessado' CHECK (category IN ('Interessado', 'Captação')));
+INSERT INTO "leads" ("id","name","phone","modality","stage","temp","property","value","followup_at","created_at","updated_at","closed_at","deleted_at","client_id","source","category") VALUES(1,'Fernando Sousa Pereira','5519998828934','Aluguel','Documentação/Crédito','Quente','mirante',344040,'2026-11-17','2026-11-17T22:32:41.133Z','2026-11-18T02:59:50.117Z',NULL,'2026-11-18T19:55:14.807Z',NULL,'Painel','Interessado');
+INSERT INTO "leads" ("id","name","phone","modality","stage","temp","property","value","followup_at","created_at","updated_at","closed_at","deleted_at","client_id","source","category") VALUES(2,'Fernando Sousa','5519998828934','Aluguel','Novo Lead','Quente','YTI-0002 - Casa Ampla Com 3 Dormitorios + Edicula',2800,'2026-12-26','2026-11-18T01:08:16.446Z','2026-11-18T11:56:22.275Z',NULL,'2026-11-18T19:53:57.723Z',1,'Painel','Interessado');
+INSERT INTO "leads" ("id","name","phone","modality","stage","temp","property","value","followup_at","created_at","updated_at","closed_at","deleted_at","client_id","source","category") VALUES(3,'Jorge','5524998828934','Compra','Qualificação','Quente','YTI-0004 - Casa do Neymar',2000000,'2026-11-24','2026-11-18T01:10:23.526Z','2026-11-18T01:36:30.204Z',NULL,'2026-11-18T19:54:54.593Z',2,'CRC','Interessado');
+INSERT INTO "leads" ("id","name","phone","modality","stage","temp","property","value","followup_at","created_at","updated_at","closed_at","deleted_at","client_id","source","category") VALUES(4,'Jose Antonio','5519998874544','Compra','Visita Agendada','Morno','Casa com 2 quartos em Quatis',0,'2026-11-30','2026-11-18T01:11:58.758Z','2026-11-18T11:58:56.064Z',NULL,'2026-11-18T19:55:04.152Z',3,'Site','Captação');
+INSERT INTO "leads" ("id","name","phone","modality","stage","temp","property","value","followup_at","created_at","updated_at","closed_at","deleted_at","client_id","source","category") VALUES(5,'Rosane','559987645623','Aluguel','Novo Lead','Quente','YTI-0005 - Casa da Juliete',8777,'2026-11-20','2026-11-18T11:17:57.143Z','2026-11-18T11:55:19.259Z',NULL,'2026-11-18T19:54:11.587Z',4,'Site','Interessado');
+INSERT INTO "leads" ("id","name","phone","modality","stage","temp","property","value","followup_at","created_at","updated_at","closed_at","deleted_at","client_id","source","category") VALUES(6,'Andre Santos','5524912345678','Compra','Novo Lead','Quente','YTI-0006 - Apartamento - Cond Parque Recanto Belo',180000,'2026-11-23','2026-11-19T15:08:30.255Z','2026-11-19T15:08:30.255Z',NULL,'2026-11-19T16:01:46.557Z',5,'Painel','Interessado');
+CREATE TABLE lead_events (        -- histórico com data real (base para métricas de conversão)
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id    INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  kind       TEXT    NOT NULL CHECK (kind IN ('criado','nota','etapa','modalidade','temperatura','followup')),
+  text       TEXT    NOT NULL CHECK (length(text) BETWEEN 1 AND 1000),
+  created_at TEXT    NOT NULL
+);
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(1,1,'criado','kidhf testes','2026-11-17T22:32:41.133Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(2,1,'modalidade','Modalidade alterada para "Aluguel".','2026-11-17T22:33:12.543Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(3,1,'modalidade','Modalidade alterada para "Compra".','2026-11-17T22:33:13.609Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(4,1,'modalidade','Modalidade alterada para "Aluguel".','2026-11-17T22:33:15.994Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(5,2,'criado','Cliente precisa de uma casa com 4 dormitorios e minimo de 2 vagas de garagem','2026-11-18T01:08:16.446Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(6,3,'criado','Lead criado a partir do cadastro no CRC.','2026-11-18T01:10:23.526Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(7,4,'criado','Contato pelo site (anunciar imóvel — Venda): Casa com 2 quartos em Quatis. Detalhes: Tenho uma casa grande','2026-11-18T01:11:58.758Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(8,3,'etapa','Etapa alterada de "Novo Lead" para "Qualificação".','2026-11-18T01:34:06.962Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(9,3,'nota','Apresentei outras opçoes o cliente quer agendar visita na proxima semana','2026-11-18T01:34:49.601Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(10,3,'temperatura','Temperatura alterada para "Quente".','2026-11-18T01:35:12.182Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(11,3,'nota','Imóvel de interesse atualizado.','2026-11-18T01:35:12.182Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(12,3,'followup','Próximo follow-up: 24/11.','2026-11-18T01:36:30.204Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(13,4,'etapa','Etapa alterada de "Novo Lead" para "Visita Agendada".','2026-11-18T01:36:42.438Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(14,4,'nota','Visita para dia 28','2026-11-18T01:37:07.939Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(15,1,'etapa','Etapa alterada de "Novo Lead" para "Documentação/Crédito".','2026-11-18T02:59:50.117Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(16,5,'criado','Interesse pelo site em YTI-0005 - Casa da Juliete.','2026-11-18T11:17:57.143Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(17,5,'nota','Pediu para ligar depois de amanhã','2026-11-18T11:55:13.824Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(18,5,'followup','Próximo follow-up: 20/11.','2026-11-18T11:55:19.259Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(19,2,'nota','Ligar depois do natal','2026-11-18T11:56:09.866Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(20,2,'followup','Próximo follow-up: 26/12.','2026-11-18T11:56:22.275Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(21,4,'followup','Próximo follow-up: 30/11.','2026-11-18T11:58:56.064Z');
+INSERT INTO "lead_events" ("id","lead_id","kind","text","created_at") VALUES(22,6,'criado','Tem interesse no ap','2026-11-19T15:08:30.255Z');
+CREATE TABLE clients (            -- CRC
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,   -- código público: CRC-NN
+  name             TEXT NOT NULL CHECK (length(name) BETWEEN 2 AND 120),
+  phone            TEXT NOT NULL CHECK (phone GLOB '55[0-9][0-9]*' AND length(phone) IN (12, 13)),
+  modality         TEXT NOT NULL CHECK (modality IN ('Compra', 'Aluguel')),
+  profile          TEXT NOT NULL CHECK (profile IN ('Comprador','Proprietário','Investidor','Locatário')),
+  regions          TEXT NOT NULL CHECK (length(regions) BETWEEN 1 AND 200),
+  budget           TEXT NOT NULL DEFAULT 'A definir' CHECK (length(budget) <= 120),
+  preferences      TEXT NOT NULL DEFAULT '' CHECK (length(preferences) <= 1000),
+  next_action      TEXT NOT NULL DEFAULT '' CHECK (length(next_action) <= 300),
+  birthday_month   INTEGER NOT NULL DEFAULT 0 CHECK (birthday_month IN (0, 1)),
+  pending_followup INTEGER NOT NULL DEFAULT 1 CHECK (pending_followup IN (0, 1)),
+  last_interaction TEXT NOT NULL DEFAULT '',
+  created_at       TEXT NOT NULL,
+  updated_at       TEXT NOT NULL,
+  deleted_at       TEXT
+, source TEXT NOT NULL DEFAULT 'Painel' CHECK (source IN ('Painel', 'Site', 'Lead')));
+INSERT INTO "clients" ("id","name","phone","modality","profile","regions","budget","preferences","next_action","birthday_month","pending_followup","last_interaction","created_at","updated_at","deleted_at","source") VALUES(1,'Fernando Sousa','5519998828934','Aluguel','Locatário','YTI-0002 - Casa Ampla Com 3 Dormitorios + Edicula','A definir','','',0,1,'Hoje • Lead criado no funil','2026-11-18T01:08:16.300Z','2026-11-18T01:08:16.300Z','2026-11-18T19:54:23.078Z','Lead');
+INSERT INTO "clients" ("id","name","phone","modality","profile","regions","budget","preferences","next_action","birthday_month","pending_followup","last_interaction","created_at","updated_at","deleted_at","source") VALUES(2,'Jorge','5524998828934','Compra','Comprador','Itatiaia','1800','Casa ampla com +3 dormitorios','Chamar na proxima semana',0,1,'Hoje • Cadastro inicial no CRC','2026-11-18T01:10:23.233Z','2026-11-18T01:10:23.233Z','2026-11-18T19:54:38.679Z','Painel');
+INSERT INTO "clients" ("id","name","phone","modality","profile","regions","budget","preferences","next_action","birthday_month","pending_followup","last_interaction","created_at","updated_at","deleted_at","source") VALUES(3,'Jose Antonio','5519998874544','Compra','Proprietário','Casa com 2 quartos em Quatis','A definir','','',0,0,'Hoje • Contato de relacionamento realizado','2026-11-18T01:11:58.481Z','2026-11-18T18:50:16.257Z','2026-11-18T19:54:29.342Z','Site');
+INSERT INTO "clients" ("id","name","phone","modality","profile","regions","budget","preferences","next_action","birthday_month","pending_followup","last_interaction","created_at","updated_at","deleted_at","source") VALUES(4,'Rosane','559987645623','Aluguel','Locatário','Logo Ali','A definir','','',0,1,'Hoje • Contato pelo site','2026-11-18T11:17:56.868Z','2026-11-18T11:17:56.868Z','2026-11-18T19:54:34.251Z','Site');
+INSERT INTO "clients" ("id","name","phone","modality","profile","regions","budget","preferences","next_action","birthday_month","pending_followup","last_interaction","created_at","updated_at","deleted_at","source") VALUES(5,'Andre Santos','5524912345678','Compra','Comprador','YTI-0006 - Apartamento - Cond Parque Recanto Belo','A definir','','',0,1,'Hoje • Lead criado no funil','2026-11-19T15:08:30.105Z','2026-11-19T15:08:30.105Z',NULL,'Lead');
+CREATE TABLE properties (   id           INTEGER PRIMARY KEY AUTOINCREMENT,   code         TEXT GENERATED ALWAYS AS ('YTI-' || printf('%04d', id)) VIRTUAL,   title        TEXT    NOT NULL CHECK (length(title) BETWEEN 3 AND 150),   purpose      TEXT    NOT NULL CHECK (purpose IN ('Comprar', 'Alugar')),   type         TEXT    NOT NULL DEFAULT 'Casa' CHECK (length(type) BETWEEN 1 AND 40),   neighborhood TEXT    NOT NULL CHECK (length(neighborhood) BETWEEN 1 AND 80),   city         TEXT    NOT NULL DEFAULT 'Resende - RJ' CHECK (length(city) BETWEEN 1 AND 80),   price        INTEGER NOT NULL DEFAULT 0 CHECK (price BETWEEN 0 AND 1000000000),   area_m2      INTEGER NOT NULL DEFAULT 0 CHECK (area_m2 BETWEEN 0 AND 10000000),   bedrooms     INTEGER NOT NULL DEFAULT 0 CHECK (bedrooms BETWEEN 0 AND 99),   bathrooms    INTEGER NOT NULL DEFAULT 0 CHECK (bathrooms BETWEEN 0 AND 99),   parking      INTEGER NOT NULL DEFAULT 0 CHECK (parking BETWEEN 0 AND 99),   photo_url    TEXT    NOT NULL DEFAULT '' CHECK (length(photo_url) <= 500),   badge        TEXT    NOT NULL DEFAULT '' CHECK (length(badge) <= 40),   status       TEXT    NOT NULL DEFAULT 'Disponível' CHECK (status IN ('Disponível','Reservado','Vendido','Alugado','Inativo')),   description  TEXT    NOT NULL DEFAULT '' CHECK (length(description) <= 2000),   created_at   TEXT    NOT NULL,   updated_at   TEXT    NOT NULL,   deleted_at   TEXT );
+INSERT INTO "properties" ("id","title","purpose","type","neighborhood","city","price","area_m2","bedrooms","bathrooms","parking","photo_url","badge","status","description","created_at","updated_at","deleted_at") VALUES(1,'Apartamento Moderno Mobiliado Próximo ao Polo Industrial','Alugar','Apartamento','Centro','Porto Real - RJ',2900,78,2,2,1,'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80','Pronto para Morar','Disponível','Apartamento impecável em Porto Real com armários planejados na cozinha, quartos e sala. Acesso rápido à Via Dutra e ao polo automotivo.','2026-11-18T00:59:06.967Z','2026-11-18T00:59:06.967Z','2026-11-18T19:55:28.034Z');
+INSERT INTO "properties" ("id","title","purpose","type","neighborhood","city","price","area_m2","bedrooms","bathrooms","parking","photo_url","badge","status","description","created_at","updated_at","deleted_at") VALUES(2,'Casa Ampla Com 3 Dormitorios + Edicula','Comprar','Casa','Boa Vista 1','Resende - RJ',500000,220,4,3,2,'https://ibb.co/sd7SvxgQ','Exclusividade','Disponível','Casa ampla com jardim e area de lazer com churrasqueira coberta, 3 domitorios sendo uma suite, conta com edicula com banheiro dedicado.','2026-11-18T00:59:07.131Z','2026-11-18T00:59:07.131Z','2026-11-18T19:55:32.413Z');
+INSERT INTO "properties" ("id","title","purpose","type","neighborhood","city","price","area_m2","bedrooms","bathrooms","parking","photo_url","badge","status","description","created_at","updated_at","deleted_at") VALUES(3,'Casebre sem fotos','Comprar','Terreno','Serrinha do Alambari','Resende - RJ',350000,1000,2,1,2,'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRExNcZQZv8THYzwsPPGIOhm7gzxRAfLHr9eFEJSguQptGoO_uBQxMDwzaX&s=10','Oportunidade','Disponível','Casebre Charmoso para venda na serrinha do alambari','2026-11-18T00:59:07.282Z','2026-11-18T00:59:07.282Z','2026-11-18T19:55:45.235Z');
+INSERT INTO "properties" ("id","title","purpose","type","neighborhood","city","price","area_m2","bedrooms","bathrooms","parking","photo_url","badge","status","description","created_at","updated_at","deleted_at") VALUES(4,'Casa do Neymar','Comprar','Apartamento','Morada da colina','Resende - RJ',1929999,335,12,12,12,'https://s2-casavogue.glbimg.com/hg7kt6quju5q5_CkSw5ysgXBNvM=/0x0:1193x610/1000x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_d72fd4bf0af74c0c89d27a5a226dbbf8/internal_photos/bs/2023/J/b/Cax5UtS3Ozft7wg83Q2Q/neymar.jpg','Novinha','Disponível','tem tudo até o batmovel','2026-11-18T01:24:49.307Z','2026-11-18T15:40:39.906Z','2026-11-18T19:55:41.041Z');
+INSERT INTO "properties" ("id","title","purpose","type","neighborhood","city","price","area_m2","bedrooms","bathrooms","parking","photo_url","badge","status","description","created_at","updated_at","deleted_at") VALUES(5,'Casa da Juliete','Alugar','Chácara/Sítio','Mirante da Serra','Resende - RJ',8777,3432,6,2,1,'https://admin.cnnbrasil.com.br/wp-content/uploads/sites/12/2024/03/casa-juliette-rj.jpg?w=1024-0','Chata','Disponível','Casa bonita toda branca','2026-11-18T11:16:58.934Z','2026-11-18T18:52:32.584Z','2026-11-18T19:55:36.875Z');
+INSERT INTO "properties" ("id","title","purpose","type","neighborhood","city","price","area_m2","bedrooms","bathrooms","parking","photo_url","badge","status","description","created_at","updated_at","deleted_at") VALUES(6,'Apartamento - Cond Parque Recanto Belo','Comprar','Apartamento','Cidade Alegria','Resende - RJ',210000,45,2,1,1,'https://i.ibb.co/0jpSHMGy/IMG-2142.jpg','Oportunidade','Disponível',replace('Apartamento no 2º andar, composto por 2 dormitórios, sala, cozinha estilo americana com armários planejados e banheiro social. Conta ainda com 1 vaga de garagem.\n\nCondomínio com infraestrutura de lazer completa, oferecendo portaria 24h, piscina, salão de festas, churrasqueira e espaço kids.\n\nDocumentação 100% regularizada, pronto para financiamento bancário!','\n',char(10)),'2026-11-18T21:45:36.841Z','2026-11-18T21:46:09.487Z',NULL);
+DELETE FROM sqlite_sequence;
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('d1_migrations',1);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('leads',6);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('lead_events',22);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('properties',6);
+INSERT INTO "sqlite_sequence" ("name","seq") VALUES('clients',5);
+CREATE INDEX idx_leads_active ON leads (stage, followup_at) WHERE deleted_at IS NULL;
+CREATE INDEX idx_leads_phone  ON leads (phone);
+CREATE INDEX idx_events_lead ON lead_events (lead_id, created_at);
+CREATE UNIQUE INDEX uq_clients_phone ON clients (phone) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX uq_properties_code ON properties (code);
+CREATE INDEX idx_properties_public ON properties (status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_leads_client ON leads (client_id);
+CREATE INDEX idx_leads_category ON leads (category) WHERE deleted_at IS NULL;
