@@ -553,7 +553,7 @@
 
                     <div>
                         <label class="block text-xs font-bold text-moss mb-1">Categoria *</label>
-                        <select id="lead-category" onchange="syncLeadModalityOptions()" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <select id="lead-category" onchange="syncLeadModalityOptions(); syncLeadPropertyBox()" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                             <option value="Interessado">Interessado (comprador / locatário)</option>
                             <option value="Captação">Captação (proprietário que quer anunciar)</option>
                         </select>
@@ -568,7 +568,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">Etapa Inicial *</label>
-                            <select id="lead-stage" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <select id="lead-stage" onchange="syncLeadPropertyBox()" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                                 <option value="Novo Lead">Novo Lead</option>
                                 <option value="Qualificação">Qualificação</option>
                                 <option value="Visita Agendada">Visita Agendada</option>
@@ -599,6 +599,23 @@
                         <input type="text" id="lead-property" list="property-options" required placeholder="Ex: YTI-001 - Casa Manejo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                     </div>
 
+                    <!-- Imóvel associado: a partir da Qualificação (somente categoria Interessado) -->
+                    <div id="lead-prop-box" class="hidden space-y-2.5 bg-sand/60 p-3.5 rounded-2xl border border-sand-border">
+                        <label class="block text-xs font-bold text-moss">Imóvel associado ao atendimento</label>
+                        <select id="lead-prop-mode" onchange="syncLeadPropertyBox()" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-sm">
+                            <option value="none">Nenhum imóvel associado</option>
+                            <option value="internal">Imóvel do nosso portfólio (somente disponíveis)</option>
+                            <option value="external">Imóvel de outra imobiliária (parceria)</option>
+                        </select>
+                        <div id="lead-prop-internal" class="hidden space-y-1.5">
+                            <select id="lead-prop-id" onchange="onLeadPropertyPick()" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-sm"></select>
+                            <p id="lead-prop-hint" class="hidden text-[11px] font-semibold text-amber-800">Em “Proposta Enviada” o imóvel é reservado automaticamente.</p>
+                        </div>
+                        <div id="lead-prop-external" class="hidden">
+                            <input type="text" id="lead-prop-ext" maxlength="300" placeholder="Nome da imobiliária, código ou link do anúncio" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-sm">
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold text-moss mb-1">Próximo follow-up (deixe vazio para não agendar)</label>
                         <input type="date" id="lead-followup-date" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
@@ -615,6 +632,56 @@
                         </button>
                         <button type="button" id="lead-delete-btn" onclick="deleteLead()" class="hidden px-4 py-3.5 rounded-xl bg-red-50 text-red-700 font-semibold text-sm">Excluir</button>
                         <button type="button" onclick="closeModal('new-lead-modal')" class="px-4 py-3.5 rounded-xl bg-sand text-moss font-semibold text-sm">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: FECHAMENTO DE LEAD ==================== -->
+    <div id="lead-close-modal" class="fixed inset-0 z-50 hidden bg-charcoal/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
+        <div class="min-h-full flex items-center justify-center">
+            <div class="bg-white w-full max-w-md rounded-3xl border border-sand-border shadow-2xl p-5 sm:p-7">
+                <div class="flex items-center justify-between gap-2 pb-3 border-b border-sand-border">
+                    <div class="min-w-0">
+                        <h3 class="font-heading font-extrabold text-moss text-lg">Fechar Lead</h3>
+                        <p id="close-lead-title" class="text-xs text-charcoal/65 truncate"></p>
+                    </div>
+                    <button type="button" onclick="closeModal('lead-close-modal')" class="p-2 rounded-xl bg-sand text-charcoal shrink-0">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <form onsubmit="submitCloseLead(event)" class="mt-4 space-y-3.5">
+                    <input type="hidden" id="close-lead-id">
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Resultado do Lead *</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="close-result" value="Ganho" required onchange="updateCloseHint()" class="peer sr-only">
+                                <span class="block text-center py-3 px-2 rounded-xl border border-sand-border bg-white text-moss text-sm font-bold transition-all peer-checked:bg-moss peer-checked:text-white peer-checked:border-moss">✅ Ganho<span class="block text-[11px] font-semibold opacity-80">Convertido</span></span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="close-result" value="Perdido" onchange="updateCloseHint()" class="peer sr-only">
+                                <span class="block text-center py-3 px-2 rounded-xl border border-sand-border bg-white text-terracotta text-sm font-bold transition-all peer-checked:bg-terracotta peer-checked:text-white peer-checked:border-terracotta">✖ Perdido<span class="block text-[11px] font-semibold opacity-80">Não convertido</span></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <p id="close-property-hint" class="hidden text-[11px] font-semibold text-moss bg-moss-soft border border-sand-border rounded-xl px-3 py-2"></p>
+
+                    <div>
+                        <label class="block text-xs font-bold text-moss mb-1">Observação sobre o Resultado *</label>
+                        <textarea id="close-note" rows="3" required minlength="3" maxlength="800" placeholder="Ex: Venda fechada por R$ 480 mil com financiamento Caixa. / Motivo da perda: cliente desistiu do financiamento." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></textarea>
+                    </div>
+
+                    <div class="flex gap-2.5 pt-2">
+                        <button type="submit" id="close-submit-btn" class="flex-1 py-3.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm disabled:opacity-60">
+                            Confirmar Fechamento
+                        </button>
+                        <button type="button" onclick="closeModal('lead-close-modal')" class="px-4 py-3.5 rounded-xl bg-sand text-moss font-semibold text-sm">
                             Cancelar
                         </button>
                     </div>
@@ -860,6 +927,11 @@
             }
         }
 
+        // Recarrega só os imóveis (o status deles pode mudar automaticamente com o lead)
+        async function reloadProps() {
+            try { crmProps = (await api('/properties')).items || []; } catch (e) { /* mantém a lista atual */ }
+        }
+
         function logoutApp() { location.href = '/cdn-cgi/access/logout'; }
 
         // UI State
@@ -1068,6 +1140,56 @@
             return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-moss-soft text-moss text-[11px] font-semibold"><i data-lucide="calendar" class="w-3 h-3"></i> ${label}</span>`;
         }
 
+        // ---- Ordenação por follow-up (crescente; sem data por último) e destaque de atrasados ----
+        const dmyBR = iso => String(iso || '').slice(8, 10) + '/' + String(iso || '').slice(5, 7);
+        const cmpFollowup = (a, b) => {
+            const x = a || '', y = b || '';
+            if (!x && !y) return 0;
+            if (!x) return 1;
+            if (!y) return -1;
+            return x < y ? -1 : (x > y ? 1 : 0);
+        };
+        const sortByFollowup = list => [...list].sort((a, b) => cmpFollowup(a.followupAt, b.followupAt));
+        function clientNextFollowup(client) {
+            const dates = findLeadsForClient(client).filter(l => l.stage !== 'Fechado' && l.followupAt).map(l => l.followupAt).sort();
+            return dates[0] || null;
+        }
+        function sortClientsByFollowup(list) {
+            const keyed = list.map(c => [c, clientNextFollowup(c)]);
+            keyed.sort((a, b) => cmpFollowup(a[1], b[1]));
+            return keyed.map(x => x[0]);
+        }
+        const isOverdueLead = lead => lead.stage !== 'Fechado' && lead.followupStatus === 'Atrasado';
+
+        // ---- Imóvel associado / resultado do fechamento (badges) ----
+        function getLeadPropertyChips(lead, includeResult = true) {
+            const chips = [];
+            if (lead.propertyId) {
+                const st = lead.propertyStatus || '';
+                const cls = st === 'Reservado' ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                    : (st === 'Vendido' || st === 'Alugado') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-moss-soft text-moss';
+                chips.push(`<span title="${esc(lead.propertyTitle || '')}" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${cls} text-[11px] font-bold"><i data-lucide="building-2" class="w-3 h-3"></i> ${esc(lead.propertyId)}${st ? ' • ' + esc(st) : ''}</span>`);
+            } else if (lead.externalProperty) {
+                chips.push(`<span title="${esc(lead.externalPropertyRef || '')}" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[11px] font-bold"><i data-lucide="handshake" class="w-3 h-3"></i> Imóvel externo</span>`);
+            }
+            if (includeResult && lead.stage === 'Fechado' && lead.closeResult) {
+                chips.push(lead.closeResult === 'Ganho'
+                    ? `<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">✅ Ganho</span>`
+                    : `<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold">✖ Perdido</span>`);
+            }
+            return chips.length ? `<div class="flex flex-wrap items-center gap-1.5 mt-1.5">${chips.join('')}</div>` : '';
+        }
+
+        function getExternalRefLine(lead) {
+            if (!lead.externalProperty || !lead.externalPropertyRef) return '';
+            const ref = lead.externalPropertyRef;
+            const shown = /^https?:\/\/\S+$/i.test(ref)
+                ? `<a href="${esc(ref)}" target="_blank" rel="noopener noreferrer" class="underline text-moss break-all">${esc(ref)}</a>`
+                : esc(ref);
+            return `<p class="text-[11px] text-charcoal/65 mt-1">Outra imobiliária: ${shown}</p>`;
+        }
+
         function getLeadWhatsAppUrl(lead) {
             const firstName = String(lead.name || '').trim().split(/\s+/)[0] || 'Cliente';
             const propText = String(lead.property || '').trim();
@@ -1080,7 +1202,7 @@
             const isRental = lead.modality === 'Aluguel';
             const linkedClient = findClientForLead(lead);
             return `
-                <div id="lead-card-${esc(lead.id)}" class="bg-white rounded-2xl border border-sand-border shadow-card p-4 flex flex-col justify-between space-y-3 hover:border-moss/30 transition-all">
+                <div id="lead-card-${esc(lead.id)}" class="${isOverdueLead(lead) ? 'bg-red-50/40 border-red-300' : 'bg-white border-sand-border'} rounded-2xl border shadow-card p-4 flex flex-col justify-between space-y-3 hover:border-moss/30 transition-all">
                     <div class="space-y-2.5">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -1090,6 +1212,7 @@
                                 </div>
                                 <h4 class="font-heading font-bold text-moss text-sm sm:text-base leading-snug">${esc(lead.name)}</h4>
                                 <p class="text-xs font-medium text-charcoal/75 mt-0.5">${esc(lead.property)}</p>
+                                ${getLeadPropertyChips(lead)}
                             </div>
                             ${linkedClient ? `
                                 <button type="button" onclick="openClientFromLead('${esc(lead.id)}')" title="Abrir ficha no CRC"
@@ -1173,10 +1296,11 @@
             document.getElementById('count-funnel-venda').textContent = searchMatched.filter(l => l.modality === 'Venda').length;
             document.getElementById('count-funnel-aluguel').textContent = searchMatched.filter(l => l.modality === 'Aluguel').length;
 
-            const filteredLeads = searchMatched.filter(l => {
+            // follow-up crescente (atrasados no topo); sem data por último
+            const filteredLeads = sortByFollowup(searchMatched.filter(l => {
                 if (funnelModalityFilter === 'Todos') return true;
                 return l.modality === funnelModalityFilter;
-            });
+            }));
 
             const pillsBar = document.getElementById('stage-pills-bar');
             pillsBar.innerHTML = STAGES.map(stage => {
@@ -1307,6 +1431,7 @@
                         </div>
                         <h3 class="font-heading font-extrabold text-moss text-xl mt-1">${esc(lead.name)}</h3>
                         <p class="text-xs text-charcoal/70">${esc(lead.property)} • <strong>${formatBRL(lead.value)}${lead.modality === 'Aluguel' ? '/mês' : ''}</strong></p>
+                        ${getLeadPropertyChips(lead, false)}${getExternalRefLine(lead)}
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                         ${linkedClient ? `
@@ -1343,6 +1468,16 @@
                     </div>` : ''}
                 </div>
 
+                ${lead.stage === 'Fechado' && lead.closeResult ? `
+                <!-- Resultado do fechamento -->
+                <div class="px-4 py-3 rounded-2xl border ${lead.closeResult === 'Ganho' ? 'bg-emerald-50 border-emerald-200' : 'bg-sand/60 border-sand-border'} space-y-1">
+                    <p class="text-xs font-heading font-bold ${lead.closeResult === 'Ganho' ? 'text-emerald-800' : 'text-charcoal/80'}">
+                        ${lead.closeResult === 'Ganho' ? '✅ Ganho (Convertido)' : '✖ Perdido (Não Convertido)'}
+                        ${lead.closedAt ? `<span class="font-medium text-charcoal/60">• ${esc(new Date(lead.closedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }))}</span>` : ''}
+                    </p>
+                    <p class="text-xs text-charcoal/85">${esc(lead.closeNote)}</p>
+                </div>` : ''}
+
                 <!-- 1-Tap Modality Toggle -->
                 <div class="flex items-center justify-between gap-2 bg-sand/60 px-4 py-2.5 rounded-2xl border border-sand-border">
                     <span class="text-xs font-heading font-bold text-moss">Modalidade do Atendimento:</span>
@@ -1368,6 +1503,12 @@
                         `).join('')}
                     </div>
                 </div>
+
+                ${lead.stage !== 'Fechado' ? `
+                <button type="button" onclick="openCloseLead('${esc(lead.id)}')" class="w-full py-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="flag" class="w-4 h-4"></i>
+                    <span>Fechar Lead (Ganho / Perdido)</span>
+                </button>` : ''}
 
                 <!-- Add New Follow-up Note -->
                 <form onsubmit="addLeadNote(event, '${esc(lead.id)}')" class="space-y-2">
@@ -1439,11 +1580,17 @@
         async function moveLeadStage(leadId, newStage) {
             const lead = leads.find(l => l.id === leadId);
             if (!lead || lead.stage === newStage) return;
+            if (newStage === 'Fechado') { openCloseLead(leadId); return; }   // fechar exige resultado + observação
             try {
-                upsert(leads, await api('/leads/' + leadId, { method: 'PATCH', body: { stage: newStage, ...chosenFollowup() } }));
+                const before = lead.propertyStatus;
+                const upd = await api('/leads/' + leadId, { method: 'PATCH', body: { stage: newStage, ...chosenFollowup() } });
+                upsert(leads, upd);
+                if (upd.propertyId) await reloadProps();   // o imóvel pode ter sido reservado automaticamente
                 selectedStage = newStage;
                 refreshAll(); openLeadDetail(leadId, false);
-                showToast(`Lead movido para "${newStage}". Follow-up: ${leads.find(l => l.id === leadId).followupDate}.`);
+                let msg = `Lead movido para "${newStage}". Follow-up: ${upd.followupDate}.`;
+                if (upd.propertyId && upd.propertyStatus !== before) msg += ` Imóvel ${upd.propertyId}: ${upd.propertyStatus}.`;
+                showToast(msg);
             } catch (e) { showToast(e.message); }
         }
 
@@ -1482,7 +1629,53 @@
                 note: document.getElementById('lead-note').value
             };
             body.followup_at = document.getElementById('lead-followup-date').value || null;
+            const propBox = document.getElementById('lead-prop-box');
+            if (propBox && !propBox.classList.contains('hidden')) {   // seção visível = associação faz parte do salvamento
+                const mode = document.getElementById('lead-prop-mode').value;
+                body.link_mode = mode;
+                if (mode === 'internal') body.property_code = document.getElementById('lead-prop-id').value;
+                if (mode === 'external') body.external_ref = document.getElementById('lead-prop-ext').value;
+            }
             return body;
+        }
+
+        // ---- Imóvel associado no formulário do lead ----
+        const LINK_STAGES = ['Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
+
+        // Lista só imóveis Disponíveis (+ o já vinculado a este lead, mesmo que tenha mudado para Reservado)
+        function populateLeadPropertySelect(lead) {
+            const sel = document.getElementById('lead-prop-id');
+            const keep = lead && lead.propertyId ? lead.propertyId : '';
+            const opts = crmProps.filter(p => p.status === 'Disponível' || p.code === keep);
+            let html = '<option value="">Selecione um imóvel disponível…</option>' + opts.map(p =>
+                `<option value="${esc(p.code)}">${esc(p.code)} — ${esc(p.title)} • ${p.purpose === 'Alugar' ? 'Aluguel' : 'Venda'}${p.status !== 'Disponível' ? ' (' + esc(p.status) + ')' : ''}</option>`).join('');
+            if (keep && !opts.some(p => p.code === keep)) {
+                html += `<option value="${esc(keep)}">${esc(keep)} — ${esc(lead.propertyTitle || 'imóvel vinculado')}</option>`;
+            }
+            sel.innerHTML = html;
+            sel.value = keep;
+        }
+
+        function syncLeadPropertyBox() {
+            const box = document.getElementById('lead-prop-box');
+            if (!box) return;
+            const stage = document.getElementById('lead-stage').value;
+            const eligible = document.getElementById('lead-category').value !== 'Captação' && LINK_STAGES.includes(stage);
+            const mode = document.getElementById('lead-prop-mode').value;
+            box.classList.toggle('hidden', !eligible);
+            document.getElementById('lead-prop-internal').classList.toggle('hidden', mode !== 'internal');
+            document.getElementById('lead-prop-external').classList.toggle('hidden', mode !== 'external');
+            document.getElementById('lead-prop-id').required = eligible && mode === 'internal';
+            document.getElementById('lead-prop-ext').required = eligible && mode === 'external';
+            document.getElementById('lead-prop-hint').classList.toggle('hidden', !(mode === 'internal' && stage === 'Proposta Enviada'));
+        }
+
+        function onLeadPropertyPick() {
+            const code = document.getElementById('lead-prop-id').value;
+            const p = crmProps.find(x => x.code === code);
+            const field = document.getElementById('lead-property');
+            // acompanha o padrão "YTI-0001 - Título" sem sobrescrever texto livre digitado pelo corretor
+            if (p && (!field.value.trim() || /^YTI-\d+/i.test(field.value.trim()))) field.value = `${p.code} - ${p.title}`.slice(0, 200);
         }
 
         function syncLeadModalityOptions(preferredModality) {
@@ -1514,6 +1707,10 @@
             document.getElementById('lead-followup-date').value = tomorrowBR();
             document.getElementById('lead-note').closest('div').classList.remove('hidden');
             syncLeadModalityOptions('Compra');
+            populateLeadPropertySelect(null);
+            document.getElementById('lead-prop-mode').value = 'none';
+            document.getElementById('lead-prop-ext').value = '';
+            syncLeadPropertyBox();
         }
 
         function openNewLeadModal() {
@@ -1538,6 +1735,10 @@
             document.getElementById('lead-property').value = l.property;
             document.getElementById('lead-value').value = l.value;
             document.getElementById('lead-followup-date').value = l.followupAt || '';
+            populateLeadPropertySelect(l);
+            document.getElementById('lead-prop-mode').value = l.externalProperty ? 'external' : (l.propertyId ? 'internal' : 'none');
+            document.getElementById('lead-prop-ext').value = l.externalPropertyRef || '';
+            syncLeadPropertyBox();
             document.getElementById('lead-note').closest('div').classList.add('hidden');
             document.getElementById('new-lead-modal').classList.remove('hidden');
             lucide.createIcons();
@@ -1547,6 +1748,11 @@
             event.preventDefault();
             const editId = document.getElementById('lead-edit-id').value;
             const body = leadBody();
+            const curLead = editId ? leads.find(l => l.id === editId) : null;
+            if (body.stage === 'Fechado' && (!curLead || curLead.stage !== 'Fechado')) {
+                showToast('Para fechar um lead use o botão "Fechar Lead" no detalhe do atendimento (resultado + observação).');
+                return;
+            }
             try {
                 if (editId) {
                     delete body.note;
@@ -1572,6 +1778,61 @@
             if (!id || !confirm('Excluir este lead? O cliente no CRC continua cadastrado.')) return;
             try { await api('/leads/' + id, { method: 'DELETE' }); closeModal('new-lead-modal'); await loadAll(); showToast('Lead excluído.'); }
             catch (e) { showToast(e.message); }
+        }
+
+        // ---- Rotina de Fechamento (Ganho / Perdido + observação obrigatória) ----
+        function openCloseLead(leadId) {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+            if (lead.stage === 'Fechado') { showToast('Este lead já está fechado.'); return; }
+            document.getElementById('close-lead-id').value = lead.id;
+            document.getElementById('close-lead-title').textContent = `${lead.id} • ${lead.name}`;
+            document.querySelectorAll('input[name="close-result"]').forEach(r => { r.checked = false; });
+            document.getElementById('close-note').value = '';
+            updateCloseHint();
+            document.getElementById('lead-close-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // Avisa o que vai acontecer com o imóvel interno associado (a regra real é aplicada no servidor)
+        function updateCloseHint() {
+            const lead = leads.find(l => l.id === document.getElementById('close-lead-id').value);
+            const res = (document.querySelector('input[name="close-result"]:checked') || {}).value;
+            const box = document.getElementById('close-property-hint');
+            let msg = '';
+            if (lead && lead.propertyId && lead.propertyStatus && res) {
+                if (res === 'Ganho' && (lead.propertyStatus === 'Disponível' || lead.propertyStatus === 'Reservado')) {
+                    msg = `O imóvel ${lead.propertyId} será marcado como ${lead.propertyPurpose === 'Alugar' ? 'Alugado' : 'Vendido'}.`;
+                } else if (res === 'Perdido' && lead.propertyStatus === 'Reservado') {
+                    msg = `O imóvel ${lead.propertyId} voltará para Disponível (se nenhum outro lead ativo tiver proposta nele).`;
+                }
+            }
+            box.textContent = msg;
+            box.classList.toggle('hidden', !msg);
+        }
+
+        async function submitCloseLead(event) {
+            event.preventDefault();
+            const id = document.getElementById('close-lead-id').value;
+            const result = (document.querySelector('input[name="close-result"]:checked') || {}).value;
+            const note = document.getElementById('close-note').value.trim();
+            if (!result) { showToast('Selecione o resultado: Ganho ou Perdido.'); return; }
+            if (note.length < 3) { showToast('Informe a observação sobre o resultado.'); return; }
+            const btn = document.getElementById('close-submit-btn');
+            btn.disabled = true;
+            try {
+                const before = (leads.find(l => l.id === id) || {}).propertyStatus;
+                const upd = await api('/leads/' + id + '/close', { method: 'POST', body: { result, note } });
+                upsert(leads, upd);
+                if (upd.propertyId) await reloadProps();   // imóvel pode ter virado Vendido/Alugado ou voltado a Disponível
+                selectedStage = 'Fechado';
+                closeModal('lead-close-modal');
+                refreshAll(); openLeadDetail(id, false);
+                let msg = `Lead fechado como ${result === 'Ganho' ? 'Ganho' : 'Perdido'}.`;
+                if (upd.propertyId && upd.propertyStatus !== before) msg += ` Imóvel ${upd.propertyId}: ${upd.propertyStatus}.`;
+                showToast(msg);
+            } catch (e) { showToast(e.message); }
+            finally { btn.disabled = false; }
         }
 
         // 5. CRC RENDERING & BUCKETS DE ÚLTIMO CONTATO
@@ -1656,12 +1917,14 @@
                 return;
             }
 
-            grid.innerHTML = filtered.map(c => {
+            grid.innerHTML = sortClientsByFollowup(filtered).map(c => {
                 const clientLeads = findLeadsForClient(c);
                 const activeLead = clientLeads.find(l => l.stage !== 'Fechado') || clientLeads[0];
+                const nextFu = clientNextFollowup(c);
+                const fuOverdue = !!nextFu && nextFu < todayBR();
                 const bucket = getCrcContactBucket(c);
                 return `
-                <article id="crc-card-${esc(c.id)}" class="bg-white rounded-3xl border border-sand-border shadow-card p-5 flex flex-col justify-between space-y-4 transition-all">
+                <article id="crc-card-${esc(c.id)}" class="${fuOverdue ? 'bg-red-50/40 border-red-300' : 'bg-white border-sand-border'} rounded-3xl border shadow-card p-5 flex flex-col justify-between space-y-4 transition-all">
                     <div class="space-y-3">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
@@ -1669,6 +1932,9 @@
                                     ${getModalityBadge(c.modality)}
                                     <span class="px-2.5 py-0.5 rounded-md ${bucket.badgeClass} text-[11px] font-bold">${esc(bucket.label)}</span>
                                     ${c.pendingFollowup ? `<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold">⏰ Follow-up</span>` : ''}
+                                    ${nextFu ? (fuOverdue
+                                        ? `<span class="px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 text-[11px] font-bold">Atrasado • ${dmyBR(nextFu)}</span>`
+                                        : `<span class="px-2 py-0.5 rounded-md bg-moss-soft text-moss text-[11px] font-semibold">📅 ${nextFu === todayBR() ? 'Hoje' : dmyBR(nextFu)}</span>`) : ''}
                                     ${c.birthdayMonth ? `<span class="px-2 py-0.5 rounded-md bg-terracotta-soft text-terracotta text-[11px] font-bold">🎂 Aniversariante</span>` : ''}
                                 </div>
                                 <h4 class="font-heading font-bold text-moss text-base">${esc(c.name)}</h4>
