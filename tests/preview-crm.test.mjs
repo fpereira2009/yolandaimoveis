@@ -120,6 +120,41 @@ const mockLead = { id: 'LD-TEST', name: 'Cliente Teste UI', phone: '552499999999
   propertyStatus: null, externalProperty: false, externalPropertyRef: '' };
 vm.runInContext(`leads = [${JSON.stringify(mockLead)}]; crmProps = [${JSON.stringify({code:'YTI-0099',title:'Casa UI',status:'Disponível'})}];`, uiCtx);
 uiCtx.showToast = () => {};
+
+// Refinamento exclusivo do modal de movimentação: hierarquia, eventos e contato mobile.
+vm.runInContext('openLeadDetail("LD-TEST")', uiCtx);
+const detailHtml = uiEl('lead-detail-content').innerHTML;
+const positions = [
+  'Imóvel associado ao atendimento',
+  'Mover Etapa no Funil (Toque para alterar):',
+  'Chamar no WhatsApp',
+  'Próximo follow-up:',
+  'Fechar Lead (Ganho / Perdido)',
+  'Registrar Nova Interação / Follow-up:',
+  'Fechar Janela',
+].map(label => {
+  const n = detailHtml.indexOf(label);
+  assert.ok(n >= 0, `Bloco ausente no modal: ${label}`);
+  checks++;
+  return n;
+});
+for (let i = 1; i < positions.length; i++) {
+  assert.ok(positions[i - 1] < positions[i], 'Blocos fora da ordem solicitada');
+  checks++;
+}
+assert.ok(detailHtml.includes('>Associar imóvel</button>'));
+assert.equal(detailHtml.includes('Modalidade do Atendimento:'), false);
+assert.equal(detailHtml.includes('changeLeadModality('), false);
+assert.equal((detailHtml.match(/Chamar no WhatsApp/g) || []).length, 1);
+assert.ok(detailHtml.includes('href="tel:+5524999999999"'));
+assert.match(detailHtml, /<a href="tel:\+5524999999999"[^>]*class="[^"]*sm:hidden[^"]*"/);
+assert.match(detailHtml, /aria-label="Ligar para Cliente Teste UI"/);
+assert.ok(detailHtml.includes('data-lucide="phone"'));
+assert.ok(detailHtml.includes("onsubmit=\"saveLeadProperty(event, 'LD-TEST')\""));
+assert.ok(detailHtml.includes("onclick=\"moveLeadStage('LD-TEST', 'Proposta Enviada')\""));
+assert.ok(detailHtml.includes("onchange=\"saveLeadFollowup('LD-TEST', this.value)\""));
+assert.ok(detailHtml.includes("onsubmit=\"addLeadNote(event, 'LD-TEST')\""));
+checks += 12;
 uiEl('lead-edit-id').value = mockLead.id;
 uiEl('lead-name').value = mockLead.name;
 uiEl('lead-phone').value = mockLead.phone;

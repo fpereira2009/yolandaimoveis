@@ -96,3 +96,23 @@ Nenhuma nova migration ou alteração de Pages Functions foi necessária neste a
 3. `LEIA-ME-PREVIEW.md`
 
 **Resultado atualizado da validação:** 113 verificações locais aprovadas com todas as migrations originais e Functions reais. Nenhum banco remoto foi alterado e nenhum deploy foi executado.
+
+
+## Refinamento posterior: ordenação do modal de movimentação (somente PREVIEW)
+
+**Arquivo funcional alterado:** `public/app/index.html`. Sem alteração em `functions/`, `wrangler.toml` ou migrations. A base é o pacote completo atualizado que já contém associação/região no modal Mover Lead.
+
+Ordem do modal (logo abaixo do cabeçalho):
+
+1. **Imóvel associado ao atendimento**, com o campo de região e botão **Associar imóvel**; os IDs `detail-prop-mode`, `detail-prop-id`, `detail-property`, `detail-property-options` e handlers `syncDetailPropertyBox`, `onDetailPropertyInput`, `saveLeadProperty` foram preservados.
+2. **Mover Etapa no Funil (Toque para alterar)**, com os mesmos `moveLeadStage()` e etapas.
+3. **Contato rápido:** o WhatsApp original foi movido do rodapé para esta posição e ganhou um botão apenas com ícone `phone` à direita, usando `tel:+55...` (a partir de `normPhone(lead.phone)`). O botão de discagem usa `sm:hidden`, portanto só aparece em viewport **abaixo de 640 px**; inclui `aria-label` e `title` para acessibilidade.
+4. **Próximo follow-up**, preservando `detail-followup`, `saveLeadFollowup()` e os atalhos de data.
+5. **Fechar Lead (Ganho / Perdido)**, preservando `openCloseLead()`; não aparece quando o lead já está fechado.
+6. **Registrar Nova Interação / Follow-up**, preservando `new-note-text` e `addLeadNote()`.
+
+O histórico e o resultado de fechamento foram mantidos abaixo dos seis blocos, antes do rodapé **Fechar Janela**. O controle redundante *Modalidade do Atendimento* (Compra/Aluguel) não aparece mais neste modal; a modalidade continua no formulário Editar Lead.
+
+**Testes:** `node --experimental-sqlite tests/preview-crm.test.mjs`, com **138 verificações locais aprovadas** incluindo ordenação, IDs, eventos, telefone, responsividade (classe `sm:hidden`), associação, mudança de etapa e todas as regras de reserva anteriores.
+
+**Infraestrutura:** nenhuma nova migration, comando Wrangler, alteração de banco ou deploy necessária nesta entrega. Não foi acessado o banco remoto `yolanda-crm-dev`. Aplicar somente na branch de preview e conferir o mobile/desktop no Pages Preview após o push. Verificar a binding `DB` no painel Cloudflare Pages, pois o arquivo `wrangler.toml` já aponta `env.preview` para `yolanda-crm-dev`.
