@@ -14,10 +14,9 @@ const PSTATUS = ['Disponível', 'Reservado', 'Vendido', 'Alugado', 'Inativo'];
 const CLOSE_RESULTS = ['Ganho', 'Perdido'];
 // Etapas a partir das quais o lead (Interessado) aceita imóvel associado
 const LINK_STAGES = ['Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
-// Etapas em que o lead "segura" a reserva do imóvel (evita liberar um imóvel que outro lead ainda negocia)
+// Etapas em que o lead "segura" e aciona a reserva do imóvel
 const HOLDING_STAGES_SQL = "('Proposta Enviada','Documentação/Crédito')";
 const HOLDING_STAGES = ['Proposta Enviada', 'Documentação/Crédito'];
-const RESERVE_STAGE = 'Proposta Enviada';
 const TZ = 'America/Sao_Paulo';
 const CODE_PREFIX = 'YTI-';
 
@@ -198,7 +197,7 @@ async function parseLink(env, b, cur, nextStage, nextCategory) {
   const mode = oneOf(b.link_mode, ['none', 'internal', 'external'], 'associação de imóvel');
   if (nextStage === 'Fechado') throw new HttpError(400, 'Lead fechado: a associação de imóvel não pode ser alterada.');
   if (mode === 'none') return { propertyId: null, external: 0, ref: '', prop: null };
-  if (nextCategory === 'Captação') throw new HttpError(400, 'A associação de imóvel vale apenas para leads da categoria Interessado.');
+  if (nextCategory === 'Captação') throw new HttpError(400, 'Leads de Captação não podem ser associados a imóveis do portfólio.');
   if (!LINK_STAGES.includes(nextStage)) throw new HttpError(400, 'Associe o imóvel a partir da etapa Qualificação.');
   if (mode === 'external') {
     return { propertyId: null, external: 1, ref: str(b.external_ref, 'imobiliária parceira / link', { min: 2, max: 300, required: true }), prop: null };
@@ -235,7 +234,7 @@ async function insertLead(env, v) {
         v.propertyId ?? null, v.external ? 1 : 0, v.extRef || ''),
     env.DB.prepare('SELECT last_insert_rowid() AS id'),
     env.DB.prepare("INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (last_insert_rowid(), 'criado', ?, ?)").bind(String(v.note).slice(0, 1000), t),
-    ...(v.reserve && v.propertyId ? [reserveStmt(env, v.propertyId, t)] : []),   // lead já nasce em "Proposta Enviada" com imóvel interno
+    ...(v.reserve && v.propertyId ? [reserveStmt(env, v.propertyId, t)] : []),
   ]);
   return res[1].results[0].id;
 }
@@ -286,7 +285,10 @@ async function createLead(env, b) {
     v.propertyId = link.propertyId; v.external = link.external; v.extRef = link.ref;
     if (link.prop) {
       v.note += ` Imóvel associado: ${propCode(link.prop.id)} - ${link.prop.title}.`;
-      if (v.stage === RESERVE_STAGE && link.prop.status === 'Disponível') { v.reserve = true; v.note += ' Imóvel reservado automaticamente (Proposta Enviada).'; }
+      if (HOLDING_STAGES.includes(v.stage) && link.prop.status === 'Disponível') {
+        v.reserve = true;
+        v.note += ` Imóvel reservado automaticamente (${v.stage}).`;
+      }
     } else v.note += ` Imóvel de outra imobiliária associado: ${link.ref}.`;
   }
   const id = await insertLead(env, v);
@@ -305,7 +307,7 @@ async function patchLead(env, id, b) {
     if (b.stage === 'Fechado') throw new HttpError(400, 'Para fechar um lead use a rotina de Fechamento (resultado + observação).');
     nextStage = b.stage;
     set('stage', b.stage); set('closed_at', null);
-    if (cur.stage === 'Fechado') { set('close_result', null); set('close_note', null); }   // lead reaberto
+    if (cur.stage === 'Fechado') { set('close_result', null); set('close_note', null); }   // lead reaberto (não altera imóvel Vendido/Alugado)
     if (b.followup_at === undefined) set('followup_at', addDays(todayBR(), 1));
     events.push(['etapa', `Etapa alterada de "${cur.stage}" para "${b.stage}".`]);
   }
@@ -348,17 +350,31 @@ async function patchLead(env, id, b) {
       events.push(['nota', link.prop ? `Imóvel associado: ${propCode(link.prop.id)} - ${link.prop.title}.`
         : link.external ? `Imóvel de outra imobiliária associado: ${link.ref}.` : 'Associação de imóvel removida.']);
     }
+  } else if ((nextCategory === 'Captação' || !LINK_STAGES.includes(nextStage)) && (cur.property_id || cur.external_property)) {
+    // Se mudou para Captação ou recuou para Novo Lead, desvincula automaticamente
+    nextPropId = null;
+    nextPropStatus = null;
+    if (cur.property_id !== null) set('property_id', null);
+    if (cur.external_property) set('external_property', 0);
+    if (cur.external_property_ref) set('external_property_ref', '');
+    events.push(['nota', 'Associação de imóvel removida automaticamente devido à alteração de categoria/etapa.']);
   }
-  // imóvel anterior volta a Disponível se este lead o segurava (Reservado) e nenhum outro lead o está negociando
-  if (cur.property_id && cur.property_id !== nextPropId && cur.p_status === 'Reservado' && HOLDING_STAGES.includes(cur.stage)
+
+  const wasHolding = HOLDING_STAGES.includes(cur.stage);
+  const isHolding = HOLDING_STAGES.includes(nextStage);
+
+  // Libera o imóvel anterior se este lead o segurava (Reservado) e trocou/desvinculou ou recuou para etapa anterior à proposta,
+  // respeitando a proteção contra disputa (só libera se nenhum outro lead ativo o mantiver em reserva).
+  if (cur.property_id && cur.p_status === 'Reservado' && wasHolding && (cur.property_id !== nextPropId || !isHolding)
       && !(await hasOtherHolder(env, cur.property_id, id))) {
     propStmts.push(releaseStmt(env, cur.property_id, id, t));
     events.push(['nota', `Imóvel ${propCode(cur.property_id)} liberado (voltou para Disponível).`]);
   }
-  // Proposta Enviada + imóvel interno Disponível -> Reservado
-  if (nextPropId && nextStage === RESERVE_STAGE && (nextStage !== cur.stage || nextPropId !== cur.property_id) && nextPropStatus === 'Disponível') {
+
+  // Gatilho de Reserva: qualquer lead (exceto Captação) com imóvel associado que entre/esteja em Proposta Enviada OU Documentação/Crédito
+  if (nextCategory !== 'Captação' && nextPropId && isHolding && nextPropStatus === 'Disponível') {
     propStmts.push(reserveStmt(env, nextPropId, t));
-    events.push(['nota', `Imóvel ${propCode(nextPropId)} reservado automaticamente (Proposta Enviada).`]);
+    events.push(['nota', `Imóvel ${propCode(nextPropId)} reservado automaticamente (${nextStage}).`]);
   }
 
   const newName = b.name !== undefined ? str(b.name, 'nome', { min: 2, max: 120, required: true }) : cur.name;
@@ -374,7 +390,7 @@ async function patchLead(env, id, b) {
     }
     set('name', newName); set('phone', newPhone);
   }
-  if (!sets.length) return loadLead(env, id);
+  if (!sets.length && !propStmts.length) return loadLead(env, id);
   set('updated_at', t);
   try {
     await env.DB.batch([
@@ -591,7 +607,8 @@ async function publicContact(env, b) {
       regions: p.neighborhood, property: `${propCode(p.id)} - ${p.title}`.slice(0, 200), value: p.price, temp: 'Quente',
       note: `Interesse pelo site em ${propCode(p.id)} - ${p.title}.${msg ? ' Mensagem: ' + msg : ''}` };
   }
-  const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });const open = await openLeadFor(env, phone, v.modality, v.category);
+  const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
+  const open = await openLeadFor(env, phone, v.modality, v.category);
   if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);
   else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, note: v.note });
   return json({ ok: true }, 201);
