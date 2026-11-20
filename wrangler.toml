@@ -13,3 +13,19 @@ binding = "DB"
 database_name = "yolanda-crm-dev"
 database_id = "23514b9c-5c0e-464c-8c85-1342b4fae522"
 migrations_dir = "migrations"
+
+# R2: produção configurada, sem habilitar as novas rotas de escrita em produção.
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "yolanda-imoveis-prod"
+
+[vars]
+MEDIA_ENV = "production"
+
+# O preview utiliza exclusivamente DB=yolanda-crm-dev + bucket R2 de testes.
+[[env.preview.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "yolanda-imoveis-dev"
+
+[env.preview.vars]
+MEDIA_ENV = "preview"

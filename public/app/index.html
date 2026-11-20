@@ -505,8 +505,17 @@
                         <div><label class="block text-xs font-bold text-moss mb-1">Banheiros</label><input type="number" id="prop-bathrooms" min="0" max="99" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Vagas</label><input type="number" id="prop-parking" min="0" max="99" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                     </div>
+                    <div class="space-y-2.5" id="prop-r2-gallery">
+                        <label for="prop-files" class="block text-xs font-bold text-moss">Fotos do imóvel (até 10 imagens)</label>
+                        <input type="file" id="prop-files" accept="image/jpeg,image/png,image/webp" multiple
+                            onchange="selectPropertyPhotos(event)"
+                            class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <p id="prop-gallery-count" class="text-xs text-charcoal/65" aria-live="polite">0 de 10 fotos</p>
+                        <div id="prop-gallery-editor" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" aria-label="Galeria e escolha de capa"></div>
+                        <p class="text-[11px] text-charcoal/65">Toque em “Definir capa” na foto desejada. Fotos novas serão otimizadas antes do envio.</p>
+                    </div>
                     <div>
-                        <label class="block text-xs font-bold text-moss mb-1">URL da foto principal (link direto HTTPS, ex: https://i.ibb.co/...)</label>
+                        <label class="block text-xs font-bold text-moss mb-1">URL da foto principal (legado, alternativa às imagens R2)</label>
                         <input type="url" id="prop-photo" maxlength="500" oninput="previewPropPhoto()" placeholder="https://i.ibb.co/..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                         <div id="prop-photo-alert" class="hidden mt-2 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2">
                             <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
@@ -517,7 +526,7 @@
                     <div><label class="block text-xs font-bold text-moss mb-1">Destaque (selo no card)</label><input type="text" id="prop-badge" maxlength="40" placeholder="Ex: Oportunidade, Novo, Exclusivo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                     <div><label class="block text-xs font-bold text-moss mb-1">Descrição</label><textarea id="prop-description" rows="3" maxlength="2000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></textarea></div>
                     <div class="flex flex-wrap gap-2.5 pt-2">
-                        <button type="submit" class="flex-1 py-3.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm">Salvar Imóvel</button>
+                        <button id="prop-save-btn" type="submit" class="flex-1 py-3.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm">Salvar Imóvel</button>
                         <button type="button" id="prop-delete-btn" onclick="deleteProperty()" class="hidden px-4 py-3.5 rounded-xl bg-red-50 text-red-700 font-semibold text-sm">Excluir</button>
                         <button type="button" onclick="closeModal('property-modal')" class="px-4 py-3.5 rounded-xl bg-sand text-moss font-semibold text-sm">Cancelar</button>
                     </div>
@@ -2324,7 +2333,149 @@
             }
         }
 
+        // Galeria R2: foto principal, seleção em lote e processamento no navegador.
+        let propExistingImages = [];
+        let propPendingPhotos = [];
+        let propCoverChoice = null;
+        let propNextLocalId = 0;
+        let propSaving = false;
+
+        function releasePendingPropertyPhotos() {
+            for (const item of propPendingPhotos) URL.revokeObjectURL(item.preview);
+            propPendingPhotos = [];
+        }
+        function renderPropertyPhotoEditor() {
+            const box = document.getElementById('prop-gallery-editor');
+            const count = propExistingImages.length + propPendingPhotos.length;
+            document.getElementById('prop-gallery-count').textContent = count + ' de 10 fotos';
+            const items = [
+                ...propExistingImages.map(i => ({ type: 'existing', id: i.id, url: i.url })),
+                ...propPendingPhotos.map(i => ({ type: 'new', id: i.id, url: i.preview }))
+            ];
+            box.innerHTML = items.map(item => {
+                const selected = propCoverChoice && propCoverChoice.type === item.type && propCoverChoice.id === item.id;
+                const action = item.type === 'existing'
+                    ? `removePropertyImage(${item.id})` : `removePendingPropertyPhoto(${item.id})`;
+                return `<div class="rounded-xl border ${selected ? 'border-terracotta ring-2 ring-terracotta/40' : 'border-sand-border'} overflow-hidden bg-sand/60">
+                  <img src="${esc(item.url)}" class="w-full aspect-[4/3] object-cover" alt="Foto do imóvel">
+                  <div class="p-2 space-y-1.5">
+                    <button type="button" onclick="setPropertyCover('${item.type}', ${item.id})"
+                       class="w-full text-[11px] font-bold px-2 py-1.5 rounded-lg ${selected ? 'bg-terracotta text-white' : 'bg-white text-moss border border-sand-border'}">
+                       ${selected ? '★ Capa selecionada' : 'Definir capa'}</button>
+                    <button type="button" onclick="${action}" class="w-full text-[11px] text-red-700 font-semibold py-1">Remover foto</button>
+                  </div>
+                </div>`;
+            }).join('');
+        }
+        function setPropertyCover(type, id) {
+            if (propSaving) return;
+            propCoverChoice = { type, id };
+            renderPropertyPhotoEditor();
+        }
+        function selectPropertyPhotos(event) {
+            if (propSaving) { event.target.value = ''; return; }
+            const files = Array.from(event.target.files || []);
+            event.target.value = '';
+            const slots = 10 - propExistingImages.length - propPendingPhotos.length;
+            if (files.length > slots) showToast(`Limite de 10 fotos. Você pode adicionar mais ${Math.max(0, slots)}.`);
+            for (const file of files.slice(0, Math.max(0, slots))) {
+                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                    showToast('Use fotos JPEG, PNG ou WebP.'); continue;
+                }
+                const item = { id: ++propNextLocalId, file, preview: URL.createObjectURL(file) };
+                propPendingPhotos.push(item);
+                if (!propCoverChoice) propCoverChoice = { type: 'new', id: item.id };
+            }
+            renderPropertyPhotoEditor();
+        }
+        function removePendingPropertyPhoto(id) {
+            if (propSaving) return;
+            const index = propPendingPhotos.findIndex(p => p.id === id);
+            if (index < 0) return;
+            URL.revokeObjectURL(propPendingPhotos[index].preview);
+            propPendingPhotos.splice(index, 1);
+            if (propCoverChoice && propCoverChoice.type === 'new' && propCoverChoice.id === id) {
+                propCoverChoice = propExistingImages.length ? {type:'existing', id:propExistingImages[0].id}
+                    : propPendingPhotos.length ? {type:'new', id:propPendingPhotos[0].id} : null;
+            }
+            renderPropertyPhotoEditor();
+        }
+        async function refreshPropertyImageState(code) {
+            const data = await api('/media/properties/' + code + '/images');
+            propExistingImages = data.images || [];
+            const list = await api('/properties');
+            crmProps = list.items || [];
+            const p = crmProps.find(x => x.code === code);
+            if (p) {
+                const currentCover = propExistingImages.find(i => i.cover);
+                if (!propCoverChoice || (propCoverChoice.type === 'existing' && !propExistingImages.some(i => i.id === propCoverChoice.id))) {
+                    propCoverChoice = currentCover ? {type:'existing', id:currentCover.id} : null;
+                }
+            }
+            renderProps();
+            renderPropertyPhotoEditor();
+        }
+        async function removePropertyImage(id) {
+            const code = document.getElementById('prop-edit-id').value;
+            if (!code || propSaving || !confirm('Remover esta foto permanentemente do imóvel?')) return;
+            try {
+                await api('/media/properties/' + code + '/images/' + id, {method:'DELETE'});
+                if (propCoverChoice && propCoverChoice.type === 'existing' && propCoverChoice.id === id) propCoverChoice = null;
+                await refreshPropertyImageState(code);
+                showToast('Foto removida.');
+            } catch (error) { showToast(error.message); }
+        }
+        async function optimizePropertyPhoto(file) {
+            let img;
+            let objectUrl;
+            try {
+                if ('createImageBitmap' in window) img = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                else {
+                    objectUrl = URL.createObjectURL(file);
+                    img = await new Promise((resolve, reject) => {
+                        const element = new Image();
+                        element.onload = () => resolve(element);
+                        element.onerror = reject;
+                        element.src = objectUrl;
+                    });
+                }
+                const sw = img.width, sh = img.height;
+                if (!sw || !sh) throw new Error('Imagem inválida.');
+                const ratio = Math.min(1, 1600 / Math.max(sw, sh));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(sw * ratio));
+                canvas.height = Math.max(1, Math.round(sh * ratio));
+                const ctx = canvas.getContext('2d', {alpha:false});
+                if (!ctx) throw new Error('Não foi possível otimizar a imagem.');
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const toBlob = (type, quality) => new Promise(r => canvas.toBlob(r, type, quality));
+                let blob = await toBlob('image/webp', 0.82);
+                if (!blob || blob.type !== 'image/webp') blob = await toBlob('image/jpeg', 0.80);
+                if (blob && blob.size > 6 * 1024 * 1024) blob = await toBlob('image/jpeg', 0.68);
+                if (!blob || blob.size > 6 * 1024 * 1024) throw new Error('Imagem não pôde ser reduzida a menos de 6 MB.');
+                return blob;
+            } finally {
+                if (img && typeof img.close === 'function') img.close();
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+            }
+        }
+        async function sendPropertyImage(code, blob) {
+            const resp = await fetch('/api/media/properties/' + encodeURIComponent(code) + '/images', {
+                method:'PUT', credentials:'same-origin', headers:{'Content-Type':blob.type, 'Accept':'application/json'}, body:blob
+            });
+            const result = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(result.error || `Falha no upload (HTTP ${resp.status}).`);
+            return result.item;
+        }
+
         function fillPropForm(p) {
+            releasePendingPropertyPhotos();
+            propExistingImages = Array.isArray(p?.images) ? p.images.map(i => ({...i})) : [];
+            const existingCover = propExistingImages.find(i => i.cover) || propExistingImages[0];
+            propCoverChoice = existingCover ? {type:'existing', id:existingCover.id} : null;
+            document.getElementById('prop-files').value = '';
+            renderPropertyPhotoEditor();
             const set = (id, v) => document.getElementById(id).value = v;
             set('prop-edit-id', p ? p.code : '');
             set('prop-title', p ? p.title : ''); set('prop-purpose', p ? p.purpose : 'Comprar');
@@ -2332,7 +2483,7 @@
             set('prop-status', p ? p.status : 'Disponível'); set('prop-neighborhood', p ? p.neighborhood : '');
             set('prop-city', p ? p.city : 'Resende - RJ'); set('prop-area', p ? p.area_m2 : '');
             set('prop-bedrooms', p ? p.bedrooms : ''); set('prop-bathrooms', p ? p.bathrooms : '');
-            set('prop-parking', p ? p.parking : ''); set('prop-photo', p ? p.photo_url : '');
+            set('prop-parking', p ? p.parking : ''); set('prop-photo', p ? (p.legacy_photo_url ?? p.photo_url) : '');
             set('prop-badge', p ? p.badge : ''); set('prop-description', p ? p.description : '');
             document.getElementById('prop-modal-title').textContent = p ? 'Editar ' + p.code : 'Novo Imóvel';
             document.getElementById('prop-code-note').classList.toggle('hidden', !!p);
@@ -2346,6 +2497,7 @@
 
         async function handleSaveProperty(event) {
             event.preventDefault();
+            if (propSaving) return;
             const g = id => document.getElementById(id).value;
             const body = {
                 title: g('prop-title'), purpose: g('prop-purpose'), type: g('prop-type'), price: g('prop-price'),
@@ -2354,15 +2506,44 @@
                 photo_url: g('prop-photo'), badge: g('prop-badge'), description: g('prop-description')
             };
             const editId = g('prop-edit-id');
+            const button = document.getElementById('prop-save-btn');
+            const oldLabel = button.textContent;
+            let saved;
+            propSaving = true; button.disabled = true; document.getElementById('prop-files').disabled = true;
             try {
-                const saved = editId
+                saved = editId
                     ? await api('/properties/' + editId, { method: 'PATCH', body })
                     : await api('/properties', { method: 'POST', body });
-                upsertBy(crmProps, saved, 'code');
-                crmProps.sort((a, b) => b.code.localeCompare(a.code));
-                closeModal('property-modal'); renderProps();
+                document.getElementById('prop-edit-id').value = saved.code;
+                const uploadedIds = new Map();
+                for (const pending of [...propPendingPhotos]) {
+                    button.textContent = `Otimizando e enviando foto ${uploadedIds.size + 1} / ${propPendingPhotos.length}…`;
+                    const blob = await optimizePropertyPhoto(pending.file);
+                    const created = await sendPropertyImage(saved.code, blob);
+                    uploadedIds.set(pending.id, created.id);
+                    if (propCoverChoice?.type === 'new' && propCoverChoice.id === pending.id) {
+                        propCoverChoice = {type:'existing', id:created.id};
+                    }
+                    URL.revokeObjectURL(pending.preview);
+                    propPendingPhotos = propPendingPhotos.filter(i => i.id !== pending.id);
+                }
+                let coverId = null;
+                if (propCoverChoice?.type === 'existing') coverId = propCoverChoice.id;
+                if (propCoverChoice?.type === 'new') coverId = uploadedIds.get(propCoverChoice.id);
+                if (coverId) await api('/media/properties/' + saved.code + '/images/' + coverId, {method:'PATCH', body:{cover:true}});
+                propCoverChoice = null;
+                await refreshPropertyImageState(saved.code);
+                closeModal('property-modal');
                 showToast(editId ? `${saved.code} atualizado!` : `Imóvel cadastrado com o código ${saved.code}!`);
-            } catch (e) { showToast(e.message); }
+            } catch (e) {
+                if (saved?.code) {
+                    try { await refreshPropertyImageState(saved.code); } catch (refreshError) { console.error(refreshError); }
+                    showToast('Dados salvos, mas a galeria não foi concluída. ' + e.message + ' Reabra ou tente salvar novamente.');
+                } else showToast(e.message);
+            } finally {
+                propSaving = false; button.disabled = false; button.textContent = oldLabel;
+                document.getElementById('prop-files').disabled = false;
+            }
         }
         function upsertBy(list, item, key) { const i = list.findIndex(x => x[key] === item[key]); if (i >= 0) list[i] = item; else list.unshift(item); }
 
@@ -2394,6 +2575,14 @@
         async function loadCleanSocialImage(rawUrl) {
             const clean = String(rawUrl || '').trim();
             if (!clean) return null;
+
+            // Use o proxy same-origin para gerar cards, inclusive quando a vitrine
+            // utiliza domínio público R2 com política CORS diferente.
+            const r2Key = clean.match(/(?:^|\/)(properties\/\d+\/[0-9a-f-]{36}\.(?:webp|jpg))$/);
+            if (r2Key) {
+                const img = await loadCanvasImageSafe('/api/media/file/' + r2Key[1], false);
+                if (img) return img;
+            }
 
             let targetUrl = clean;
             const driveMatch = clean.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i);

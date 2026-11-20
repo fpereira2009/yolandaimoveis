@@ -914,7 +914,7 @@
                     if (!resp.ok) throw new Error("HTTP " + resp.status);
                     const data = await resp.json();
                     const items = (data.items || []).map(function (p) {
-                        const raw = /^https?:\/\//i.test(p.foto_url || "") ? p.foto_url : DEFAULT_ARCH_FALLBACK;
+                        const raw = /^(https?:\/\/|\/api\/media\/file\/)/i.test(p.foto_url || "") ? p.foto_url : DEFAULT_ARCH_FALLBACK;
                         p.foto_url = raw;
                         p.resolved_foto_url = resolvePropertyImageUrl(raw);
                         return p;
@@ -1196,6 +1196,21 @@
                 setFinalidadeFilter("Todos");
             }
 
+            // Carrossel do detalhe: lista completa, setas e gesto de deslizar no mobile.
+            let activePropertyImages = [];
+            let activePropertyImageIndex = 0;
+            function movePropertyGallery(step) {
+                if (!activePropertyImages.length) return;
+                activePropertyImageIndex = (activePropertyImageIndex + step + activePropertyImages.length) % activePropertyImages.length;
+                const image = document.getElementById('modal-property-img');
+                const counter = document.getElementById('property-gallery-counter');
+                if (image) {
+                    image.dataset.fallbackApplied = '0';
+                    image.src = resolvePropertyImageUrl(activePropertyImages[activePropertyImageIndex]);
+                }
+                if (counter) counter.textContent = (activePropertyImageIndex + 1) + ' / ' + activePropertyImages.length;
+            }
+
             // ==================== MODAL DETALHES DO IMÓVEL ====================
             function openPropertyModal(codigo) {
                 const prop = properties.find(function (p) { return p.codigo === codigo; });
@@ -1207,15 +1222,25 @@
                 const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
                 const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
                 const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
+                activePropertyImages = Array.isArray(prop.images) && prop.images.length
+                    ? prop.images.map(i => i.url).filter(Boolean) : [resolvedImg];
+                activePropertyImageIndex = 0;
 
                 content.innerHTML =
-                    '<div class="relative aspect-[16/9] bg-moss-soft">' +
+                    '<div id="property-gallery-swipe" class="relative aspect-[16/9] bg-moss-soft touch-pan-y">' +
                         '<img id="modal-property-img" ' +
-                             'src="' + resolvedImg + '" ' +
+                             'src="' + esc(resolvedImg) + '" ' +
                              'data-raw-img="' + esc(normalizedRawKey) + '" ' +
                              'onerror="handlePropertyImgError(this, \'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
                              'alt="' + esc(prop.titulo) + '" ' +
                              'class="w-full h-full object-cover">' +
+                        (activePropertyImages.length > 1 ?
+                            '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
+                                '<i data-lucide="chevron-left" class="w-5 h-5"></i></button>' +
+                            '<button type="button" onclick="movePropertyGallery(1)" aria-label="Próxima foto" class="absolute top-1/2 -translate-y-1/2 right-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
+                                '<i data-lucide="chevron-right" class="w-5 h-5"></i></button>' +
+                            '<span id="property-gallery-counter" aria-live="polite" class="absolute bottom-4 right-4 rounded-lg bg-charcoal/80 text-white text-xs font-bold px-2.5 py-1">1 / ' + activePropertyImages.length + '</span>'
+                        : '') +
                         '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
                                 'class="absolute top-4 right-4 p-2.5 rounded-full bg-white/95 text-charcoal hover:bg-terracotta hover:text-white shadow-md transition-colors">' +
                             '<i data-lucide="x" class="w-5 h-5"></i>' +
@@ -1301,6 +1326,21 @@
                 if (modalImgEl) {
                     resolvePropertyImageUrl(prop.foto_url, modalImgEl);
                 }
+                const swipeArea = document.getElementById('property-gallery-swipe');
+                if (swipeArea && activePropertyImages.length > 1) {
+                    let startX = null;
+                    swipeArea.addEventListener('touchstart', e => {
+                        startX = e.changedTouches[0]?.clientX ?? null;
+                    }, {passive:true});
+                    swipeArea.addEventListener('touchend', e => {
+                        if (startX === null) return;
+                        const endX = e.changedTouches[0]?.clientX;
+                        if (typeof endX === 'number' && Math.abs(endX - startX) > 45) {
+                            movePropertyGallery(endX < startX ? 1 : -1);
+                        }
+                        startX = null;
+                    }, {passive:true});
+                }
 
                 safeRefreshIcons();
             }
@@ -1353,6 +1393,7 @@
             window.applyFilters = applyFilters;
             window.resetFilters = resetFilters;
             window.openPropertyModal = openPropertyModal;
+            window.movePropertyGallery = movePropertyGallery;
             window.closePropertyModal = closePropertyModal;
             window.handleOwnerSubmit = handleOwnerSubmit;
             window.toggleMobileMenu = toggleMobileMenu;

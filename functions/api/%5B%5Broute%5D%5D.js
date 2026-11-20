@@ -1,3 +1,4 @@
+import { mediaEnabled, propertyImageMap, propertyImageRows, withGallery, deletePhysicalImages } from '../_shared/property-media.js';
 // API (Cloudflare Pages Functions + D1)
 //  Pública (site):  GET /api/public/properties · POST /api/public/contact
 //  Restrita (CRC):  /api/leads · /api/clients · /api/properties  (exige Cloudflare Access)
@@ -144,17 +145,17 @@ const CLIENTS_SQL = `SELECT c.*,
   (SELECT MAX(e.created_at) FROM lead_events e JOIN leads l ON l.id = e.lead_id
    WHERE l.client_id = c.id AND e.kind IN ('criado', 'nota')) AS last_lead_contact_at
   FROM clients c WHERE c.deleted_at IS NULL ORDER BY next_followup IS NULL ASC, next_followup ASC, c.updated_at DESC`;
-const propOut = (r) => ({
+const propOut = (r, images = [], env) => withGallery({
   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
   city: r.city, price: r.price, area_m2: r.area_m2, bedrooms: r.bedrooms, bathrooms: r.bathrooms, parking: r.parking,
-  photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
-});
-const propPublic = (r) => ({   // mesmo formato que o site já usava ao ler a planilha
+  photo_url: r.photo_url, legacy_photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
+}, images, env);
+const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
   codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
   valor: r.price, area_m2: r.area_m2, quartos: r.bedrooms, banheiros: r.bathrooms, vagas: r.parking,
   foto_url: r.photo_url, destaque: r.badge, status: r.status,
   descricao: r.description || 'Imóvel selecionado por Iêda Holanda. Entre em contato para mais informações.',
-});
+}, images, env);
 
 // Lead + dados do imóvel interno associado (LEFT JOIN: leads sem imóvel continuam aparecendo)
 const LEAD_SELECT = `SELECT l.*, p.title AS p_title, p.status AS p_status, p.purpose AS p_purpose
@@ -593,8 +594,29 @@ async function patchProperty(env, id, b) {
   const row = await env.DB.prepare(`UPDATE properties SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = ? WHERE id = ? AND deleted_at IS NULL RETURNING *`)
     .bind(...cols.map((c) => vals[c]), nowIso(), id).first();
   if (!row) throw new HttpError(404, 'Imóvel não encontrado.');
-  return propOut(row);
+  return propOut(row, await propertyImageRows(env, id), env);
 }
+// Exclusão lógica primeiro impede uploads concorrentes e retira imediatamente o imóvel
+// da vitrine. Exclui em seguida os objetos R2 e os metadados D1; DELETE é idempotente
+// para permitir limpeza manual em caso de falha transitória do R2 (sem 2PC entre serviços).
+async function deletePropertyWithMedia(env, id) {
+  if (!mediaEnabled(env)) return softDelete(env, 'properties', id);
+  const row = await env.DB.prepare('SELECT id, deleted_at FROM properties WHERE id = ?').bind(id).first();
+  if (!row) throw new HttpError(404, 'Imóvel não encontrado.');
+  if (!row.deleted_at) {
+    await env.DB.prepare('UPDATE properties SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
+      .bind(nowIso(), nowIso(), id).run();
+  }
+  const images = await propertyImageRows(env, id);
+  try { await deletePhysicalImages(env, images); }
+  catch (e) {
+    console.error('R2: limpeza pendente para imóvel ' + id, e);
+    throw new HttpError(503, 'Imóvel removido do catálogo, mas a limpeza de imagens falhou. Repita a exclusão para concluir.');
+  }
+  await env.DB.prepare('DELETE FROM property_images WHERE property_id = ?').bind(id).run();
+  return { ok: true, imagesRemoved: images.length };
+}
+
 async function importProperties(env, b) {
   const rows = Array.isArray(b.rows) ? b.rows.slice(0, 200) : [];
   const created = [], skipped = [];
@@ -608,7 +630,8 @@ async function importProperties(env, b) {
 // ---------- Público (site) ----------
 async function publicProperties(env) {
   const rows = (await env.DB.prepare("SELECT * FROM properties WHERE deleted_at IS NULL AND status IN ('Disponível','Reservado') ORDER BY id DESC").all()).results;
-  return json({ items: rows.map(propPublic) }, 200, { 'Cache-Control': 'public, max-age=60' });
+  const galleries = await propertyImageMap(env);
+  return json({ items: rows.map(r => propPublic(r, galleries.get(r.id) || [])) }, 200, { 'Cache-Control': 'public, max-age=60' });
 }
 
 async function publicContact(env, b) {
@@ -718,12 +741,16 @@ export async function onRequest({ request, env, params }) {
     }
     if (res === 'properties') {
       if (!id) {
-        if (method === 'GET') return json({ items: (await env.DB.prepare('SELECT * FROM properties WHERE deleted_at IS NULL ORDER BY id DESC').all()).results.map(propOut) });
+        if (method === 'GET') {
+          const rows = (await env.DB.prepare('SELECT * FROM properties WHERE deleted_at IS NULL ORDER BY id DESC').all()).results;
+          const galleries = await propertyImageMap(env);
+          return json({ items: rows.map(r => propOut(r, galleries.get(r.id) || [])) });
+        }
         if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true })), 201);
       } else if (id === 'import' && method === 'POST') return json(await importProperties(env, body));
       else if (!sub) {
         if (method === 'PATCH') return json(await patchProperty(env, parseId(id), body));
-        if (method === 'DELETE') return json(await softDelete(env, 'properties', parseId(id)));
+        if (method === 'DELETE') return json(await deletePropertyWithMedia(env, parseId(id)));
       }
     }
     throw new HttpError(404, 'Rota não encontrada.');
