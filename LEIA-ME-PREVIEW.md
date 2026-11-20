@@ -14,7 +14,7 @@
 | Caminho | O que mudou |
 |---|---|
 | `functions/api/[[route]].js` | Associação livre/portfólio, proteção de Captação, reserva/liberação transacionais, preservação de Vendido/Alugado, contato do site, data de último contato CRC, compatibilidade de API. |
-| `public/app/index.html` | Input único com sugestões de imóveis disponíveis e digitação livre, vínculo automático ao selecionar sugestão, badge de negociação (existente, agora ignora Captação), Kanban com coluna Fechado e buckets CRC baseados em último contato. |
+| `public/app/index.html` | Input com sugestões de imóveis disponíveis e digitação livre, campos associados e região posicionados no cadastro e na movimentação de etapa, não editáveis no modal Editar Lead, badge de negociação, Kanban com coluna Fechado e buckets CRC baseados em último contato. |
 | `migrations/0007_crm_ultimo_contato.sql` | Nova coluna `clients.last_contact_at` com backfill sem inferência de fechamento legado. |
 | `tests/preview-crm.test.mjs` | Testes de integração usando todas as migrations reais e simulador D1 transacional. |
 | `LEIA-ME-PREVIEW.md` | Instruções técnicas e comandos de preview. |
@@ -72,6 +72,27 @@ node --experimental-sqlite tests/preview-crm.test.mjs
 
 ## Resultado da validação local
 
-**85 verificações passaram**, usando schema construído com migrations `0001` até `0007`, Functions reais e transações simuladas. Inclui uso direto da API, concorrência lógica de múltiplos titulares, troca/desvinculação, exclusão, captação, geração de leads via site, reabertura de Ganho e preservação de fechamentos legados.
+**113 verificações passaram**, usando schema construído com migrations `0001` até `0007`, Functions reais e transações simuladas. Inclui uso direto da API, concorrência lógica de múltiplos titulares, troca/desvinculação, exclusão, captação, geração de leads via site, reabertura de Ganho e preservação de fechamentos legados.
 
 **Limite da validação:** não foram executados comandos remotos no Cloudflare e não foi feito deploy. A execução real no D1 `yolanda-crm-dev` e a checagem visual em navegador mobile/desktop dependem do ambiente de preview do projeto.
+
+## Ajuste posterior: campos de imóvel nos cards de leads
+
+**Alterações somente na interface do CRM (`public/app/index.html`)**:
+
+- **Cadastrar Novo Lead:** “Imóvel associado ao atendimento” vem **antes** de “Imóvel / Região de Interesse”. Mantidos os modos sem vínculo, portfólio e parceria externa; a seleção de imóvel do portfólio continua limitada a disponíveis, com campo livre para texto manual.
+- **Mover Lead:** os dois campos passaram para o card de detalhes, **imediatamente depois** do bloco “Mover Etapa no Funil” e **antes** de “Fechar Lead (Ganho / Perdido)”. Há botão “Salvar” para atualizar a associação e a região sem mudar a etapa.
+- **Mudança de etapa:** se um imóvel novo for selecionado, clicar em outra etapa envia `property`, `link_mode`, `property_code`/`external_ref` e `stage` **na mesma requisição PATCH**, que usa o `env.DB.batch` existente na Function para gerir a reserva/liberação.
+- **Editar Lead:** os dois campos são ocultados no formulário compartilhado e **não são enviados à API** ao salvar as demais alterações, impedindo a alteração acidental do vínculo.
+- **Captação:** o card de movimentação permite somente texto livre; associação interna continua vedada.
+- **Lead fechado:** exibe os dois campos para consulta, sem permitir alteração durante o fechamento. A reabertura não altera status Vendido/Alugado. Antes de Fechar Lead, alterações não salvas do imóvel são detectadas, com pedido de salvamento prévio.
+
+Nenhuma nova migration ou alteração de Pages Functions foi necessária neste ajuste, pois a API anterior já aceitava a atualização atômica de imóvel/etapa. Os arquivos `wrangler.toml` e `migrations/` foram preservados.
+
+### Arquivos alterados nesta etapa
+
+1. `public/app/index.html`
+2. `tests/preview-crm.test.mjs` (verificação da estrutura/ordem do formulário, edição sem vínculo, escolha de imóvel, texto manual, PATCH combinado e proteção do fechamento)
+3. `LEIA-ME-PREVIEW.md`
+
+**Resultado atualizado da validação:** 113 verificações locais aprovadas com todas as migrations originais e Functions reais. Nenhum banco remoto foi alterado e nenhum deploy foi executado.

@@ -80,6 +80,129 @@ assert.ok(html.includes('oninput="onLeadPropertyInput()"'));
 assert.ok(html.includes('const kanbanStages = STAGES;'));
 checks += 3;
 
+// Movimentação: campos em ordem correta, edição sem link/property e PATCH atômico por etapa.
+const createForm = html.slice(html.indexOf('id="new-lead-modal"'), html.indexOf('MODAL: FECHAMENTO DE LEAD'));
+assert.ok(createForm.indexOf('id="lead-prop-box"') < createForm.indexOf('id="lead-property-field-wrapper"'));
+assert.ok(html.indexOf('<!-- Imóvel associado + região: posicionados junto à movimentação do funil -->') < html.indexOf('<span>Fechar Lead (Ganho / Perdido)</span>'));
+assert.equal((html.match(/id="detail-property"/g) || []).length, 1);
+checks += 3;
+
+// Executa as funções vanilla em um DOM simulado, sem navegador nem rede externa.
+const uiElements = new Map();
+function uiEl(id) {
+  if (!uiElements.has(id)) {
+    const classes = new Set();
+    const el = {
+      value: '', textContent: '', innerHTML: '', required: false,
+      classList: {
+        add: name => classes.add(name), remove: name => classes.delete(name),
+        contains: name => classes.has(name), toggle: (name, force) => {
+          const enable = force === undefined ? !classes.has(name) : !!force;
+          if (enable) classes.add(name); else classes.delete(name);
+        },
+      },
+      closest: () => ({ classList: { add() {}, remove() {} } }),
+    };
+    uiElements.set(id, el);
+  }
+  return uiElements.get(id);
+}
+const uiCtx = vm.createContext({
+  window: { addEventListener() {} },
+  document: { getElementById: uiEl },
+  lucide: { createIcons() {} },
+  console,
+});
+new vm.Script(script).runInContext(uiCtx);
+const mockLead = { id: 'LD-TEST', name: 'Cliente Teste UI', phone: '5524999999999',
+  modality: 'Compra', category: 'Interessado', stage: 'Visita Agendada', temp: 'Morno',
+  property: 'Centro', value: 500000, followupAt: '', propertyId: null,
+  propertyStatus: null, externalProperty: false, externalPropertyRef: '' };
+vm.runInContext(`leads = [${JSON.stringify(mockLead)}]; crmProps = [${JSON.stringify({code:'YTI-0099',title:'Casa UI',status:'Disponível'})}];`, uiCtx);
+uiCtx.showToast = () => {};
+uiEl('lead-edit-id').value = mockLead.id;
+uiEl('lead-name').value = mockLead.name;
+uiEl('lead-phone').value = mockLead.phone;
+uiEl('lead-modality').value = mockLead.modality;
+uiEl('lead-category').value = mockLead.category;
+uiEl('lead-stage').value = mockLead.stage;
+uiEl('lead-temp').value = mockLead.temp;
+uiEl('lead-property').value = 'INDEVIDAMENTE MODIFICADO';
+uiEl('lead-value').value = mockLead.value;
+uiEl('lead-note').value = 'nota';
+uiEl('lead-followup-date').value = '';
+uiEl('lead-prop-mode').value = 'none';
+const editBody = vm.runInContext('leadBody()', uiCtx);
+assert.equal('property' in editBody, false, 'Editar Lead não deve modificar imóvel/região');
+assert.equal('link_mode' in editBody, false, 'Editar Lead não deve alterar vínculo interno');
+vm.runInContext('openEditLead("LD-TEST")', uiCtx);
+assert.equal(uiEl('lead-property-field-wrapper').classList.contains('hidden'), true);
+assert.equal(uiEl('lead-prop-box').classList.contains('hidden'), true);
+assert.equal(uiEl('lead-property').required, false);
+checks += 5;
+
+// O datalist oferece os disponíveis, e o texto manual não força associação.
+uiEl('detail-property').value = 'YTI-0099 - Casa UI';
+uiEl('detail-prop-mode').value = 'none';
+uiEl('detail-prop-id').value = '';
+uiEl('detail-prop-ext').value = '';
+vm.runInContext('onDetailPropertyInput("LD-TEST")', uiCtx);
+assert.equal(uiEl('detail-prop-mode').value, 'internal');
+assert.equal(uiEl('detail-prop-id').value, 'YTI-0099');
+let req = vm.runInContext('detailPropertyPayload(leads[0])', uiCtx);
+assert.equal(req.link_mode, 'internal');
+assert.equal(req.property_code, 'YTI-0099');
+checks += 4;
+let sent = null;
+uiCtx.api = async (path, opts) => {
+  sent = { path, body: opts.body };
+  return { ...mockLead, stage: opts.body.stage, propertyId: opts.body.property_code || null, propertyStatus: 'Reservado' };
+};
+uiCtx.reloadProps = async () => {};
+uiCtx.refreshAll = () => {};
+uiCtx.openLeadDetail = () => {};
+uiCtx.chosenFollowup = () => ({});
+await vm.runInContext('moveLeadStage("LD-TEST", "Proposta Enviada")', uiCtx);
+assert.equal(sent.path, '/leads/LD-TEST');
+assert.equal(sent.body.stage, 'Proposta Enviada');
+assert.equal(sent.body.link_mode, 'internal');
+assert.equal(sent.body.property_code, 'YTI-0099');
+assert.equal(sent.body.property, 'YTI-0099 - Casa UI');
+checks += 5;
+uiEl('detail-property').value = 'Região informada livremente';
+vm.runInContext('onDetailPropertyInput("LD-TEST")', uiCtx);
+req = vm.runInContext('detailPropertyPayload(leads[0])', uiCtx);
+assert.equal(req.link_mode, 'none');
+assert.equal(req.property, 'Região informada livremente');
+checks += 2;
+vm.runInContext('leads[0].category = "Captação"', uiCtx);
+req = vm.runInContext('detailPropertyPayload(leads[0])', uiCtx);
+assert.equal('link_mode' in req, false);
+checks++;
+vm.runInContext('leads[0].stage = "Fechado"', uiCtx);
+req = vm.runInContext('detailPropertyPayload(leads[0])', uiCtx);
+assert.equal(Object.keys(req).length, 0);
+checks++;
+
+// O fechamento não pode usar um imóvel/região alterado mas ainda não salvo.
+const warnings = [];
+uiCtx.showToast = msg => warnings.push(msg);
+vm.runInContext('leads[0].stage = "Visita Agendada"; leads[0].category = "Interessado"', uiCtx);
+uiEl('detail-property').value = 'Outro imóvel manual';
+uiEl('detail-prop-mode').value = 'none';
+uiEl('lead-detail-modal').classList.remove('hidden');
+vm.runInContext('openCloseLead("LD-TEST")', uiCtx);
+assert.ok(warnings.some(msg => msg.includes('Salve primeiro')));
+checks++;
+
+// Na API, uma única requisição troca vínculo + etapa, reservando o imóvel no DB.batch.
+const combinedProp = await prop('Imóvel Reserva por Movimentação');
+const combinedLead = await lead('Lead Reserva por Movimentação', null);
+await api('PATCH', `/leads/${combinedLead.id}`, { stage: 'Documentação/Crédito', property: `${combinedProp.code} - ${combinedProp.title}`, link_mode: 'internal', property_code: combinedProp.code });
+checkProp(combinedProp.code, 'Reservado');
+await api('PATCH', `/leads/${combinedLead.id}`, { stage: 'Qualificação', property: 'Outra região', link_mode: 'none' });
+checkProp(combinedProp.code, 'Disponível');
+
 const a = await prop('Casa Teste A');
 const b = await prop('Apartamento Teste B', 'Alugar');
 const c = await prop('Terreno Teste C');
