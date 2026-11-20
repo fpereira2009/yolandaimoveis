@@ -595,10 +595,10 @@
 
                     <div id="lead-property-field-wrapper">
                         <label class="block text-xs font-bold text-moss mb-1">Imóvel / Região de Interesse *</label>
-                        <input type="text" id="lead-property" list="property-options" required placeholder="Selecione um imóvel disponível ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <input type="text" id="lead-property" list="property-options" oninput="onLeadPropertyInput()" onchange="onLeadPropertyInput()" maxlength="200" required placeholder="Selecione um imóvel disponível ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                     </div>
 
-                    <!-- Imóvel associado: a partir da Qualificação (somente categoria Interessado) -->
+                    <!-- Imóvel associado: qualquer etapa aberta (somente categoria Interessado) -->
                     <div id="lead-prop-box" class="hidden space-y-2.5 bg-sand/60 p-3.5 rounded-2xl border border-sand-border">
                         <label class="block text-xs font-bold text-moss">Imóvel associado ao atendimento</label>
                         <select id="lead-prop-mode" onchange="syncLeadPropertyBox()" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-sm">
@@ -607,7 +607,8 @@
                             <option value="external">Imóvel de outra imobiliária (parceria)</option>
                         </select>
                         <div id="lead-prop-internal" class="hidden space-y-1.5">
-                            <select id="lead-prop-id" onchange="onLeadPropertyPick()" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-sm"></select>
+                            <input id="lead-prop-id" type="hidden">
+                            <span id="lead-prop-selected" class="inline-flex max-w-full items-center px-2.5 py-1 rounded-lg bg-white border border-sand-border text-moss text-xs font-semibold break-words">Selecione um imóvel disponível no campo acima.</span>
                             <p id="lead-prop-hint" class="hidden text-[11px] font-semibold text-amber-800">Em “Proposta Enviada” ou “Documentação/Crédito” o imóvel é reservado automaticamente.</p>
                         </div>
                         <div id="lead-prop-external" class="hidden">
@@ -1322,8 +1323,8 @@
                 stageGrid.innerHTML = stageLeads.map(l => buildLeadCardHTML(l)).join('');
             }
 
-            // Quadro Kanban exibe exclusivamente etapas abertas/ativas (exclui 'Fechado')
-            const kanbanStages = STAGES.filter(s => s !== 'Fechado');
+            // Mantém os mesmos buckets do filtro por etapa, inclusive Fechado.
+            const kanbanStages = STAGES;
             const kanbanWrapper = document.getElementById('kanban-columns-wrapper');
             kanbanWrapper.innerHTML = kanbanStages.map(stage => {
                 const colLeads = filteredLeads.filter(l => l.stage === stage);
@@ -1612,7 +1613,22 @@
             const value = document.getElementById('detail-property').value.trim();
             if (!value) { showToast('Informe o imóvel ou a região de interesse.'); return; }
             try {
-                upsert(leads, await api('/leads/' + leadId, { method: 'PATCH', body: { property: value } }));
+                const lead = leads.find(l => l.id === leadId);
+                const body = { property: value };
+                // A lista oferece somente disponíveis. Seleção vincula o imóvel;
+                // texto livre continua permitido sem criar vínculo indevido.
+                const chosen = crmProps.find(p => p.status === 'Disponível' &&
+                    (value === `${p.code} - ${p.title}` || value === p.code));
+                if (lead && lead.category !== 'Captação' && lead.stage !== 'Fechado') {
+                    if (chosen) {
+                        body.link_mode = 'internal';
+                        body.property_code = chosen.code;
+                    } else if (lead.propertyId && value !== lead.property) {
+                        body.link_mode = 'none';
+                    }
+                }
+                upsert(leads, await api('/leads/' + leadId, { method: 'PATCH', body }));
+                await reloadProps();
                 refreshAll(); openLeadDetail(leadId, false);
                 showToast('Imóvel / região de interesse atualizado.');
             } catch (e) { showToast(e.message); }
@@ -1642,9 +1658,8 @@
                 value: document.getElementById('lead-value').value,
                 note: document.getElementById('lead-note').value
             };
-            if (!editId) {
-                body.property = document.getElementById('lead-property').value;
-            }
+            // Campo livre, mesmo na edição: o vínculo é enviado separadamente.
+            body.property = document.getElementById('lead-property').value;
             body.followup_at = document.getElementById('lead-followup-date').value || null;
             const propBox = document.getElementById('lead-prop-box');
             if (propBox && !propBox.classList.contains('hidden')) {
@@ -1659,7 +1674,7 @@
         }
 
         // ---- Imóvel associado no formulário do lead ----
-        const LINK_STAGES = ['Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
+        const LINK_STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
         const HOLDING_STAGES = ['Proposta Enviada', 'Documentação/Crédito'];
 
         function syncPropertyDatalist() {
@@ -1673,17 +1688,38 @@
                     .join('');
         }
 
-        function populateLeadPropertySelect(lead) {
-            const sel = document.getElementById('lead-prop-id');
-            const keep = lead && lead.propertyId ? lead.propertyId : '';
-            const opts = crmProps.filter(p => p.status === 'Disponível' || p.code === keep);
-            let html = '<option value="">Selecione um imóvel disponível…</option>' + opts.map(p =>
-                `<option value="${esc(p.code)}">${esc(p.code)} — ${esc(p.title)} • ${p.purpose === 'Alugar' ? 'Aluguel' : 'Venda'}${p.status !== 'Disponível' ? ' (' + esc(p.status) + ')' : ''}</option>`).join('');
-            if (keep && !opts.some(p => p.code === keep)) {
-                html += `<option value="${esc(keep)}">${esc(keep)} — ${esc(lead.propertyTitle || 'imóvel vinculado')}</option>`;
+        function onLeadPropertyInput() {
+            const field = document.getElementById('lead-property');
+            const mode = document.getElementById('lead-prop-mode');
+            if (document.getElementById('lead-category').value === 'Captação') return;
+            const text = field.value.trim();
+            const editing = leads.find(l => l.id === document.getElementById('lead-edit-id').value);
+            const chosen = crmProps.find(p => (p.status === 'Disponível' || p.code === editing?.propertyId) &&
+                (text === `${p.code} - ${p.title}` || text === p.code));
+            const selected = document.getElementById('lead-prop-id');
+            if (chosen) {
+                mode.value = 'internal';
+                selected.value = chosen.code;
+            } else if (mode.value === 'internal') {
+                // Texto manual é válido e não cria uma reserva por engano.
+                mode.value = 'none';
+                selected.value = '';
             }
-            sel.innerHTML = html;
-            sel.value = keep;
+            syncSelectedPropertyLabel();
+            syncLeadPropertyBox();
+        }
+
+        function syncSelectedPropertyLabel() {
+            const code = document.getElementById('lead-prop-id').value;
+            const p = crmProps.find(x => x.code === code);
+            document.getElementById('lead-prop-selected').textContent = code
+                ? `${code} — ${p ? p.title : 'Imóvel vinculado'}`
+                : 'Selecione um imóvel disponível no campo acima.';
+        }
+
+        function populateLeadPropertySelect(lead) {
+            document.getElementById('lead-prop-id').value = lead?.propertyId || '';
+            syncSelectedPropertyLabel();
         }
 
         function syncLeadPropertyBox() {
@@ -1693,23 +1729,17 @@
             const stage = document.getElementById('lead-stage').value;
             const isCaptacao = document.getElementById('lead-category').value === 'Captação';
             const eligible = !isCaptacao && LINK_STAGES.includes(stage);
-            if (!eligible) {
+            if (!eligible && (isCaptacao || stage !== 'Fechado')) {
+                // Ao editar um lead Fechado, preserva o modo para uma eventual
+                // reabertura no mesmo formulário (sem desvincular o imóvel).
                 document.getElementById('lead-prop-mode').value = 'none';
             }
             const mode = document.getElementById('lead-prop-mode').value;
             box.classList.toggle('hidden', !eligible);
             document.getElementById('lead-prop-internal').classList.toggle('hidden', mode !== 'internal');
             document.getElementById('lead-prop-external').classList.toggle('hidden', mode !== 'external');
-            document.getElementById('lead-prop-id').required = eligible && mode === 'internal';
             document.getElementById('lead-prop-ext').required = eligible && mode === 'external';
             document.getElementById('lead-prop-hint').classList.toggle('hidden', !(mode === 'internal' && HOLDING_STAGES.includes(stage)));
-        }
-
-        function onLeadPropertyPick() {
-            const code = document.getElementById('lead-prop-id').value;
-            const p = crmProps.find(x => x.code === code);
-            const field = document.getElementById('lead-property');
-            if (p && (!field.value.trim() || /^YTI-\d+/i.test(field.value.trim()))) field.value = `${p.code} - ${p.title}`.slice(0, 200);
         }
 
         function syncLeadModalityOptions(preferredModality) {
@@ -1768,9 +1798,9 @@
             syncLeadModalityOptions(l.modality);
             document.getElementById('lead-stage').value = l.stage;
             document.getElementById('lead-temp').value = l.temp;
-            // Campo redundante "Imóvel / Região de Interesse" oculto no modal Editar Lead
-            document.getElementById('lead-property-field-wrapper').classList.add('hidden');
-            document.getElementById('lead-property').required = false;
+            // Campo de texto livre permite editar imóvel/região sem impor vínculo.
+            document.getElementById('lead-property-field-wrapper').classList.remove('hidden');
+            document.getElementById('lead-property').required = true;
             document.getElementById('lead-property').value = l.property;
             document.getElementById('lead-value').value = l.value;
             document.getElementById('lead-followup-date').value = l.followupAt || '';
@@ -1787,6 +1817,10 @@
             event.preventDefault();
             const editId = document.getElementById('lead-edit-id').value;
             const body = leadBody();
+            if (body.link_mode === 'internal' && !body.property_code) {
+                showToast('Selecione um imóvel disponível no campo "Imóvel / Região de Interesse".');
+                return;
+            }
             const curLead = editId ? leads.find(l => l.id === editId) : null;
             if (body.stage === 'Fechado' && (!curLead || curLead.stage !== 'Fechado')) {
                 showToast('Para fechar um lead use o botão "Fechar Lead" no detalhe do atendimento (resultado + observação).');
@@ -1875,23 +1909,17 @@
 
         // 5. CRC RENDERING & BUCKETS DE ÚLTIMO CONTATO / FOLLOW-UP
         function getCrcContactBucket(client) {
-            const nextFu = clientNextFollowup(client);
             const minus30Iso = addDaysBR(-30);
             const minus365Iso = addDaysBR(-365);
-
+            // Follow-up futuro é agendamento, NÃO é último contato.
+            const raw = client.lastContactAt || client.updatedAt || client.createdAt;
             let refIso = null;
-            if (nextFu) {
-                refIso = nextFu;
-            } else {
-                const raw = client.updatedAt || client.createdAt;
-                if (raw) {
-                    const parsed = new Date(raw);
-                    if (!Number.isNaN(parsed.getTime())) {
-                        refIso = parsed.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-                    }
+            if (raw) {
+                const parsed = new Date(raw);
+                if (!Number.isNaN(parsed.getTime())) {
+                    refIso = parsed.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
                 }
             }
-
             if (!refIso || refIso >= minus30Iso) {
                 return { key: 'recent', label: 'Recentes / Ativos', badgeClass: 'bg-moss-soft text-moss' };
             }
@@ -2105,7 +2133,7 @@
             document.getElementById('prop-count').textContent = list.length + (list.length === 1 ? ' imóvel' : ' imóveis') + (list.length !== crmProps.length ? ' (de ' + crmProps.length + ')' : '');
             syncPropertyDatalist();
             document.getElementById('prop-grid').innerHTML = list.length ? list.map(p => {
-                const activeLinkedLeads = leads.filter(l => l.stage !== 'Fechado' && l.propertyId === p.code);
+                const activeLinkedLeads = leads.filter(l => l.stage !== 'Fechado' && l.category !== 'Captação' && l.propertyId === p.code);
                 const negotiationBadge = activeLinkedLeads.length
                     ? `<span title="${esc(activeLinkedLeads.map(l => l.name).join(', '))}" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-terracotta-soft text-terracotta border border-terracotta/25 text-[11px] font-bold"><i data-lucide="handshake" class="w-3 h-3"></i> Em negociação${activeLinkedLeads.length > 1 ? ' (' + activeLinkedLeads.length + ')' : ''}</span>`
                     : '';

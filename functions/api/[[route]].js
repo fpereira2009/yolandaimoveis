@@ -12,8 +12,8 @@ const CATEGORIES = ['Interessado', 'Captação'];   // Captação = proprietári
 const PURPOSES = ['Comprar', 'Alugar'];
 const PSTATUS = ['Disponível', 'Reservado', 'Vendido', 'Alugado', 'Inativo'];
 const CLOSE_RESULTS = ['Ganho', 'Perdido'];
-// Etapas a partir das quais o lead (Interessado) aceita imóvel associado
-const LINK_STAGES = ['Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
+// O imóvel pode ser vinculado desde Novo Lead; só as etapas HOLDING_STAGES reservam.
+const LINK_STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
 // Etapas em que o lead "segura" e aciona a reserva do imóvel
 const HOLDING_STAGES_SQL = "('Proposta Enviada','Documentação/Crédito')";
 const HOLDING_STAGES = ['Proposta Enviada', 'Documentação/Crédito'];
@@ -136,9 +136,13 @@ const clientOut = (r) => ({
   budget: r.budget, preferences: r.preferences, lastInteraction: r.last_interaction, nextAction: r.next_action,
   pendingFollowup: !!r.pending_followup, birthdayMonth: !!r.birthday_month, source: r.source,
   createdAt: r.created_at, updatedAt: r.updated_at,
+  lastContactAt: [r.last_contact_at, r.last_lead_contact_at].filter(Boolean).sort().at(-1) || r.created_at,
 });
 // CRC: ordena pelo follow-up em aberto mais antigo dos leads do cliente; sem follow-up por último
-const CLIENTS_SQL = `SELECT c.*, (SELECT MIN(l.followup_at) FROM leads l WHERE l.client_id = c.id AND l.deleted_at IS NULL AND l.stage != 'Fechado' AND l.followup_at IS NOT NULL) AS next_followup
+const CLIENTS_SQL = `SELECT c.*,
+  (SELECT MIN(l.followup_at) FROM leads l WHERE l.client_id = c.id AND l.deleted_at IS NULL AND l.stage != 'Fechado' AND l.followup_at IS NOT NULL) AS next_followup,
+  (SELECT MAX(e.created_at) FROM lead_events e JOIN leads l ON l.id = e.lead_id
+   WHERE l.client_id = c.id AND e.kind IN ('criado', 'nota')) AS last_lead_contact_at
   FROM clients c WHERE c.deleted_at IS NULL ORDER BY next_followup IS NULL ASC, next_followup ASC, c.updated_at DESC`;
 const propOut = (r) => ({
   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
@@ -173,18 +177,20 @@ async function loadLead(env, id) {
 // ---------- Imóvel associado ao lead: reserva / liberação / venda-locação ----------
 const reserveStmt = (env, propId, t) => env.DB.prepare(
   "UPDATE properties SET status = 'Reservado', updated_at = ? WHERE id = ? AND status = 'Disponível' AND deleted_at IS NULL").bind(t, propId);
-const releaseStmt = (env, propId, exceptLeadId, t) => env.DB.prepare(
-  `UPDATE properties SET status = 'Disponível', updated_at = ? WHERE id = ? AND status = 'Reservado' AND deleted_at IS NULL
-     AND NOT EXISTS (SELECT 1 FROM leads o WHERE o.property_id = ? AND o.id != ? AND o.deleted_at IS NULL AND o.stage IN ${HOLDING_STAGES_SQL})`)
-  .bind(t, propId, propId, exceptLeadId);
+// Deve ser executado APÓS a atualização do lead no mesmo DB.batch.
+// A decisão de liberar é tomada dentro da transação, considerando TODOS os outros
+// titulares ativos da reserva, e nunca altera Vendido/Alugado/Inativo.
+const releaseStmt = (env, propId, t) => env.DB.prepare(
+  `UPDATE properties SET status = 'Disponível', updated_at = ?
+   WHERE id = ? AND status = 'Reservado' AND deleted_at IS NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM leads o
+       WHERE o.property_id = properties.id AND o.deleted_at IS NULL
+         AND o.category = 'Interessado' AND o.stage IN ${HOLDING_STAGES_SQL}
+     )`).bind(t, propId);
 const closeWonStmt = (env, propId, t) => env.DB.prepare(
   `UPDATE properties SET status = CASE purpose WHEN 'Alugar' THEN 'Alugado' ELSE 'Vendido' END, updated_at = ?
     WHERE id = ? AND deleted_at IS NULL AND status IN ('Disponível','Reservado')`).bind(t, propId);
-async function hasOtherHolder(env, propId, exceptLeadId) {
-  const r = await env.DB.prepare(`SELECT count(*) AS n FROM leads WHERE property_id = ? AND id != ? AND deleted_at IS NULL AND stage IN ${HOLDING_STAGES_SQL}`)
-    .bind(propId, exceptLeadId).first();
-  return r.n > 0;
-}
 const eventStmt = (env, leadId, kind, text, t) =>
   env.DB.prepare('INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?,?,?,?)').bind(leadId, kind, String(text).slice(0, 1000), t);
 
@@ -192,10 +198,13 @@ const eventStmt = (env, leadId, kind, text, t) =>
 async function parseLink(env, b, cur, nextStage, nextCategory) {
   if (b.link_mode === undefined) return null;
   const mode = oneOf(b.link_mode, ['none', 'internal', 'external'], 'associação de imóvel');
-  if (nextStage === 'Fechado') throw new HttpError(400, 'Lead fechado: a associação de imóvel não pode ser alterada.');
+  if (nextStage === 'Fechado') {
+    if (mode === 'none' && cur && !cur.property_id && !cur.external_property) return null;
+    throw new HttpError(400, 'Lead fechado: a associação de imóvel não pode ser alterada.');
+  }
   if (mode === 'none') return { propertyId: null, external: 0, ref: '', prop: null };
   if (nextCategory === 'Captação') throw new HttpError(400, 'Leads de Captação não podem ser associados a imóveis do portfólio.');
-  if (!LINK_STAGES.includes(nextStage)) throw new HttpError(400, 'Associe o imóvel a partir da etapa Qualificação.');
+  if (!LINK_STAGES.includes(nextStage)) throw new HttpError(400, 'Etapa inválida para associação de imóvel.');
   if (mode === 'external') {
     return { propertyId: null, external: 1, ref: str(b.external_ref, 'imobiliária parceira / link', { min: 2, max: 300, required: true }), prop: null };
   }
@@ -212,9 +221,9 @@ async function ensureClient(env, v) {
   if (found) return { row: found, created: false };
   const t = nowIso();
   try {
-    const row = await env.DB.prepare('INSERT INTO clients (name, phone, modality, regions, budget, preferences, next_action, birthday_month, pending_followup, last_interaction, source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,0,1,?,?,?,?) RETURNING *')
+    const row = await env.DB.prepare('INSERT INTO clients (name, phone, modality, regions, budget, preferences, next_action, birthday_month, pending_followup, last_interaction, source, created_at, updated_at, last_contact_at) VALUES (?,?,?,?,?,?,?,0,1,?,?,?,?,?) RETURNING *')
       .bind(v.name, v.phone, v.modality, v.regions || 'A definir', v.budget || 'A definir', v.preferences || '', v.nextAction || '',
-        v.lastInteraction || 'Hoje • Cadastro inicial', v.source, t, t).first();
+        v.lastInteraction || 'Hoje • Cadastro inicial', v.source, t, t, t).first();
     return { row, created: true };
   } catch (e) {
     if (!isUnique(e)) throw e;
@@ -223,6 +232,9 @@ async function ensureClient(env, v) {
 }
 
 async function insertLead(env, v) {
+  if (v.category === 'Captação' && (v.propertyId || v.external)) {
+    throw new HttpError(400, 'Leads de Captação não podem ter imóvel associado.');
+  }
   const t = nowIso();
   const res = await env.DB.batch([
     env.DB.prepare('INSERT INTO leads (name, phone, modality, stage, temp, property, value, followup_at, client_id, source, category, created_at, updated_at, closed_at, property_id, external_property, external_property_ref) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
@@ -230,6 +242,7 @@ async function insertLead(env, v) {
         v.propertyId ?? null, v.external ? 1 : 0, v.extRef || ''),
     env.DB.prepare('SELECT last_insert_rowid() AS id'),
     env.DB.prepare("INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (last_insert_rowid(), 'criado', ?, ?)").bind(String(v.note).slice(0, 1000), t),
+    ...(v.clientId ? [env.DB.prepare('UPDATE clients SET last_contact_at = ? WHERE id = ?').bind(t, v.clientId)] : []),
     ...(v.reserve && v.propertyId ? [reserveStmt(env, v.propertyId, t)] : []),
   ]);
   return res[1].results[0].id;
@@ -242,6 +255,8 @@ async function addEvent(env, leadId, kind, text) {
   await env.DB.batch([
     env.DB.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').bind(t, leadId),
     env.DB.prepare('INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?,?,?,?)').bind(leadId, kind, text.slice(0, 1000), t),
+    ...(kind === 'nota' ? [env.DB.prepare(
+      'UPDATE clients SET last_contact_at = ? WHERE id = (SELECT client_id FROM leads WHERE id = ?)').bind(t, leadId)] : []),
   ]);
 }
 
@@ -271,12 +286,14 @@ async function createLead(env, b) {
     const dup = await openLeadFor(env, v.phone, v.modality, v.category);
     if (dup) throw new HttpError(409, `Já existe um lead em aberto com este telefone (${leadCode(dup.id)}).`, { duplicateOf: leadCode(dup.id) });
   }
+  // Valida a associação ANTES de criar uma ficha de cliente, para não deixar
+  // cadastros órfãos se o imóvel informado estiver indisponível.
+  const link = await parseLink(env, b, null, v.stage, v.category);
   const { row: client, created } = await ensureClient(env, {
     name: v.name, phone: v.phone, modality: v.modality,
     regions: v.property, source: 'Lead', lastInteraction: 'Hoje • Lead criado no funil',
   });
   v.clientId = client.id;
-  const link = await parseLink(env, b, null, v.stage, v.category);
   if (link && (link.propertyId || link.external)) {
     v.propertyId = link.propertyId; v.external = link.external; v.extRef = link.ref;
     if (link.prop) {
@@ -345,7 +362,7 @@ async function patchLead(env, id, b) {
       events.push(['nota', link.prop ? `Imóvel associado: ${propCode(link.prop.id)} - ${link.prop.title}.`
         : link.external ? `Imóvel de outra imobiliária associado: ${link.ref}.` : 'Associação de imóvel removida.']);
     }
-  } else if ((nextCategory === 'Captação' || !LINK_STAGES.includes(nextStage)) && (cur.property_id || cur.external_property)) {
+  } else if ((nextCategory === 'Captação' || (nextStage !== 'Fechado' && !LINK_STAGES.includes(nextStage))) && (cur.property_id || cur.external_property)) {
     nextPropId = null;
     nextPropStatus = null;
     if (cur.property_id !== null) set('property_id', null);
@@ -357,15 +374,17 @@ async function patchLead(env, id, b) {
   const wasHolding = HOLDING_STAGES.includes(cur.stage);
   const isHolding = HOLDING_STAGES.includes(nextStage);
 
-  if (cur.property_id && cur.p_status === 'Reservado' && wasHolding && (cur.property_id !== nextPropId || !isHolding)
-      && !(await hasOtherHolder(env, cur.property_id, id))) {
-    propStmts.push(releaseStmt(env, cur.property_id, id, t));
-    events.push(['nota', `Imóvel ${propCode(cur.property_id)} liberado (voltou para Disponível).`]);
+  // A liberação ocorre após mudar a associação/etapa, na MESMA transação.
+  // Não usamos contagem antecipada: outro lead pode manter o imóvel reservado.
+  if (cur.property_id && wasHolding &&
+      (cur.property_id !== nextPropId || !isHolding || nextCategory === 'Captação')) {
+    propStmts.push(releaseStmt(env, cur.property_id, t));
+    events.push(['nota', `Reserva do imóvel ${propCode(cur.property_id)} reavaliada após alteração do lead.`]);
   }
 
-  if (nextCategory !== 'Captação' && nextPropId && isHolding && nextPropStatus === 'Disponível') {
+  if (nextCategory === 'Interessado' && nextPropId && isHolding && nextPropStatus === 'Disponível') {
     propStmts.push(reserveStmt(env, nextPropId, t));
-    events.push(['nota', `Imóvel ${propCode(nextPropId)} reservado automaticamente (${nextStage}).`]);
+    events.push(['nota', `Reserva do imóvel ${propCode(nextPropId)} solicitada automaticamente (${nextStage}).`]);
   }
 
   const newName = b.name !== undefined ? str(b.name, 'nome', { min: 2, max: 120, required: true }) : cur.name;
@@ -396,7 +415,7 @@ async function patchLead(env, id, b) {
 
 async function addNote(env, id, b) {
   const text = str(b.text, 'nota', { min: 1, max: 1000, required: true });
-  const cur = await env.DB.prepare('SELECT stage, followup_at FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
+  const cur = await env.DB.prepare('SELECT stage, followup_at, client_id FROM leads WHERE id = ? AND deleted_at IS NULL').bind(id).first();
   if (!cur) throw new HttpError(404, 'Lead não encontrado.');
   const followup = b.followup_at !== undefined ? dateOrNull(b.followup_at)
     : cur.stage === 'Fechado' ? cur.followup_at : addDays(todayBR(), 1);
@@ -404,6 +423,7 @@ async function addNote(env, id, b) {
   await env.DB.batch([
     env.DB.prepare('UPDATE leads SET updated_at = ?, followup_at = ? WHERE id = ?').bind(t, followup, id),
     env.DB.prepare("INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?, 'nota', ?, ?)").bind(id, text, t),
+    ...(cur.client_id ? [env.DB.prepare('UPDATE clients SET last_contact_at = ? WHERE id = ?').bind(t, cur.client_id)] : []),
   ]);
   return loadLead(env, id);
 }
@@ -420,13 +440,13 @@ async function closeLead(env, id, b) {
   const events = [];
   if (cur.property_id && cur.p_status) {
     const code = propCode(cur.property_id);
-    if (result === 'Ganho' && (cur.p_status === 'Disponível' || cur.p_status === 'Reservado')) {
+    if (result === 'Ganho' && cur.category === 'Interessado' && (cur.p_status === 'Disponível' || cur.p_status === 'Reservado')) {
       const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
       stmts.push(closeWonStmt(env, cur.property_id, t));
       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
-    } else if (result === 'Perdido' && cur.p_status === 'Reservado' && !(await hasOtherHolder(env, cur.property_id, id))) {
-      stmts.push(releaseStmt(env, cur.property_id, id, t));
-      events.push(['nota', `Imóvel ${code} voltou para Disponível automaticamente.`]);
+    } else if ((result === 'Perdido' || cur.category === 'Captação') && cur.p_status === 'Reservado') {
+      stmts.push(releaseStmt(env, cur.property_id, t));
+      events.push(['nota', `Reserva do imóvel ${code} reavaliada após fechamento perdido.`]);
     }
   }
   events.push(['etapa', `Lead fechado como ${result === 'Ganho' ? 'Ganho (Convertido)' : 'Perdido (Não Convertido)'}. Observação: ${note}`]);
@@ -439,8 +459,8 @@ async function deleteLead(env, id) {
   const cur = await loadLeadRow(env, id);
   const t = nowIso();
   const stmts = [env.DB.prepare('UPDATE leads SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL').bind(t, id)];
-  if (cur.property_id && cur.p_status === 'Reservado' && HOLDING_STAGES.includes(cur.stage) && !(await hasOtherHolder(env, cur.property_id, id)))
-    stmts.push(releaseStmt(env, cur.property_id, id, t));
+  if (cur.property_id && cur.p_status === 'Reservado')
+    stmts.push(releaseStmt(env, cur.property_id, t));
   await env.DB.batch(stmts);
   return { ok: true };
 }
@@ -495,14 +515,21 @@ async function patchClient(env, id, b) {
   if (b.preferences !== undefined) set('preferences', str(b.preferences, 'preferências', { max: 1000 }));
   if (b.next_action !== undefined) set('next_action', str(b.next_action, 'próxima ação', { max: 300 }));
   if (b.birthday_month !== undefined) set('birthday_month', b.birthday_month ? 1 : 0);
-  if (b.contact_done) { set('pending_followup', 0); set('last_interaction', 'Hoje • Contato de relacionamento realizado'); }
+  if (b.contact_done) {
+    set('pending_followup', 0);
+    set('last_interaction', 'Hoje • Contato de relacionamento realizado');
+    set('last_contact_at', nowIso());
+  }
   if (!sets.length) throw new HttpError(400, 'Nada para atualizar.');
   set('updated_at', nowIso());
   const stmts = [env.DB.prepare(`UPDATE clients SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id)];
   if (leadSets.length) stmts.push(env.DB.prepare(`UPDATE leads SET ${leadSets.join(', ')} WHERE client_id = ?`).bind(...leadVals, id));
   try { await env.DB.batch(stmts); }
   catch (e) { if (isUnique(e)) throw new HttpError(409, 'Já existe um cliente com este telefone no CRC.'); throw e; }
-  return clientOut(await env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(id).first());
+  return clientOut(await env.DB.prepare(
+    `SELECT c.*, (SELECT MAX(e.created_at) FROM lead_events e JOIN leads l ON l.id = e.lead_id
+     WHERE l.client_id = c.id AND e.kind IN ('criado', 'nota')) AS last_lead_contact_at
+     FROM clients c WHERE c.id = ?`).bind(id).first());
 }
 
 // ---------- Imóveis ----------
@@ -549,6 +576,18 @@ async function insertProperty(env, vals) {
 }
 async function patchProperty(env, id, b) {
   const vals = await propValues(b);
+  // Impede a liberação MANUAL de uma reserva que outro lead ainda mantém.
+  // Vendido/Alugado não são revertidos automaticamente; a reversão desses
+  // estados finais permanece uma decisão manual do corretor.
+  if (vals.status === 'Disponível') {
+    const row = await env.DB.prepare('SELECT status FROM properties WHERE id = ? AND deleted_at IS NULL').bind(id).first();
+    if (row?.status === 'Reservado') {
+      const holder = await env.DB.prepare(
+        `SELECT 1 FROM leads WHERE property_id = ? AND deleted_at IS NULL
+         AND category = 'Interessado' AND stage IN ${HOLDING_STAGES_SQL} LIMIT 1`).bind(id).first();
+      if (holder) throw new HttpError(409, 'Este imóvel ainda tem leads ativos em negociação. Libere a reserva pelo funil.');
+    }
+  }
   const cols = Object.keys(vals);
   if (!cols.length) throw new HttpError(400, 'Nada para atualizar.');
   const row = await env.DB.prepare(`UPDATE properties SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = ? WHERE id = ? AND deleted_at IS NULL RETURNING *`)
@@ -592,12 +631,15 @@ async function publicContact(env, b) {
     const m = p.purpose === 'Alugar' ? 'Aluguel' : 'Compra';
     v = { category: 'Interessado', modality: m, clientModality: m,
       regions: p.neighborhood, property: `${propCode(p.id)} - ${p.title}`.slice(0, 200), value: p.price, temp: 'Quente',
+      // Contato de imóvel disponível já entra vinculado; a reserva só virá
+      // quando o corretor avançar o lead para Proposta ou Documentação.
+      propertyId: p.status === 'Disponível' ? p.id : null,
       note: `Interesse pelo site em ${propCode(p.id)} - ${p.title}.${msg ? ' Mensagem: ' + msg : ''}` };
   }
   const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
   const open = await openLeadFor(env, phone, v.modality, v.category);
   if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);
-  else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, note: v.note });
+  else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, propertyId: v.propertyId ?? null, note: v.note });
   return json({ ok: true }, 201);
 }
 
