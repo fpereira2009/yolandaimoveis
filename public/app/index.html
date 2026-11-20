@@ -90,6 +90,12 @@
         .card-highlight {
             animation: pulseHighlight 2.2s ease-in-out;
         }
+        .property-description p + p { margin-top: .65em; }
+        .property-description h4 { font-weight: 800; color: #2C4A3E; margin: .75em 0 .3em; }
+        .property-description ul { list-style: disc; padding-left: 1.4em; margin: .4em 0; }
+        .property-description ol { list-style: decimal; padding-left: 1.4em; margin: .4em 0; }
+        .property-description li + li { margin-top: .25em; }
+        .property-rich-editor:empty:before { content: 'Descreva o imóvel ou cole um texto formatado...'; color: #8b948d; }
     </style>
 </head>
 <body class="antialiased selection:bg-moss selection:text-white">
@@ -514,17 +520,21 @@
                         <div id="prop-gallery-editor" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" aria-label="Galeria e escolha de capa"></div>
                         <p class="text-[11px] text-charcoal/65">Toque em “Definir capa” na foto desejada. Fotos novas serão otimizadas antes do envio.</p>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-moss mb-1">URL da foto principal (legado, alternativa às imagens R2)</label>
-                        <input type="url" id="prop-photo" maxlength="500" oninput="previewPropPhoto()" placeholder="https://i.ibb.co/..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
-                        <div id="prop-photo-alert" class="hidden mt-2 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2">
-                            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
-                            <span id="prop-photo-alert-msg"></span>
-                        </div>
-                        <img id="prop-photo-preview" alt="Prévia da foto do imóvel" class="hidden mt-2 h-32 rounded-xl object-cover border border-sand-border" referrerpolicy="no-referrer" onerror="handlePropPhotoError()">
-                    </div>
                     <div><label class="block text-xs font-bold text-moss mb-1">Destaque (selo no card)</label><input type="text" id="prop-badge" maxlength="40" placeholder="Ex: Oportunidade, Novo, Exclusivo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
-                    <div><label class="block text-xs font-bold text-moss mb-1">Descrição</label><textarea id="prop-description" rows="3" maxlength="2000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></textarea></div>
+                    <div class="space-y-1.5">
+                        <label for="prop-description-editor" class="block text-xs font-bold text-moss">Descrição</label>
+                        <div class="flex flex-wrap gap-1.5" role="toolbar" aria-label="Formatação da descrição">
+                            <button type="button" onmousedown="event.preventDefault()" onclick="formatPropertyDescription('bold')" class="px-3 py-1.5 rounded-lg bg-sand border border-sand-border text-moss text-xs font-bold" title="Negrito">B</button>
+                            <button type="button" onmousedown="event.preventDefault()" onclick="formatPropertyDescription('italic')" class="px-3 py-1.5 rounded-lg bg-sand border border-sand-border text-moss text-xs italic" title="Itálico">I</button>
+                            <button type="button" onmousedown="event.preventDefault()" onclick="formatPropertyDescription('insertUnorderedList')" class="px-3 py-1.5 rounded-lg bg-sand border border-sand-border text-moss text-xs" title="Lista com marcadores">• Lista</button>
+                            <button type="button" onmousedown="event.preventDefault()" onclick="formatPropertyDescription('insertOrderedList')" class="px-3 py-1.5 rounded-lg bg-sand border border-sand-border text-moss text-xs" title="Lista numerada">1. Lista</button>
+                        </div>
+                        <div id="prop-description-editor" contenteditable="true" role="textbox" aria-label="Descrição do imóvel" aria-multiline="true"
+                            oninput="syncPropertyDescription()" onpaste="pastePropertyDescription(event)"
+                            class="property-description property-rich-editor w-full min-h-[136px] px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:ring-2 focus:ring-moss/30"></div>
+                        <textarea id="prop-description" class="hidden" tabindex="-1" aria-hidden="true"></textarea>
+                        <div class="flex justify-between gap-2 text-[11px] text-charcoal/65"><span>Você pode colar textos formatados da IA (títulos, negrito e listas).</span><span id="prop-description-count" aria-live="polite">0 / 2000</span></div>
+                    </div>
                     <div class="flex flex-wrap gap-2.5 pt-2">
                         <button id="prop-save-btn" type="submit" class="flex-1 py-3.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm">Salvar Imóvel</button>
                         <button type="button" id="prop-delete-btn" onclick="deleteProperty()" class="hidden px-4 py-3.5 rounded-xl bg-red-50 text-red-700 font-semibold text-sm">Excluir</button>
@@ -783,6 +793,7 @@
     </div>
 
     <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script src="/js/property-description.js?v=4.3.1"></script>
     <script>
         const STAGES = [
             "Novo Lead",
@@ -2279,58 +2290,27 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function setPropPhotoAlert(message) {
-            const box = document.getElementById('prop-photo-alert');
-            const msgEl = document.getElementById('prop-photo-alert-msg');
-            if (!message) {
-                box.classList.add('hidden');
-                msgEl.textContent = '';
-                return;
-            }
-            msgEl.textContent = message;
-            box.classList.remove('hidden');
-            if (window.lucide) lucide.createIcons();
+        // Texto formatado no editor é persistido como Markdown seguro no D1.
+        function syncPropertyDescription() {
+            const markdown = YolandaDescription.fromHtml(document.getElementById('prop-description-editor').innerHTML);
+            document.getElementById('prop-description').value = markdown;
+            const count = document.getElementById('prop-description-count');
+            count.textContent = `${markdown.length} / 2000`;
+            count.classList.toggle('text-red-700', markdown.length > 2000);
+            return markdown;
         }
-
-        function handlePropPhotoError() {
-            const img = document.getElementById('prop-photo-preview');
-            img.classList.add('hidden');
-            const u = document.getElementById('prop-photo').value.trim();
-            if (u) {
-                setPropPhotoAlert('Não foi possível carregar a prévia desta imagem. Verifique se é um link direto de arquivo (.jpg, .png, .webp) público e não uma página HTML ou link do Google Drive.');
-            }
+        function pastePropertyDescription(event) {
+            event.preventDefault();
+            const html = event.clipboardData?.getData('text/html');
+            const text = event.clipboardData?.getData('text/plain') || '';
+            const markdown = html ? YolandaDescription.fromHtml(html) : text;
+            document.execCommand('insertHTML', false, YolandaDescription.toHtml(markdown));
+            syncPropertyDescription();
         }
-
-        function previewPropPhoto() {
-            const img = document.getElementById('prop-photo-preview');
-            const u = document.getElementById('prop-photo').value.trim();
-            setPropPhotoAlert('');
-
-            if (!u) {
-                img.classList.add('hidden');
-                return;
-            }
-            if (/^http:\/\//i.test(u)) {
-                img.classList.add('hidden');
-                setPropPhotoAlert('Atenção: o site exige links seguros (https://). Links http:// são bloqueados.');
-                return;
-            }
-            if (/^https:\/\/(drive|docs)\.google\.com\//i.test(u)) {
-                img.classList.add('hidden');
-                setPropPhotoAlert('Links do Google Drive não funcionam de forma confiável nas fotos do site (bloqueio de cookies/permissões). Envie a foto para o ImgBB e cole o "Link direto" (https://i.ibb.co/...).');
-                return;
-            }
-            if (/^https:\/\/ibb\.co\//i.test(u)) {
-                img.classList.add('hidden');
-                setPropPhotoAlert('Você colou o link da página do ImgBB (ibb.co/...). Copie o "Link direto" da imagem, que começa com https://i.ibb.co/...');
-                return;
-            }
-            if (/^https:\/\//i.test(u)) {
-                img.src = u;
-                img.classList.remove('hidden');
-            } else {
-                img.classList.add('hidden');
-            }
+        function formatPropertyDescription(command) {
+            document.getElementById('prop-description-editor').focus();
+            document.execCommand(command, false, null);
+            syncPropertyDescription();
         }
 
         // Galeria R2: foto principal, seleção em lote e processamento no navegador.
@@ -2483,12 +2463,13 @@
             set('prop-status', p ? p.status : 'Disponível'); set('prop-neighborhood', p ? p.neighborhood : '');
             set('prop-city', p ? p.city : 'Resende - RJ'); set('prop-area', p ? p.area_m2 : '');
             set('prop-bedrooms', p ? p.bedrooms : ''); set('prop-bathrooms', p ? p.bathrooms : '');
-            set('prop-parking', p ? p.parking : ''); set('prop-photo', p ? (p.legacy_photo_url ?? p.photo_url) : '');
+            set('prop-parking', p ? p.parking : '');
             set('prop-badge', p ? p.badge : ''); set('prop-description', p ? p.description : '');
+            document.getElementById('prop-description-editor').innerHTML = YolandaDescription.toHtml(p ? p.description : '');
+            syncPropertyDescription();
             document.getElementById('prop-modal-title').textContent = p ? 'Editar ' + p.code : 'Novo Imóvel';
             document.getElementById('prop-code-note').classList.toggle('hidden', !!p);
             document.getElementById('prop-delete-btn').classList.toggle('hidden', !p);
-            previewPropPhoto();
             document.getElementById('property-modal').classList.remove('hidden');
             lucide.createIcons();
         }
@@ -2499,11 +2480,13 @@
             event.preventDefault();
             if (propSaving) return;
             const g = id => document.getElementById(id).value;
+            const markdown = syncPropertyDescription();
+            if (markdown.length > 2000) { showToast('A descrição pode ter até 2.000 caracteres.'); return; }
             const body = {
                 title: g('prop-title'), purpose: g('prop-purpose'), type: g('prop-type'), price: g('prop-price'),
                 status: g('prop-status'), neighborhood: g('prop-neighborhood'), city: g('prop-city'), area_m2: g('prop-area'),
                 bedrooms: g('prop-bedrooms'), bathrooms: g('prop-bathrooms'), parking: g('prop-parking'),
-                photo_url: g('prop-photo'), badge: g('prop-badge'), description: g('prop-description')
+                badge: g('prop-badge'), description: markdown
             };
             const editId = g('prop-edit-id');
             const button = document.getElementById('prop-save-btn');
@@ -2894,7 +2877,6 @@
                 city: col(r, ['cidade', 'municipio']) || 'Resende - RJ', price: brNumber(col(r, ['valor', 'preco', 'price'])),
                 area_m2: brNumber(col(r, ['area_m2', 'area', 'metragem'])), bedrooms: brNumber(col(r, ['quartos', 'dormitorios'])),
                 bathrooms: brNumber(col(r, ['banheiros', 'wc'])), parking: brNumber(col(r, ['vagas', 'garagem'])),
-                photo_url: /^https:\/\//i.test(col(r, ['foto_url', 'foto', 'imagem'])) ? col(r, ['foto_url', 'foto', 'imagem']) : '',
                 badge: col(r, ['destaque', 'selo']), description: col(r, ['descricao', 'detalhes']),
                 status: PROP_STATUS.find(s => normTxt(s) === normTxt(col(r, ['status', 'situacao']))) || 'Disponível'
             }));

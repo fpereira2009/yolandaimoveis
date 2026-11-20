@@ -1,5 +1,5 @@
 // Utilitários de galeria: apenas recursos preview. Não consulta a tabela nova em produção.
-export const mediaEnabled = (env) => env.MEDIA_ENV === 'preview' && !!env.MEDIA_BUCKET && !!env.DB;
+export const mediaEnabled = (env) => env?.MEDIA_ENV === 'preview' && !!env?.MEDIA_BUCKET && !!env?.DB;
 export const mediaPath = (key, env) => {
   const base = String(env?.MEDIA_PUBLIC_BASE_URL || '').trim();
   return /^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(base)
@@ -40,7 +40,7 @@ export async function propertyImageMap(env) {
 }
 export function withGallery(property, list = [], env) {
   const images = list.map((r) => r && r.url ? r : serializeImage(r, env));
-  const coverUrl = images.length ? images[0].url : (property.photo_url || property.foto_url || '');
+  const coverUrl = images.length ? images[0].url : (env?.MEDIA_ENV === 'preview' ? '' : (property.photo_url || property.foto_url || ''));
   return {
     ...property,
     ...(Object.hasOwn(property, 'foto_url') ? { foto_url: coverUrl } : { photo_url: coverUrl }),

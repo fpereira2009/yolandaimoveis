@@ -58,10 +58,13 @@ async function call(handler, method, pathname, data = null, expected = 200, opts
   tests++;
   return result;
 }
+await call(main,'POST','properties',{title:'Apartamento proibido',purpose:'Comprar',neighborhood:'Centro',photo_url:'https://example.org/photo.jpg'},400);
 const p = await call(main,'POST','properties',{title:'Apartamento de teste R2', purpose:'Comprar', neighborhood:'Manejo', price:490000,
-  photo_url:'https://images.example.com/legado.jpg'},201);
+  description:'## Diferenciais\n\n**Ambientes amplos**\n\n- 3 quartos\n- Varanda'},201);
 check(p.code === 'YTI-0001','código imóvel');
-check(p.photo_url === 'https://images.example.com/legado.jpg','link legado antes do upload');
+check(p.photo_url === '', 'preview não aceita URL de imagem externa');
+check(!('legacy_photo_url' in p), 'API preview não expõe campo legado');
+check(p.description.includes('**Ambientes amplos**'), 'descrição formatada preservada');
 check(p.images.length === 0,'sem fotos inicialmente');
 const tinyWebp = Uint8Array.from([82,73,70,70,20,0,0,0,87,69,66,80,86,80,56,32,0,0,0,0]);
 const created = [];
@@ -86,7 +89,7 @@ check(db.prepare('SELECT count(*) AS n FROM property_images WHERE is_cover=1').g
 check(db.prepare('SELECT id FROM property_images WHERE is_cover=1').get().id === created[3].id,'capa escolhida');
 const all = await call(main,'GET','properties');
 check(all.items[0].photo_url === created[3].url,'API interna aponta capa R2');
-check(all.items[0].legacy_photo_url === 'https://images.example.com/legado.jpg','URL legada preservada na DB');
+check(!('legacy_photo_url' in all.items[0]), 'sem campo legado no preview');
 check(all.items[0].images.length === 10,'API CRM retorna galeria');
 const pub = await call(main,'GET','public/properties');
 check(pub.items[0].foto_url === created[3].url,'API vitrine aponta capa R2');
@@ -117,11 +120,17 @@ check(bucket.size===0,'R2 sem imagens órfãs após exclusão');
 check(db.prepare('SELECT count(*) AS n FROM property_images').get().n===0,'D1 sem metadados órfãos');
 check(!!db.prepare('SELECT deleted_at FROM properties WHERE id=1').get().deleted_at,'exclusão lógica preservada');
 check((await call(main,'GET','public/properties')).items.length===0,'imóvel excluído fora da vitrine');
-// Imóvel sem imagens R2 continua exibindo URL existente.
-const legacy = await call(main,'POST','properties',{title:'Casa de teste legada',purpose:'Comprar',neighborhood:'Centro',photo_url:'https://x.example.org/a.jpg'},201);
-const legacyPublic = await call(main,'GET','public/properties');
-check(legacyPublic.items[0].foto_url==='https://x.example.org/a.jpg','fallback link antigo');
-check(legacyPublic.items[0].images.length===0,'sem migração forçada');
+// A leitura dos links antigos fica exclusiva do ambiente de produção.
+const legacy = await call(main,'POST','properties',{title:'Casa de teste legada',purpose:'Comprar',neighborhood:'Centro'},201);
+db.prepare('UPDATE properties SET photo_url=? WHERE id=?').run('https://x.example.org/a.jpg',2);
+const previewPublic = await call(main,'GET','public/properties');
+check(previewPublic.items[0].foto_url==='', 'preview não utiliza links legados');
+check(previewPublic.items[0].images.length===0, 'sem galeria nova');
+const prodPublic = await call(main,'GET','public/properties',null,200,{env:{...env,MEDIA_ENV:'production'}});
+check(prodPublic.items[0].foto_url==='https://x.example.org/a.jpg','produção conserva URLs anteriores');
+await call(main,'PATCH',`properties/${legacy.code}`,{photo_url:'https://x.example.org/alterada.jpg'},400);
+const imported = await call(main,'POST','properties/import',{rows:[{title:'CSV com URL de foto',purpose:'Comprar',neighborhood:'Centro',photo_url:'https://x.example.org/a.jpg'}]});
+check(imported.skipped.length===1, 'importação de URL também bloqueada no preview');
 check(legacy.code==='YTI-0002','sequência códigos');
 // Falha temporária R2: exclusão marca imóvel removido, preserva dados para retry e limpa depois.
 const tmp = await call(main,'POST','properties',{title:'Imóvel falha transitória',purpose:'Comprar',neighborhood:'Centro'},201);
@@ -159,6 +168,23 @@ const crm=fs.readFileSync(path.join(root,'public/app/index.html'),'utf8');
 const site=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
 for(const token of ['id="prop-files"','id="prop-gallery-editor"','selectPropertyPhotos(event)','optimizePropertyPhoto(file)','sendPropertyImage(code, blob)','setPropertyCover(type, id)','removePropertyImage(id)','onsubmit="handleSaveProperty(event)"']) check(crm.includes(token),`CRM mantém ${token}`);
 for(const token of ['window.movePropertyGallery = movePropertyGallery','id="property-gallery-swipe"','function movePropertyGallery(step)','property-gallery-counter','touchstart','touchend','movePropertyGallery(-1)','movePropertyGallery(1)']) check(site.includes(token),`vitrine mantém ${token}`);
+check(!crm.includes('id="prop-photo"'), 'entrada URL removida do CRM');
+check(!crm.includes('previewPropPhoto()'), 'pré-visualização legada removida');
+check(!crm.includes("photo_url: g('prop-photo')"), 'payload CRM usa somente R2');
+check(!crm.includes("col(r, ['foto_url', 'foto', 'imagem'])"), 'importação CSV sem URL');
+for(const token of ['id="prop-description-editor"','pastePropertyDescription(event)','formatPropertyDescription(command)','syncPropertyDescription()']) check(crm.includes(token),`Editor: ${token}`);
+for(const token of ['function togglePropertyZoom(clientX, clientY)', 'function attachPropertyImageGestures(area)', 'resetPropertyZoom()', 'YolandaDescription.toHtml(prop.descricao)', 'touchmove']) check(site.includes(token),`Site 4.3.1: ${token}`);
+const moduleText = fs.readFileSync(path.join(root,'public/js/property-description.js'),'utf8');
+const context = {globalThis:{}};
+vm.runInNewContext(moduleText, context);
+const render = context.globalThis.YolandaDescription.toHtml;
+const good = render('## Destaques\n\n**Piscina**\n\n- Jardim\n- Varanda\n\n1. Visite\n2. Negocie');
+check(good.includes('<h4>Destaques</h4>'),'título renderizado');
+check(good.includes('<strong>Piscina</strong>'),'negrito renderizado');
+check(good.includes('<ul><li>Jardim</li><li>Varanda</li></ul>'),'lista com marcadores');
+check(good.includes('<ol><li>Visite</li><li>Negocie</li></ol>'),'lista numerada');
+check(render('<script>alert(1)</script>').includes('&lt;script&gt;'),'HTML ativo escapado');
+check(!render('<img src=x>').includes('<img'), 'tags img não são interpretadas');
 for(const file of [crm,site]) {
   const scripts=[...file.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
   for(const script of scripts) new vm.Script(script);

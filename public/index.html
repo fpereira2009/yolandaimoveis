@@ -76,6 +76,14 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        .property-description p + p { margin-top: .7em; }
+        .property-description h4 { color: #2C4A3E; font-weight: 800; margin: .75em 0 .35em; }
+        .property-description ul { list-style: disc; padding-left: 1.5em; margin: .5em 0; }
+        .property-description ol { list-style: decimal; padding-left: 1.5em; margin: .5em 0; }
+        .property-description li + li { margin-top: .25em; }
+        #modal-property-img { transition: transform 180ms ease; -webkit-user-select: none; user-select: none; }
+        #property-gallery-swipe.is-zoomed { cursor: grab; touch-action: none; }
+        #property-gallery-swipe.is-zoomed:active { cursor: grabbing; }
     </style>
 </head>
 <body class="antialiased selection:bg-moss selection:text-white overflow-x-hidden">
@@ -597,6 +605,7 @@
     </div>
 
     <!-- ==================== JAVASCRIPT ==================== -->
+    <script src="/js/property-description.js?v=4.3.1"></script>
     <script>
         (function () {
             "use strict";
@@ -1201,6 +1210,7 @@
             let activePropertyImageIndex = 0;
             function movePropertyGallery(step) {
                 if (!activePropertyImages.length) return;
+                resetPropertyZoom();
                 activePropertyImageIndex = (activePropertyImageIndex + step + activePropertyImages.length) % activePropertyImages.length;
                 const image = document.getElementById('modal-property-img');
                 const counter = document.getElementById('property-gallery-counter');
@@ -1209,6 +1219,81 @@
                     image.src = resolvePropertyImageUrl(activePropertyImages[activePropertyImageIndex]);
                 }
                 if (counter) counter.textContent = (activePropertyImageIndex + 1) + ' / ' + activePropertyImages.length;
+            }
+
+            // Zoom por duplo clique no desktop ou dois toques no celular.
+            // O gesto de arrastar move a área de interesse quando a foto está ampliada.
+            let propertyZoomed = false;
+            let propertyZoomOrigin = {x: 50, y: 50};
+            function resetPropertyZoom() {
+                propertyZoomed = false;
+                propertyZoomOrigin = {x: 50, y: 50};
+                const image = document.getElementById('modal-property-img');
+                const area = document.getElementById('property-gallery-swipe');
+                if (image) { image.style.transform = ''; image.style.transformOrigin = ''; }
+                if (area) area.classList.remove('is-zoomed');
+            }
+            function togglePropertyZoom(clientX, clientY) {
+                const area = document.getElementById('property-gallery-swipe');
+                const image = document.getElementById('modal-property-img');
+                if (!area || !image) return;
+                if (propertyZoomed) { resetPropertyZoom(); return; }
+                const r = area.getBoundingClientRect();
+                propertyZoomOrigin.x = Math.max(0, Math.min(100, 100 * (clientX - r.left) / r.width));
+                propertyZoomOrigin.y = Math.max(0, Math.min(100, 100 * (clientY - r.top) / r.height));
+                propertyZoomed = true;
+                image.style.transformOrigin = `${propertyZoomOrigin.x}% ${propertyZoomOrigin.y}%`;
+                image.style.transform = 'scale(2.2)';
+                area.classList.add('is-zoomed');
+            }
+            function attachPropertyImageGestures(area) {
+                let tapAt = 0, tapX = 0, tapY = 0, lastTouch = 0, start = null, drag = null;
+                area.addEventListener('dblclick', e => {
+                    if (Date.now() - lastTouch < 650 || e.target.closest('button')) return;
+                    e.preventDefault(); togglePropertyZoom(e.clientX, e.clientY);
+                });
+                area.addEventListener('touchstart', e => {
+                    if (e.touches.length !== 1 || e.target.closest('button')) { start = null; return; }
+                    const touch = e.touches[0]; start = {x:touch.clientX,y:touch.clientY};
+                    if (propertyZoomed) drag = {...start, ox:propertyZoomOrigin.x, oy:propertyZoomOrigin.y};
+                }, {passive:true});
+                area.addEventListener('touchmove', e => {
+                    if (!propertyZoomed || !drag || e.touches.length !== 1) return;
+                    e.preventDefault();
+                    const rect = area.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    propertyZoomOrigin.x = Math.max(0, Math.min(100, drag.ox - (touch.clientX-drag.x)/rect.width*80));
+                    propertyZoomOrigin.y = Math.max(0, Math.min(100, drag.oy - (touch.clientY-drag.y)/rect.height*80));
+                    document.getElementById('modal-property-img').style.transformOrigin = `${propertyZoomOrigin.x}% ${propertyZoomOrigin.y}%`;
+                }, {passive:false});
+                area.addEventListener('touchend', e => {
+                    const touch = e.changedTouches[0];
+                    if (!touch || !start) return;
+                    const distance = Math.hypot(touch.clientX-start.x,touch.clientY-start.y);
+                    if (distance < 25) {
+                        const now = Date.now();
+                        if (now-tapAt < 370 && Math.hypot(touch.clientX-tapX,touch.clientY-tapY) < 45) {
+                            e.preventDefault(); lastTouch = now;
+                            togglePropertyZoom(touch.clientX,touch.clientY); tapAt = 0;
+                        } else {tapAt=now;tapX=touch.clientX;tapY=touch.clientY;}
+                    } else if (!propertyZoomed && distance > 45 && activePropertyImages.length > 1) {
+                        movePropertyGallery(touch.clientX < start.x ? 1 : -1);
+                    }
+                    start = null; drag = null;
+                }, {passive:false});
+                let mouse = null;
+                area.addEventListener('pointerdown', e => {
+                    if (!propertyZoomed || e.pointerType !== 'mouse' || e.target.closest('button')) return;
+                    mouse = {x:e.clientX,y:e.clientY,ox:propertyZoomOrigin.x,oy:propertyZoomOrigin.y};
+                });
+                area.addEventListener('pointermove', e => {
+                    if (!mouse || !propertyZoomed) return;
+                    const rect=area.getBoundingClientRect();
+                    propertyZoomOrigin.x = Math.max(0,Math.min(100,mouse.ox-(e.clientX-mouse.x)/rect.width*80));
+                    propertyZoomOrigin.y = Math.max(0,Math.min(100,mouse.oy-(e.clientY-mouse.y)/rect.height*80));
+                    document.getElementById('modal-property-img').style.transformOrigin = `${propertyZoomOrigin.x}% ${propertyZoomOrigin.y}%`;
+                });
+                ['pointerup','pointercancel','pointerleave'].forEach(name=>area.addEventListener(name,()=>{mouse=null;}));
             }
 
             // ==================== MODAL DETALHES DO IMÓVEL ====================
@@ -1227,13 +1312,13 @@
                 activePropertyImageIndex = 0;
 
                 content.innerHTML =
-                    '<div id="property-gallery-swipe" class="relative aspect-[16/9] bg-moss-soft touch-pan-y">' +
+                    '<div id="property-gallery-swipe" class="relative aspect-[16/9] bg-moss-soft touch-pan-y overflow-hidden" aria-label="Dê dois cliques ou dois toques para ampliar a foto">' +
                         '<img id="modal-property-img" ' +
                              'src="' + esc(resolvedImg) + '" ' +
                              'data-raw-img="' + esc(normalizedRawKey) + '" ' +
                              'onerror="handlePropertyImgError(this, \'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
                              'alt="' + esc(prop.titulo) + '" ' +
-                             'class="w-full h-full object-cover">' +
+                             'class="w-full h-full object-cover" draggable="false">' +
                         (activePropertyImages.length > 1 ?
                             '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
                                 '<i data-lucide="chevron-left" class="w-5 h-5"></i></button>' +
@@ -1286,7 +1371,7 @@
 
                         '<div class="space-y-1.5">' +
                             '<h4 class="font-heading font-bold text-moss text-sm">Descrição do Imóvel</h4>' +
-                            '<p class="text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + esc(prop.descricao) + '</p>' +
+                            '<div class="property-description text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + YolandaDescription.toHtml(prop.descricao) + '</div>' +
                         '</div>' +
 
                         '<form id="interest-form" onsubmit="submitInterest(event, \'' + prop.codigo + '\')" class="space-y-2">' +
@@ -1327,20 +1412,7 @@
                     resolvePropertyImageUrl(prop.foto_url, modalImgEl);
                 }
                 const swipeArea = document.getElementById('property-gallery-swipe');
-                if (swipeArea && activePropertyImages.length > 1) {
-                    let startX = null;
-                    swipeArea.addEventListener('touchstart', e => {
-                        startX = e.changedTouches[0]?.clientX ?? null;
-                    }, {passive:true});
-                    swipeArea.addEventListener('touchend', e => {
-                        if (startX === null) return;
-                        const endX = e.changedTouches[0]?.clientX;
-                        if (typeof endX === 'number' && Math.abs(endX - startX) > 45) {
-                            movePropertyGallery(endX < startX ? 1 : -1);
-                        }
-                        startX = null;
-                    }, {passive:true});
-                }
+                if (swipeArea) attachPropertyImageGestures(swipeArea);
 
                 safeRefreshIcons();
             }
@@ -1349,6 +1421,7 @@
                 const modal = document.getElementById("property-modal");
                 if (modal) modal.classList.add("hidden");
                 document.body.style.overflow = "";
+                resetPropertyZoom();
             }
 
             // ==================== ÁREA DA CORRETORA: agora em /app (Cloudflare Access) ====================

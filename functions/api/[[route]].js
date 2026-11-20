@@ -148,7 +148,7 @@ const CLIENTS_SQL = `SELECT c.*,
 const propOut = (r, images = [], env) => withGallery({
   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
   city: r.city, price: r.price, area_m2: r.area_m2, bedrooms: r.bedrooms, bathrooms: r.bathrooms, parking: r.parking,
-  photo_url: r.photo_url, legacy_photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
+  photo_url: r.photo_url, ...(env?.MEDIA_ENV === 'preview' ? {} : { legacy_photo_url: r.photo_url }), badge: r.badge, status: r.status, description: r.description,
 }, images, env);
 const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
   codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
@@ -561,11 +561,12 @@ const PROP_FIELDS = {
   badge: (v) => str(v, 'destaque', { max: 40 }), status: (v) => oneOf(v, PSTATUS, 'status'),
   description: (v) => str(v, 'descrição', { max: 2000 }),
 };
-async function propValues(b, { resolvePhoto = true, defaults = false } = {}) {
+async function propValues(b, { resolvePhoto = true, defaults = false, r2Only = false } = {}) {
   const out = {};
   const src = defaults ? { type: 'Casa', city: 'Resende - RJ', status: 'Disponível', purpose: 'Comprar', ...b } : b;
   for (const [k, fn] of Object.entries(PROP_FIELDS)) if (src[k] !== undefined) out[k] = fn(src[k]);
-  if (src.photo_url !== undefined) out.photo_url = await photoField(src.photo_url, resolvePhoto);
+  if (r2Only && src.photo_url !== undefined && String(src.photo_url || '').trim()) throw new HttpError(400, 'Fotos por URL não são aceitas no preview. Utilize o upload R2.');
+  if (!r2Only && src.photo_url !== undefined) out.photo_url = await photoField(src.photo_url, resolvePhoto);
   if (defaults && (!out.title || !out.neighborhood)) { PROP_FIELDS.title(src.title); PROP_FIELDS.neighborhood(src.neighborhood); }
   return out;
 }
@@ -573,10 +574,10 @@ async function insertProperty(env, vals) {
   const t = nowIso(); const cols = Object.keys(vals);
   const row = await env.DB.prepare(`INSERT INTO properties (${cols.join(', ')}, created_at, updated_at) VALUES (${cols.map(() => '?').join(', ')}, ?, ?) RETURNING *`)
     .bind(...cols.map((c) => vals[c]), t, t).first();
-  return propOut(row);
+  return propOut(row, [], env);
 }
 async function patchProperty(env, id, b) {
-  const vals = await propValues(b);
+  const vals = await propValues(b, { r2Only: env?.MEDIA_ENV === 'preview' });
   // Impede a liberação MANUAL de uma reserva que outro lead ainda mantém.
   // Vendido/Alugado não são revertidos automaticamente; a reversão desses
   // estados finais permanece uma decisão manual do corretor.
@@ -621,7 +622,7 @@ async function importProperties(env, b) {
   const rows = Array.isArray(b.rows) ? b.rows.slice(0, 200) : [];
   const created = [], skipped = [];
   for (let i = 0; i < rows.length; i++) {
-    try { created.push(await insertProperty(env, await propValues(rows[i], { resolvePhoto: false, defaults: true }))); }
+    try { created.push(await insertProperty(env, await propValues(rows[i], { resolvePhoto: false, defaults: true, r2Only: env?.MEDIA_ENV === 'preview' }))); }
     catch (e) { skipped.push({ row: i + 1, error: e.message }); }
   }
   return { created: created.length, skipped };
@@ -631,7 +632,7 @@ async function importProperties(env, b) {
 async function publicProperties(env) {
   const rows = (await env.DB.prepare("SELECT * FROM properties WHERE deleted_at IS NULL AND status IN ('Disponível','Reservado') ORDER BY id DESC").all()).results;
   const galleries = await propertyImageMap(env);
-  return json({ items: rows.map(r => propPublic(r, galleries.get(r.id) || [])) }, 200, { 'Cache-Control': 'public, max-age=60' });
+  return json({ items: rows.map(r => propPublic(r, galleries.get(r.id) || [], env)) }, 200, { 'Cache-Control': 'public, max-age=60' });
 }
 
 async function publicContact(env, b) {
@@ -744,9 +745,9 @@ export async function onRequest({ request, env, params }) {
         if (method === 'GET') {
           const rows = (await env.DB.prepare('SELECT * FROM properties WHERE deleted_at IS NULL ORDER BY id DESC').all()).results;
           const galleries = await propertyImageMap(env);
-          return json({ items: rows.map(r => propOut(r, galleries.get(r.id) || [])) });
+          return json({ items: rows.map(r => propOut(r, galleries.get(r.id) || [], env)) });
         }
-        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true })), 201);
+        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true, r2Only: env?.MEDIA_ENV === 'preview' })), 201);
       } else if (id === 'import' && method === 'POST') return json(await importProperties(env, body));
       else if (!sub) {
         if (method === 'PATCH') return json(await patchProperty(env, parseId(id), body));
