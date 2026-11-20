@@ -1264,16 +1264,20 @@
         function renderFunnel() {
             const query = document.getElementById('funnel-search').value.trim().toLowerCase();
 
-            document.getElementById('count-cat-todas').textContent = leads.length;
-            document.getElementById('count-cat-interessado').textContent = leads.filter(l => l.category !== 'Captação').length;
-            document.getElementById('count-cat-captacao').textContent = leads.filter(l => l.category === 'Captação').length;
+            // O Kanban exibe apenas leads ativos; a visualização por etapas mantém o histórico Fechado.
+            const visibleLeads = funnelViewMode === 'kanban'
+                ? leads.filter(l => l.stage !== 'Fechado')
+                : leads;
+            document.getElementById('count-cat-todas').textContent = visibleLeads.length;
+            document.getElementById('count-cat-interessado').textContent = visibleLeads.filter(l => l.category !== 'Captação').length;
+            document.getElementById('count-cat-captacao').textContent = visibleLeads.filter(l => l.category === 'Captação').length;
             document.querySelectorAll('.funnel-cat-btn').forEach(b => {
                 const on = b.dataset.cat === funnelCategoryFilter;
                 b.className = 'funnel-cat-btn px-3.5 py-2 rounded-xl text-xs shrink-0 flex items-center gap-1.5 transition-colors ' +
                     (on ? 'font-bold bg-moss text-white' : 'font-semibold bg-sand text-moss hover:bg-moss/10');
             });
 
-            const baseLeads = leads.filter(l => {
+            const baseLeads = visibleLeads.filter(l => {
                 const matchCat = funnelCategoryFilter === 'Todas' || l.category === funnelCategoryFilter;
                 const matchDue = !funnelFollowupOnly || (l.stage !== 'Fechado' && (l.followupStatus === 'Hoje' || l.followupStatus === 'Atrasado'));
                 return matchCat && matchDue;
@@ -1323,8 +1327,8 @@
                 stageGrid.innerHTML = stageLeads.map(l => buildLeadCardHTML(l)).join('');
             }
 
-            // Mantém os mesmos buckets do filtro por etapa, inclusive Fechado.
-            const kanbanStages = STAGES;
+            // Kanban: somente etapas ativas. O histórico Fechado permanece nas abas e no D1.
+            const kanbanStages = STAGES.filter(stage => stage !== 'Fechado');
             const kanbanWrapper = document.getElementById('kanban-columns-wrapper');
             kanbanWrapper.innerHTML = kanbanStages.map(stage => {
                 const colLeads = filteredLeads.filter(l => l.stage === stage);
