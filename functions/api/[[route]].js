@@ -171,8 +171,6 @@ async function loadLead(env, id) {
 }
 
 // ---------- Imóvel associado ao lead: reserva / liberação / venda-locação ----------
-// Todos os UPDATEs de status são condicionais (WHERE status = ...) e rodam dentro de env.DB.batch junto com a
-// alteração do lead, então lead e imóvel nunca ficam inconsistentes entre si.
 const reserveStmt = (env, propId, t) => env.DB.prepare(
   "UPDATE properties SET status = 'Reservado', updated_at = ? WHERE id = ? AND status = 'Disponível' AND deleted_at IS NULL").bind(t, propId);
 const releaseStmt = (env, propId, exceptLeadId, t) => env.DB.prepare(
@@ -191,7 +189,6 @@ const eventStmt = (env, leadId, kind, text, t) =>
   env.DB.prepare('INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?,?,?,?)').bind(leadId, kind, String(text).slice(0, 1000), t);
 
 // Interpreta o bloco de associação do corpo da requisição (link_mode: none | internal | external).
-// Devolve null quando o corpo não mexe na associação.
 async function parseLink(env, b, cur, nextStage, nextCategory) {
   if (b.link_mode === undefined) return null;
   const mode = oneOf(b.link_mode, ['none', 'internal', 'external'], 'associação de imóvel');
@@ -204,7 +201,6 @@ async function parseLink(env, b, cur, nextStage, nextCategory) {
   }
   const prop = await env.DB.prepare('SELECT * FROM properties WHERE id = ? AND deleted_at IS NULL').bind(parseId(b.property_code)).first();
   if (!prop) throw new HttpError(404, 'Imóvel não encontrado.');
-  // só imóveis Disponíveis podem ser associados; o imóvel já vinculado ao próprio lead pode permanecer (ex.: já Reservado)
   if (prop.id !== (cur && cur.property_id) && prop.status !== 'Disponível')
     throw new HttpError(409, `O imóvel ${propCode(prop.id)} não está disponível (status atual: ${prop.status}).`);
   return { propertyId: prop.id, external: 0, ref: '', prop };
@@ -303,11 +299,10 @@ async function patchLead(env, id, b) {
   let nextStage = cur.stage;
   if (b.stage !== undefined && b.stage !== cur.stage) {
     oneOf(b.stage, STAGES, 'etapa');
-    // Fechar exige resultado + observação: só pela rotina POST /leads/:id/close
     if (b.stage === 'Fechado') throw new HttpError(400, 'Para fechar um lead use a rotina de Fechamento (resultado + observação).');
     nextStage = b.stage;
     set('stage', b.stage); set('closed_at', null);
-    if (cur.stage === 'Fechado') { set('close_result', null); set('close_note', null); }   // lead reaberto (não altera imóvel Vendido/Alugado)
+    if (cur.stage === 'Fechado') { set('close_result', null); set('close_note', null); }
     if (b.followup_at === undefined) set('followup_at', addDays(todayBR(), 1));
     events.push(['etapa', `Etapa alterada de "${cur.stage}" para "${b.stage}".`]);
   }
@@ -351,7 +346,6 @@ async function patchLead(env, id, b) {
         : link.external ? `Imóvel de outra imobiliária associado: ${link.ref}.` : 'Associação de imóvel removida.']);
     }
   } else if ((nextCategory === 'Captação' || !LINK_STAGES.includes(nextStage)) && (cur.property_id || cur.external_property)) {
-    // Se mudou para Captação ou recuou para Novo Lead, desvincula automaticamente
     nextPropId = null;
     nextPropStatus = null;
     if (cur.property_id !== null) set('property_id', null);
@@ -363,15 +357,12 @@ async function patchLead(env, id, b) {
   const wasHolding = HOLDING_STAGES.includes(cur.stage);
   const isHolding = HOLDING_STAGES.includes(nextStage);
 
-  // Libera o imóvel anterior se este lead o segurava (Reservado) e trocou/desvinculou ou recuou para etapa anterior à proposta,
-  // respeitando a proteção contra disputa (só libera se nenhum outro lead ativo o mantiver em reserva).
   if (cur.property_id && cur.p_status === 'Reservado' && wasHolding && (cur.property_id !== nextPropId || !isHolding)
       && !(await hasOtherHolder(env, cur.property_id, id))) {
     propStmts.push(releaseStmt(env, cur.property_id, id, t));
     events.push(['nota', `Imóvel ${propCode(cur.property_id)} liberado (voltou para Disponível).`]);
   }
 
-  // Gatilho de Reserva: qualquer lead (exceto Captação) com imóvel associado que entre/esteja em Proposta Enviada OU Documentação/Crédito
   if (nextCategory !== 'Captação' && nextPropId && isHolding && nextPropStatus === 'Disponível') {
     propStmts.push(reserveStmt(env, nextPropId, t));
     events.push(['nota', `Imóvel ${propCode(nextPropId)} reservado automaticamente (${nextStage}).`]);
@@ -417,8 +408,6 @@ async function addNote(env, id, b) {
   return loadLead(env, id);
 }
 
-// Rotina de Fechamento: resultado (Ganho/Perdido) + observação obrigatória + data/hora automática,
-// e automação do imóvel interno associado — tudo em um único env.DB.batch (atômico).
 async function closeLead(env, id, b) {
   const cur = await loadLeadRow(env, id);
   if (cur.stage === 'Fechado') throw new HttpError(409, 'Este lead já está fechado.');
@@ -429,10 +418,10 @@ async function closeLead(env, id, b) {
     "UPDATE leads SET stage = 'Fechado', closed_at = ?, close_result = ?, close_note = ?, followup_at = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NULL AND stage != 'Fechado'")
     .bind(t, result, note, t, id)];
   const events = [];
-  if (cur.property_id && cur.p_status) {   // só imóvel interno ativo; externo ou sem imóvel: nada a automatizar
+  if (cur.property_id && cur.p_status) {
     const code = propCode(cur.property_id);
     if (result === 'Ganho' && (cur.p_status === 'Disponível' || cur.p_status === 'Reservado')) {
-      const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';   // respeita a finalidade cadastrada no imóvel
+      const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
       stmts.push(closeWonStmt(env, cur.property_id, t));
       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
     } else if (result === 'Perdido' && cur.p_status === 'Reservado' && !(await hasOtherHolder(env, cur.property_id, id))) {
@@ -446,7 +435,6 @@ async function closeLead(env, id, b) {
   return loadLead(env, id);
 }
 
-// Exclusão lógica do lead; se ele segurava a reserva de um imóvel (e ninguém mais), o imóvel volta a Disponível.
 async function deleteLead(env, id) {
   const cur = await loadLeadRow(env, id);
   const t = nowIso();
@@ -479,7 +467,6 @@ async function createClient(env, b) {
     lastInteraction: 'Hoje • Cadastro inicial no CRC', source: 'Painel',
   });
   if (b.birthday_month) await env.DB.prepare('UPDATE clients SET birthday_month = 1 WHERE id = ?').bind(row.id).run();
-  // cliente -> lead: abre um lead se ainda não houver um em aberto
   let leadCreated = false;
   if (!(await openLeadFor(env, phone, modality, category))) {
     await insertLead(env, {

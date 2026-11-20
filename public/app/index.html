@@ -595,7 +595,7 @@
 
                     <div id="lead-property-field-wrapper">
                         <label class="block text-xs font-bold text-moss mb-1">Imóvel / Região de Interesse *</label>
-                        <input type="text" id="lead-property" list="property-options" required placeholder="Ex: YTI-001 - Casa Manejo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <input type="text" id="lead-property" list="property-options" required placeholder="Selecione um imóvel disponível ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                     </div>
 
                     <!-- Imóvel associado: a partir da Qualificação (somente categoria Interessado) -->
@@ -783,7 +783,6 @@
             "Fechado"
         ];
 
-        // Probabilidade estimada de fechamento por etapa para cálculo ponderado da Comissão Prevista
         const STAGE_WEIGHTS = {
             "Novo Lead": 0.10,
             "Qualificação": 0.20,
@@ -926,7 +925,6 @@
             }
         }
 
-        // Recarrega só os imóveis (o status deles pode mudar automaticamente com o lead)
         async function reloadProps() {
             try { crmProps = (await api('/properties')).items || []; } catch (e) { /* mantém a lista atual */ }
         }
@@ -1139,7 +1137,6 @@
             return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-moss-soft text-moss text-[11px] font-semibold"><i data-lucide="calendar" class="w-3 h-3"></i> ${label}</span>`;
         }
 
-        // ---- Ordenação por follow-up (crescente; sem data por último) e destaque de atrasados ----
         const dmyBR = iso => String(iso || '').slice(8, 10) + '/' + String(iso || '').slice(5, 7);
         const cmpFollowup = (a, b) => {
             const x = a || '', y = b || '';
@@ -1160,7 +1157,6 @@
         }
         const isOverdueLead = lead => lead.stage !== 'Fechado' && lead.followupStatus === 'Atrasado';
 
-        // ---- Imóvel associado / resultado do fechamento (badges) ----
         function getLeadPropertyChips(lead, includeResult = true) {
             const chips = [];
             if (lead.propertyId) {
@@ -1295,7 +1291,6 @@
             document.getElementById('count-funnel-venda').textContent = searchMatched.filter(l => l.modality === 'Venda').length;
             document.getElementById('count-funnel-aluguel').textContent = searchMatched.filter(l => l.modality === 'Aluguel').length;
 
-            // follow-up crescente (atrasados no topo); sem data por último
             const filteredLeads = sortByFollowup(searchMatched.filter(l => {
                 if (funnelModalityFilter === 'Todos') return true;
                 return l.modality === funnelModalityFilter;
@@ -1348,7 +1343,6 @@
             lucide.createIcons();
         }
 
-        // Navegação cruzada: Lead -> CRC
         function openClientFromLead(leadId) {
             const lead = leads.find(l => l.id === leadId);
             if (!lead) return;
@@ -1372,7 +1366,6 @@
             });
         }
 
-        // Navegação cruzada: CRC -> Lead (ou pré-cadastro se não houver lead)
         function openLeadFromCrc(clientId) {
             const client = crcClients.find(c => c.id === clientId);
             if (!client) return;
@@ -1409,7 +1402,6 @@
             }
         }
 
-        // Lead Detail, Quick Stage Move, Quick Follow-up & Note Logging
         let followupTouched = false;
 
         function openLeadDetail(leadId, focusMove = false) {
@@ -1452,7 +1444,7 @@
                 <form onsubmit="saveLeadProperty(event, '${esc(lead.id)}')" class="bg-sand/60 px-4 py-3 rounded-2xl border border-sand-border space-y-2">
                     <label for="detail-property" class="block text-xs font-heading font-bold text-moss">Imóvel / Região de Interesse:</label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="detail-property" list="property-options" required maxlength="200" value="${esc(lead.property)}" placeholder="Ex: YTI-001 - Casa Manejo"
+                        <input type="text" id="detail-property" list="property-options" required maxlength="200" value="${esc(lead.property)}" placeholder="Selecione um imóvel disponível ou digite..."
                                class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                         <button type="submit" class="px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs shrink-0">Salvar</button>
                     </div>
@@ -1591,7 +1583,7 @@
         async function moveLeadStage(leadId, newStage) {
             const lead = leads.find(l => l.id === leadId);
             if (!lead || lead.stage === newStage) return;
-            if (newStage === 'Fechado') { openCloseLead(leadId); return; }   // fechar exige resultado + observação
+            if (newStage === 'Fechado') { openCloseLead(leadId); return; }
             try {
                 const before = lead.propertyStatus;
                 const upd = await api('/leads/' + leadId, { method: 'PATCH', body: { stage: newStage, ...chosenFollowup() } });
@@ -1670,7 +1662,17 @@
         const LINK_STAGES = ['Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
         const HOLDING_STAGES = ['Proposta Enviada', 'Documentação/Crédito'];
 
-        // Lista só imóveis Disponíveis (+ o já vinculado a este lead, mesmo que tenha mudado para Reservado)
+        function syncPropertyDatalist() {
+            const dl = document.getElementById('property-options');
+            if (!dl) return;
+            const isCaptacao = (document.getElementById('lead-category') || {}).value === 'Captação';
+            dl.innerHTML = isCaptacao
+                ? ''
+                : crmProps.filter(p => p.status === 'Disponível')
+                    .map(p => `<option value="${esc(p.code + ' - ' + p.title)}"></option>`)
+                    .join('');
+        }
+
         function populateLeadPropertySelect(lead) {
             const sel = document.getElementById('lead-prop-id');
             const keep = lead && lead.propertyId ? lead.propertyId : '';
@@ -1685,6 +1687,7 @@
         }
 
         function syncLeadPropertyBox() {
+            syncPropertyDatalist();
             const box = document.getElementById('lead-prop-box');
             if (!box) return;
             const stage = document.getElementById('lead-stage').value;
@@ -1706,7 +1709,6 @@
             const code = document.getElementById('lead-prop-id').value;
             const p = crmProps.find(x => x.code === code);
             const field = document.getElementById('lead-property');
-            // acompanha o padrão "YTI-0001 - Título" sem sobrescrever texto livre digitado pelo corretor
             if (p && (!field.value.trim() || /^YTI-\d+/i.test(field.value.trim()))) field.value = `${p.code} - ${p.title}`.slice(0, 200);
         }
 
@@ -1831,7 +1833,6 @@
             lucide.createIcons();
         }
 
-        // Avisa o que vai acontecer com o imóvel interno associado (a regra real é aplicada no servidor)
         function updateCloseHint() {
             const lead = leads.find(l => l.id === document.getElementById('close-lead-id').value);
             const res = (document.querySelector('input[name="close-result"]:checked') || {}).value;
@@ -1875,12 +1876,9 @@
         // 5. CRC RENDERING & BUCKETS DE ÚLTIMO CONTATO / FOLLOW-UP
         function getCrcContactBucket(client) {
             const nextFu = clientNextFollowup(client);
-            const todayIso = todayBR();
-            const todayMs = Date.parse(todayIso + 'T12:00:00Z');
             const minus30Iso = addDaysBR(-30);
             const minus365Iso = addDaysBR(-365);
 
-            // Considera a data de último contato / follow-up mais recente ou agendada
             let refIso = null;
             if (nextFu) {
                 refIso = nextFu;
@@ -2105,8 +2103,7 @@
             const list = crmProps.filter(p => (!st || p.status === st) &&
                 (!q || normTxt([p.code, p.title, p.neighborhood, p.type, p.city].join(' ')).includes(q)));
             document.getElementById('prop-count').textContent = list.length + (list.length === 1 ? ' imóvel' : ' imóveis') + (list.length !== crmProps.length ? ' (de ' + crmProps.length + ')' : '');
-            const dl = document.getElementById('property-options');
-            if (dl) dl.innerHTML = crmProps.filter(p => p.status === 'Disponível' || p.status === 'Reservado').map(p => `<option value="${esc(p.code + ' - ' + p.title)}"></option>`).join('');
+            syncPropertyDatalist();
             document.getElementById('prop-grid').innerHTML = list.length ? list.map(p => {
                 const activeLinkedLeads = leads.filter(l => l.stage !== 'Fechado' && l.propertyId === p.code);
                 const negotiationBadge = activeLinkedLeads.length
