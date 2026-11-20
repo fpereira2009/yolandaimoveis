@@ -497,7 +497,7 @@
                     <div><label class="block text-xs font-bold text-moss mb-1">Título *</label><input type="text" id="prop-title" required maxlength="150" placeholder="Ex: Casa 3 quartos com piscina no Manejo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div><label class="block text-xs font-bold text-moss mb-1">Finalidade *</label><select id="prop-purpose" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"><option value="Comprar">Venda</option><option value="Alugar">Aluguel</option></select></div>
-                        <div><label class="block text-xs font-bold text-moss mb-1">Tipo</label><input type="text" id="prop-type" list="prop-type-options" maxlength="40" value="Casa" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
+                        <div><label class="block text-xs font-bold text-moss mb-1">Tipo</label><input type="text" id="prop-type" list="prop-type-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event)" onblur="restoreDatalistOnBlur(event)" maxlength="40" value="Casa" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Valor (R$) *</label><input type="number" id="prop-price" required min="0" step="1" placeholder="650000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Status</label><select id="prop-status" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"><option>Disponível</option><option>Reservado</option><option>Vendido</option><option>Alugado</option><option>Inativo</option></select></div>
                     </div>
@@ -510,15 +510,6 @@
                         <div><label class="block text-xs font-bold text-moss mb-1">Quartos</label><input type="number" id="prop-bedrooms" min="0" max="99" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Banheiros</label><input type="number" id="prop-bathrooms" min="0" max="99" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Vagas</label><input type="number" id="prop-parking" min="0" max="99" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
-                    </div>
-                    <div class="space-y-2.5" id="prop-r2-gallery">
-                        <label for="prop-files" class="block text-xs font-bold text-moss">Fotos do imóvel (até 10 imagens)</label>
-                        <input type="file" id="prop-files" accept="image/jpeg,image/png,image/webp" multiple
-                            onchange="selectPropertyPhotos(event)"
-                            class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
-                        <p id="prop-gallery-count" class="text-xs text-charcoal/65" aria-live="polite">0 de 10 fotos</p>
-                        <div id="prop-gallery-editor" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" aria-label="Galeria e escolha de capa"></div>
-                        <p class="text-[11px] text-charcoal/65">Toque em “Definir capa” na foto desejada. Fotos novas serão otimizadas antes do envio.</p>
                     </div>
                     <div><label class="block text-xs font-bold text-moss mb-1">Destaque (selo no card)</label><input type="text" id="prop-badge" maxlength="40" placeholder="Ex: Oportunidade, Novo, Exclusivo" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                     <div class="space-y-1.5">
@@ -534,6 +525,15 @@
                             class="property-description property-rich-editor w-full min-h-[136px] px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm focus:outline-none focus:ring-2 focus:ring-moss/30"></div>
                         <textarea id="prop-description" class="hidden" tabindex="-1" aria-hidden="true"></textarea>
                         <div class="flex justify-between gap-2 text-[11px] text-charcoal/65"><span>Você pode colar textos formatados da IA (títulos, negrito e listas).</span><span id="prop-description-count" aria-live="polite">0 / 2000</span></div>
+                    </div>
+                    <div class="space-y-2.5" id="prop-r2-gallery">
+                        <label for="prop-files" class="block text-xs font-bold text-moss">Fotos do imóvel (até 10 imagens)</label>
+                        <input type="file" id="prop-files" accept="image/jpeg,image/png,image/webp" multiple
+                            onchange="selectPropertyPhotos(event)"
+                            class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <p id="prop-gallery-count" class="text-xs text-charcoal/65" aria-live="polite">0 de 10 fotos</p>
+                        <div id="prop-gallery-editor" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" aria-label="Galeria e escolha de capa"></div>
+                        <p class="text-[11px] text-charcoal/65">Toque em “Definir capa” na foto desejada. Fotos novas serão otimizadas antes do envio.</p>
                     </div>
                     <div class="flex flex-wrap gap-2.5 pt-2">
                         <button id="prop-save-btn" type="submit" class="flex-1 py-3.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm">Salvar Imóvel</button>
@@ -632,7 +632,7 @@
 
                     <div id="lead-property-field-wrapper">
                         <label class="block text-xs font-bold text-moss mb-1">Imóvel / Região de Interesse *</label>
-                        <input type="text" id="lead-property" list="property-options" oninput="onLeadPropertyInput()" onchange="onLeadPropertyInput()" maxlength="200" required placeholder="Selecione um imóvel disponível ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <input type="text" id="lead-property" list="property-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event); onLeadPropertyInput()" onchange="onLeadPropertyInput()" onblur="restoreDatalistOnBlur(event)" maxlength="200" required placeholder="Selecione um imóvel disponível ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                     </div>
 
                     <div>
@@ -1497,7 +1497,7 @@
                     <div class="space-y-1.5">
                         <label for="detail-property" class="block text-xs font-heading font-bold text-moss">Imóvel / Região de Interesse *</label>
                         <div class="flex flex-col sm:flex-row gap-2">
-                            <input type="text" id="detail-property" list="detail-property-options" oninput="onDetailPropertyInput('${esc(lead.id)}')" onchange="onDetailPropertyInput('${esc(lead.id)}')" required maxlength="200" value="${esc(lead.property || '')}" placeholder="Selecione um imóvel disponível ou digite..."
+                            <input type="text" id="detail-property" list="detail-property-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event); onDetailPropertyInput('${esc(lead.id)}')" onchange="onDetailPropertyInput('${esc(lead.id)}')" onblur="restoreDatalistOnBlur(event)" required maxlength="200" value="${esc(lead.property || '')}" placeholder="Selecione um imóvel disponível ou digite..."
                                    class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                             <button type="submit" class="px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs shrink-0">Associar imóvel</button>
                         </div>
@@ -1684,7 +1684,7 @@
             const lead = leads.find(l => l.id === leadId);
             const mode = document.getElementById('detail-prop-mode');
             const field = document.getElementById('detail-property');
-            if (!lead || !mode || !field) return;
+            if (!lead || !mode || !field || isDatalistPreviewOnly(field)) return;
             const value = field.value.trim();
             const chosen = crmProps.find(p => (p.status === 'Disponível' || p.code === lead.propertyId) &&
                 (value === `${p.code} - ${p.title}` || value === p.code));
@@ -1776,6 +1776,44 @@
             return body;
         }
 
+        // V4.3.2: listas pesquisáveis exibem TODAS as opções ao receber um toque/foco.
+        // A seleção anterior é preservada até o usuário realmente editar o campo.
+        const datalistPreviousSelections = new WeakMap();
+
+        function openFullDatalist(event) {
+            const field = event.currentTarget || event.target;
+            if (!field || !field.list) return;
+            const pending = datalistPreviousSelections.get(field);
+            if (field.value && (!pending || pending.edited)) {
+                datalistPreviousSelections.set(field, { value: field.value, edited: false });
+                field.value = '';
+            }
+            // showPicker está disponível em alguns navegadores; outros utilizam
+            // normalmente a seta do datalist ou o teclado nativo.
+            if (event.type === 'focus' || document.activeElement === field) {
+                try { if (typeof field.showPicker === 'function') field.showPicker(); } catch (_) {}
+            }
+        }
+
+        function commitDatalistEdit(event) {
+            const field = event.currentTarget || event.target;
+            const pending = datalistPreviousSelections.get(field);
+            if (pending) pending.edited = true;
+        }
+
+        function isDatalistPreviewOnly(field) {
+            const pending = field && datalistPreviousSelections.get(field);
+            return !!(pending && !pending.edited && !field.value);
+        }
+
+        function restoreDatalistOnBlur(event) {
+            const field = event.currentTarget || event.target;
+            const pending = datalistPreviousSelections.get(field);
+            if (!pending) return;
+            if (!pending.edited && !field.value) field.value = pending.value;
+            datalistPreviousSelections.delete(field);
+        }
+
         // ---- Imóvel associado no formulário do lead ----
         const LINK_STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
         const HOLDING_STAGES = ['Proposta Enviada', 'Documentação/Crédito'];
@@ -1793,6 +1831,7 @@
 
         function onLeadPropertyInput() {
             const field = document.getElementById('lead-property');
+            if (isDatalistPreviewOnly(field)) return; // abrir opções não desfaz o vínculo atual
             const mode = document.getElementById('lead-prop-mode');
             if (document.getElementById('lead-category').value === 'Captação') return;
             const text = field.value.trim();
