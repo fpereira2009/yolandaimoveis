@@ -1447,6 +1447,16 @@
                     </div>
                 </div>
 
+                <!-- Imóvel / Região de Interesse (edição rápida) -->
+                <form onsubmit="saveLeadProperty(event, '${esc(lead.id)}')" class="bg-sand/60 px-4 py-3 rounded-2xl border border-sand-border space-y-2">
+                    <label for="detail-property" class="block text-xs font-heading font-bold text-moss">Imóvel / Região de Interesse:</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="detail-property" list="property-options" required maxlength="200" value="${esc(lead.property)}" placeholder="Ex: YTI-001 - Casa Manejo"
+                               class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
+                        <button type="submit" class="px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs shrink-0">Salvar</button>
+                    </div>
+                </form>
+
                 <!-- Próximo follow-up + atalhos de 1 toque -->
                 <div class="bg-sand/60 px-4 py-3 rounded-2xl border border-sand-border space-y-2.5">
                     <div class="flex items-center justify-between gap-3">
@@ -1601,6 +1611,17 @@
                 upsert(leads, await api('/leads/' + leadId, { method: 'PATCH', body: { modality: newModality } }));
                 refreshAll(); openLeadDetail(leadId, false);
                 showToast(`Modalidade alterada para ${newModality}`);
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function saveLeadProperty(event, leadId) {
+            event.preventDefault();
+            const value = document.getElementById('detail-property').value.trim();
+            if (!value) { showToast('Informe o imóvel ou a região de interesse.'); return; }
+            try {
+                upsert(leads, await api('/leads/' + leadId, { method: 'PATCH', body: { property: value } }));
+                refreshAll(); openLeadDetail(leadId, false);
+                showToast('Imóvel / região de interesse atualizado.');
             } catch (e) { showToast(e.message); }
         }
 
