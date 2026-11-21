@@ -501,7 +501,7 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div><label class="block text-xs font-bold text-moss mb-1">Finalidade *</label><select id="prop-purpose" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"><option value="Comprar">Venda</option><option value="Alugar">Aluguel</option></select></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Tipo</label><input type="text" id="prop-type" list="prop-type-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event)" onblur="restoreDatalistOnBlur(event)" maxlength="40" value="Casa" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
-                        <div><label class="block text-xs font-bold text-moss mb-1">Valor (R$) *</label><input type="number" id="prop-price" required min="0" step="1" placeholder="650000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
+                        <div><label class="block text-xs font-bold text-moss mb-1">Valor (R$) *</label><input type="text" id="prop-price" required inputmode="numeric" pattern="[0-9]{1,3}(\.[0-9]{3})*" maxlength="13" placeholder="650.000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"></div>
                         <div><label class="block text-xs font-bold text-moss mb-1">Status</label><select id="prop-status" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm"><option>Disponível</option><option>Reservado</option><option>Vendido</option><option>Alugado</option><option>Inativo</option></select></div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -797,15 +797,15 @@
 
     <!-- ==================== JAVASCRIPT LOGIC ==================== -->
     <script src="/js/property-description.js?v=4.3.1"></script>
-    <script src="/js/crm-input-masks.js?v=4.5.2"></script>
-    <script src="/js/crm-core.js?v=4.5.2"></script>
-    <script src="/js/crm-navigation.js?v=4.5.2"></script>
-    <script src="/js/crm-funnel.js?v=4.5.2"></script>
-    <script src="/js/crm-lead-detail.js?v=4.5.2"></script>
-    <script src="/js/crm-lead-actions.js?v=4.5.2"></script>
-    <script src="/js/crm-clients.js?v=4.5.2"></script>
-    <script src="/js/crm-properties.js?v=4.5.2"></script>
-    <script src="/js/crm-social-card.js?v=4.5.2"></script>
-    <script src="/js/crm-export.js?v=4.5.2"></script>
+    <script src="/js/crm-input-masks.js?v=4.5.3"></script>
+    <script src="/js/crm-core.js?v=4.5.3"></script>
+    <script src="/js/crm-navigation.js?v=4.5.3"></script>
+    <script src="/js/crm-funnel.js?v=4.5.3"></script>
+    <script src="/js/crm-lead-detail.js?v=4.5.3"></script>
+    <script src="/js/crm-lead-actions.js?v=4.5.3"></script>
+    <script src="/js/crm-clients.js?v=4.5.3"></script>
+    <script src="/js/crm-properties.js?v=4.5.3"></script>
+    <script src="/js/crm-social-card.js?v=4.5.3"></script>
+    <script src="/js/crm-export.js?v=4.5.3"></script>
 </body>
 </html>

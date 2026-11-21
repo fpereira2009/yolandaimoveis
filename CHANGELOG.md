@@ -7,6 +7,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 Nenhuma alteração pendente registrada.
 
+## [4.5.3] - 2026-11-21
+
+### Fixed
+- O campo **Valor (R$)** do formulário de **Novo Imóvel** e **Editar Imóvel** (`prop-price`) passa a usar máscara monetária reativa com milhar brasileiro (por exemplo, `150.000`, `1.250.000`), sem centavos, com cursor estável durante digitação/edição e suporte a Backspace/Delete sobre pontos.
+- Valores pré-carregados ao editar um imóvel são apresentados já formatados; na gravação de cadastro e edição, `prop-price` é convertido explicitamente para apenas dígitos (`1.250.000` → `1250000`) antes do POST/PATCH de `/api/properties`, mantendo a validação numérica no servidor e os prepared statements `.bind()`.
+- O mesmo `input` é preservado, alterando apenas `type="number"` para `type="text"` com `inputmode="numeric"`, validação `pattern` e limite de comprimento necessários para permitir pontos de milhar; os estilos e a estrutura do formulário permanecem os mesmos.
+
+### Compatibility
+- Reutilizado `crm-input-masks.js`, sem novos endpoints, migrations, bindings, campos ou botões. Preservados autenticação Cloudflare Access, R2, D1, WhatsApp com textos da 4.5.1, filtros da 4.5.2, deep linking e vínculo Lead–Imóvel.
+- Atualizados metadados do pacote e API, cache-busting dos scripts para `?v=4.5.3` e testes de regressão. Nenhuma mudança nas políticas e termos legais. Publicação remota não realizada.
+
 ## [4.5.2] - 2026-11-21
 
 ### Fixed

@@ -1,9 +1,9 @@
-// Yolanda CRM 4.5.2 — máscaras brasileiras de telefone e valor inteiro.
+// Yolanda CRM 4.5.3 — máscaras brasileiras de telefone e valores inteiros (incluindo imóveis).
 // Não cria campos adicionais e não altera contratos das APIs.
 (function () {
     'use strict';
     const phoneIds = new Set(['lead-phone', 'crc-phone', 'interest-phone', 'owner-phone']);
-    const moneyIds = new Set(['lead-value']);
+    const moneyIds = new Set(['lead-value', 'prop-price']);
     const digitsOnly = value => String(value ?? '').replace(/\D/g, '');
     function formatPhone(value) {
         let digits = digitsOnly(value);

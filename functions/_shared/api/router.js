@@ -29,7 +29,7 @@ export async function onRequest({ request, env, params }) {
     // MEDIA_ENV controla apenas a disponibilidade da integração R2.
     if (res === 'diagnostics' && id === 'disputes' && !sub && method === 'GET') {
       return json({
-        apiVersion: '4.5.2' ,
+        apiVersion: '4.5.3' ,
         mediaEnv: env.MEDIA_ENV || null,
         disputeRulesEnabled: true,
         mediaEnabled: mediaEnabled(env),

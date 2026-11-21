@@ -214,7 +214,7 @@
             const set = (id, v) => document.getElementById(id).value = v;
             set('prop-edit-id', p ? p.code : '');
             set('prop-title', p ? p.title : ''); set('prop-purpose', p ? p.purpose : 'Comprar');
-            set('prop-type', p ? p.type : 'Casa'); set('prop-price', p ? p.price : '');
+            set('prop-type', p ? p.type : 'Casa'); set('prop-price', p ? window.YolandaMasks.formatMoney(p.price) : '');
             set('prop-status', p ? p.status : 'Disponível'); set('prop-neighborhood', p ? p.neighborhood : '');
             set('prop-city', p ? p.city : 'Resende - RJ'); set('prop-area', p ? p.area_m2 : '');
             set('prop-bedrooms', p ? p.bedrooms : ''); set('prop-bathrooms', p ? p.bathrooms : '');
@@ -238,7 +238,7 @@
             const markdown = syncPropertyDescription();
             if (markdown.length > 2000) { showToast('A descrição pode ter até 2.000 caracteres.'); return; }
             const body = {
-                title: g('prop-title'), purpose: g('prop-purpose'), type: g('prop-type'), price: g('prop-price'),
+                title: g('prop-title'), purpose: g('prop-purpose'), type: g('prop-type'), price: window.YolandaMasks.digitsOnly(g('prop-price')),
                 status: g('prop-status'), neighborhood: g('prop-neighborhood'), city: g('prop-city'), area_m2: g('prop-area'),
                 bedrooms: g('prop-bedrooms'), bathrooms: g('prop-bathrooms'), parking: g('prop-parking'),
                 badge: g('prop-badge'), description: markdown

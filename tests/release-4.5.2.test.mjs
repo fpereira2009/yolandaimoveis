@@ -127,6 +127,6 @@ check(grid.innerHTML.includes('Cliente Recente') && grid.innerHTML.includes('Cli
 check(buttons[0].attrs['aria-pressed']==='true' && buttons[8].attrs['aria-pressed']==='false', 'seleção única entre duas linhas');
 check(read('wrangler.toml').includes('yolanda-crm-dev') && read('wrangler.toml').includes('yolanda-imoveis-dev'), 'separação dos ambientes preservada');
 check(read('functions/_shared/access-auth.js').includes("redirect: 'manual'"), 'correção JWT mantida');
-check(JSON.parse(read('package.json')).version==='4.5.2', 'versão declarada 4.5.2');
-check(read('public/index.html').includes('?v=4.5.2') && html.includes('?v=4.5.2'), 'atualização dos recursos JS sem cache antigo');
+check(JSON.parse(read('package.json')).version==='4.5.3', 'versão declarada 4.5.2');
+check(read('public/index.html').includes('?v=4.5.3') && html.includes('?v=4.5.3'), 'atualização dos recursos JS sem cache antigo');
 console.log(`PASSOU: ${checks} verificações específicas da versão 4.5.2.`);

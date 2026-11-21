@@ -1,0 +1,28 @@
+YOLANDA CRM 4.5.3 — MANIFESTO DO PACOTE
+Base: 4.5.2
+Data: 21/11/2026
+
+ARQUIVOS MODIFICADOS
+- CHANGELOG.md
+- functions/_shared/api/leads.js
+- functions/_shared/api/router.js
+- package-lock.json
+- package.json
+- public/app/index.html
+- public/index.html
+- public/js/crm-input-masks.js
+- public/js/crm-properties.js
+- tests/conflicts-4.3.4.test.mjs
+- tests/release-4.5.2.test.mjs
+- tests/whatsapp-labels-4.5.1.test.mjs
+
+ARQUIVOS NOVOS
+- LEIA-ME-RELEASE-4.5.3.md
+- tests/release-4.5.3.test.mjs
+- ARQUIVOS-ALTERADOS-4.5.3.txt
+
+ALTERAÇÃO PRINCIPAL
+- Máscara de milhar no preço do imóvel, no cadastro e na edição.
+- Preço formatado na tela e sanitizado para somente dígitos antes do POST/PATCH.
+- Sem mudança de bindings, migrations, endpoints nem layout institucional.
+- Publicação: apenas após teste no Preview.
