@@ -101,9 +101,9 @@
                 <!-- Ações de contato rápido -->
                 <div class="flex items-center gap-2.5">
                     <a href="${esc(getLeadWhatsAppUrl(lead))}" target="_blank" rel="noopener noreferrer"
-                       class="flex-1 min-w-0 py-3.5 rounded-xl bg-whatsapp text-white font-heading font-bold text-sm flex items-center justify-center gap-2">
-                        <i data-lucide="message-circle" class="w-4 h-4"></i>
-                        <span>Chamar no WhatsApp</span>
+                       aria-label="Chamar no WhatsApp" title="Chamar ${esc(lead.name)} no WhatsApp"
+                       class="shrink-0 w-12 py-3.5 rounded-xl bg-whatsapp text-white font-heading font-bold text-sm flex items-center justify-center">
+                        <i data-lucide="message-circle" class="w-5 h-5" aria-hidden="true"></i>
                     </a>
                     <a href="tel:+${esc(normPhone(lead.phone))}" aria-label="Ligar para ${esc(lead.name)}" title="Ligar para ${esc(lead.name)}"
                        class="sm:hidden shrink-0 w-12 py-3.5 rounded-xl bg-sand text-moss inline-flex items-center justify-center">
@@ -375,7 +375,7 @@
                 category: document.getElementById('lead-category').value,
                 stage: document.getElementById('lead-stage').value,
                 temp: document.getElementById('lead-temp').value,
-                value: document.getElementById('lead-value').value,
+                value: String(document.getElementById('lead-value').value).replace(/\D/g, ''),
                 note: document.getElementById('lead-note').value
             };
             // Associação e região: só no cadastro; em leads existentes são geridas no card "Mover Lead".

@@ -45,6 +45,55 @@
             let catalogFailed = false;
             let properties = readCatalogCache();
             let activeFinalidade = "Todos";
+            let propertyHistoryEntry = false;
+            let catalogLoaded = false;
+            const prefetchedPropertyImages = new Set();
+            // Códigos públicos válidos no parâmetro ?imovel=YTI-0001.
+            function getLinkedPropertyCode() {
+                const current = typeof location !== 'undefined' ? location : window.location;
+                const code = new URLSearchParams(current.search || '').get('imovel');
+                return /^YTI-\d{4,}$/.test(code || '') ? code : '';
+            }
+            function propertyDeepLink(prop) {
+                const current = typeof location !== 'undefined' ? location : window.location;
+                const url = new URL(current.pathname || '/', current.origin);
+                url.searchParams.set('imovel', prop.codigo);
+                return url.href;
+            }
+            function preloadPropertyImage(url, critical = false) {
+                if (typeof url !== 'string' || !url.startsWith('/api/media/file/properties/') || prefetchedPropertyImages.has(url)) return;
+                if (typeof Image === 'undefined' || typeof document.createElement !== 'function') return;
+                prefetchedPropertyImages.add(url);
+                if (prefetchedPropertyImages.size > 48) prefetchedPropertyImages.clear();
+                if (critical) {
+                    const link = document.createElement('link');
+                    link.rel = 'preload'; link.as = 'image'; link.href = url;
+                    document.head.appendChild(link);
+                    link.addEventListener('load', () => link.remove(), { once: true });
+                    link.addEventListener('error', () => link.remove(), { once: true });
+                } else {
+                    const img = new Image(); img.decoding = 'async'; img.src = url;
+                }
+            }
+            function prefetchPropertyGallery(images, index = 0) {
+                if (!images.length) return;
+                preloadPropertyImage(images[index], true);
+                // Apenas a vizinhança da foto ativa, sem carregar as 10 de uma só vez.
+                if (images.length > 1) preloadPropertyImage(images[(index + 1) % images.length]);
+                if (images.length > 2) preloadPropertyImage(images[(index + images.length - 1) % images.length]);
+            }
+            function syncPropertyModalWithUrl() {
+                if (!catalogLoaded) return;
+                const code = getLinkedPropertyCode();
+                if (code) {
+                    const prop = properties.find(p => p.codigo === code);
+                    if (prop) openPropertyModal(code, true);
+                    else showToast('Este imóvel não está disponível no catálogo atual.');
+                } else {
+                    const modal = document.getElementById('property-modal');
+                    if (modal && !modal.classList.contains('hidden')) closePropertyModal(true);
+                }
+            }
 
             // ==================== HELPERS SEGUROS ====================
             function safeRefreshIcons() {
@@ -372,6 +421,8 @@
                     if (syncIcon) syncIcon.classList.remove("animate-spin");
                     populateLocationDropdown();
                     applyFilters();
+                    catalogLoaded = true;
+                    syncPropertyModalWithUrl();
                 }
             }
 
@@ -464,12 +515,20 @@
             }
 
             function getWhatsAppPropertyLink(prop, name) {
-                const msg = "Olá Iêda Holanda! Tenho interesse no imóvel *" + prop.codigo + " - " + prop.titulo + "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias." + (name ? " Meu nome é " + name + "." : "");
+                const msg = "Olá Iêda Holanda! Tenho interesse no imóvel *" + prop.codigo + " - " + prop.titulo + "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias. Veja o anúncio: " + propertyDeepLink(prop) + (name ? " Meu nome é " + name + "." : "");
                 return "https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg);
             }
 
+            function openCardInterestWhatsApp(event, codigo) {
+                if (event) { event.preventDefault(); event.stopPropagation(); }
+                const prop = properties.find(p => p.codigo === codigo);
+                if (!prop) return;
+                // Ação síncrona ao clique: nenhum modal ou requisição bloqueia a conversão.
+                window.open(getWhatsAppPropertyLink(prop), '_blank', 'noopener,noreferrer');
+            }
+
             function getSharePropertyWhatsAppLink(prop) {
-                const pageUrl = window.location.origin + window.location.pathname + "#imoveis";
+                const pageUrl = propertyDeepLink(prop);
                 const msg =
                     "Olha este imóvel que encontrei na *Yolanda Transações Imobiliárias*:\n\n" +
                     "*" + prop.titulo + "* (Cód.: " + prop.codigo + ")\n" +
@@ -519,7 +578,7 @@
                                     (resolvedImg ?
                                         '<img src="' + esc(resolvedImg) + '" ' +
                                              'data-raw-img="' + esc(normalizedRawKey) + '" ' +
-                                             'onerror="handlePropertyImgError(this)" ' +
+                                             'onerror="handlePropertyImgError(this)" loading="lazy" decoding="async" ' +
                                              'alt="' + esc(prop.titulo) + '" draggable="false" ' +
                                              'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">'
                                         : '') +
@@ -570,10 +629,11 @@
                                         'class="flex-1 py-3 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs transition-colors">' +
                                     'Ver Detalhes' +
                                 '</button>' +
-                                '<button type="button" onclick="openPropertyModal(\'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
-                                   'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
-                                    '<i data-lucide="message-circle" class="w-4 h-4"></i>' +
-                                    '<span>Tenho Interesse</span>' +
+                                '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
+                                   'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
+                                   'class="shrink-0 p-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center transition-colors">' +
+                                    '<i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>' +
+                                    '' +
                                 '</button>' +
                                 '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
                                    'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
@@ -660,6 +720,7 @@
                     }
                 }
                 if (counter) counter.textContent = (activePropertyImageIndex + 1) + ' / ' + activePropertyImages.length;
+                prefetchPropertyGallery(activePropertyImages, activePropertyImageIndex);
             }
 
             // Zoom por duplo clique no desktop ou dois toques no celular.
@@ -738,7 +799,7 @@
             }
 
             // ==================== MODAL DETALHES DO IMÓVEL ====================
-            function openPropertyModal(codigo) {
+            function openPropertyModal(codigo, fromUrl = false) {
                 const prop = properties.find(function (p) { return p.codigo === codigo; });
                 const modal = document.getElementById("property-modal");
                 const content = document.getElementById("property-modal-content");
@@ -751,6 +812,14 @@
                 activePropertyImages = Array.isArray(prop.images) && prop.images.length
                     ? prop.images.map(i => i.url).filter(Boolean) : (resolvedImg ? [resolvedImg] : []);
                 activePropertyImageIndex = 0;
+                prefetchPropertyGallery(activePropertyImages);
+                if (!fromUrl && typeof location !== 'undefined' && typeof history !== 'undefined') {
+                    const newUrl = propertyDeepLink(prop);
+                    if (location.href !== newUrl) {
+                        history.pushState({ yolandaProperty: codigo }, '', newUrl);
+                        propertyHistoryEntry = true;
+                    }
+                }
 
                 content.innerHTML =
                     '<div id="property-gallery-swipe" class="property-image-frame relative aspect-[16/9] bg-moss-soft touch-pan-y overflow-hidden" aria-label="' + (resolvedImg ? 'Dê dois cliques ou dois toques para ampliar a foto' : PROPERTY_IMAGE_UNAVAILABLE) + '">' +
@@ -758,7 +827,7 @@
                             '<img id="modal-property-img" ' +
                                  'src="' + esc(resolvedImg) + '" ' +
                                  'data-raw-img="' + esc(normalizedRawKey) + '" ' +
-                                 'onerror="handlePropertyImgError(this)" ' +
+                                 'onerror="handlePropertyImgError(this)" decoding="async" fetchpriority="high" ' +
                                  'alt="' + esc(prop.titulo) + '" ' +
                                  'class="w-full h-full object-cover" draggable="false">'
                             : '') +
@@ -787,10 +856,10 @@
                                 '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
                             '</div>' +
                             '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
-                               'title="Encaminhar este anúncio para um contato no WhatsApp" ' +
+                               'title="Encaminhar este anúncio para um contato no WhatsApp" aria-label="Encaminhar anúncio no WhatsApp" ' +
                                'class="self-start shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
                                 '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
-                                '<span>Encaminhar</span>' +
+                                '' +
                             '</a>' +
                         '</div>' +
 
@@ -840,10 +909,9 @@
                                 '</div>' +
                             '</div>' +
 
-                            '<button type="submit" form="interest-form" id="interest-submit" ' +
-                               'class="py-3.5 px-6 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all">' +
-                                '<i data-lucide="message-circle" class="w-5 h-5"></i>' +
-                                '<span>Enviar e chamar no WhatsApp</span>' +
+                            '<button type="submit" form="interest-form" id="interest-submit" title="Enviar e chamar no WhatsApp" aria-label="Enviar e chamar no WhatsApp" ' +
+                               'class="p-3.5 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-sm flex items-center justify-center shadow-sm transition-all">' +
+                                '<i data-lucide="message-circle" class="w-5 h-5" aria-hidden="true"></i>' +
                             '</button>' +
                         '</div>' +
                     '</div>';
@@ -857,11 +925,21 @@
                 safeRefreshIcons();
             }
 
-            function closePropertyModal() {
+            function closePropertyModal(fromHistory = false) {
                 const modal = document.getElementById("property-modal");
                 if (modal) modal.classList.add("hidden");
                 document.body.style.overflow = "";
                 resetPropertyZoom();
+                if (!fromHistory && typeof history !== 'undefined' && getLinkedPropertyCode()) {
+                    if (propertyHistoryEntry) {
+                        propertyHistoryEntry = false;
+                        history.back();
+                    } else {
+                        const clean = new URL(location.href);
+                        clean.searchParams.delete('imovel');
+                        history.replaceState(history.state, '', clean);
+                    }
+                }
             }
 
             // ==================== ÁREA DA CORRETORA: agora em /app (Cloudflare Access) ====================
@@ -929,6 +1007,7 @@
             window.handlePropertyImgError = handlePropertyImgError;
             window.loadCatalog = loadCatalog;
             window.submitInterest = submitInterest;
+            window.openCardInterestWhatsApp = openCardInterestWhatsApp;
             window.setFinalidadeFilter = setFinalidadeFilter;
             window.applyFilters = applyFilters;
             window.resetFilters = resetFilters;
@@ -950,6 +1029,10 @@
                     safeRefreshIcons();
 
                     // Carrega o catálogo do banco ao abrir a página
+                    window.addEventListener('popstate', function () {
+                        propertyHistoryEntry = false;
+                        syncPropertyModalWithUrl();
+                    });
                     loadCatalog(false);
                 } catch (err) {
                     /* mantém a página sem imóveis de exemplo */

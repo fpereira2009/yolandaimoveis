@@ -69,7 +69,7 @@ async function publicObject(env, key, method, request) {
   if (!object) throw new ApiError(404, 'Imagem não encontrada.');
   const headers = new Headers({
     'Content-Type': object.httpMetadata?.contentType || (key.endsWith('.webp') ? 'image/webp' : 'image/jpeg'),
-    'Cache-Control': publicImage ? 'public, max-age=300, s-maxage=300' : 'private, no-store',
+    'Cache-Control': publicImage ? 'public, max-age=31536000, immutable' : 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
     'ETag': object.httpEtag,
   });

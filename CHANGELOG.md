@@ -5,7 +5,36 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 ## [Unreleased]
 
+Nenhuma alteração pendente registrada.
+
 ## [4.4.0] - 2026-11-21
+
+### Fixed — correção de autenticação e homologação
+- Corrigida definitivamente a busca de chaves JWT Cloudflare Access: `fetch()` para `/cdn-cgi/access/certs` utiliza `redirect: 'manual'`, compatível com Cloudflare Workers, em vez de `redirect: 'error'` (não implementado pelo runtime).
+- Respostas de redirecionamento (3xx) e respostas HTTP não bem-sucedidas permanecem bloqueadas; validação de assinatura RS256, emissor, AUD e expiração permanece obrigatória.
+- Retirados códigos HTTP temporários de diagnóstico (`ACCESS_CONFIG_INVALID`, `ACCESS_VERIFICATION_UNAVAILABLE`) das respostas ao navegador e logs temporários `[preview-access]` / `[access-jwks]`. Mantidos eventos operacionais restritos a códigos fixos e status HTTP, sem dados sensíveis.
+- Confirmado por verificação estática que D1/R2 Preview (`yolanda-crm-dev`, `yolanda-imoveis-dev`) continuam separados dos recursos Production (`yolanda-crm`, `yolanda-imoveis-prod`). Sem alteração de migrations ou bindings.
+- Preparado checklist de promoção em `CHECKLIST-PRODUCAO-4.4.0.md`; nenhuma publicação ou alteração remota foi executada nesta consolidação.
+
+
+### Added — experiência imobiliária pública / CRC
+- Deep linking de anúncios por `?imovel=YTI-####` com `history.pushState`, sincronização `popstate` e abertura automática pelo catálogo público; URLs compartilhadas no WhatsApp levam ao imóvel exato.
+- Máscaras reativas de telefone nos formulários de leads, CRC e contatos da vitrine pública, e de valor inteiro em leads, usando os próprios inputs e sanitização numérica antes da API.
+- Filtros do CRC organizados em duas linhas, com intervalo de datas do próximo follow-up do cliente.
+- Atalho telefônico `tel:` responsivo ao lado do WhatsApp nas fichas e cartões de leads/clientes.
+
+### Fixed — conversão e automação
+- O CTA “Tenho Interesse” dos cards abre diretamente a conversa da corretora com código, título e link do anúncio, sem abrir o modal.
+- Formulário de interesse no detalhe mantém envio de `property_code`; o contato público cria atendimentos distintos para imóveis distintos sem sobrescrever outro lead em negociação; o vínculo usa `leads.property_id` existente no D1 e `bind()`.
+
+### Changed — performance, acessibilidade e textos legais
+- Cache HTTP `public, max-age=31536000, immutable` somente para fotos R2 de imóveis publicamente publicados; fotos não públicas mantêm `private, no-store`. **Atenção operacional**: clientes que já armazenaram uma foto pública podem mantê-la em cache após a despublicação; fotos sensíveis devem ser excluídas do R2 e nunca publicadas.
+- Prefetch da capa e fotos vizinhas no carrossel, `fetchpriority="high"` na imagem principal, `decoding="async"` e `loading="lazy"` nos cards. Listagem já consulta galerias em lote (2 consultas, sem N+1).
+- Ações WhatsApp icon-only com `aria-label`/`title`; layouts, cores e IDs originais preservados.
+- Política de Privacidade e Termos vigentes em 21/11/2026: transparência sobre vínculo lead–imóvel, WhatsApp, URLs compartilháveis, cache e LGPD.
+- Não foram modificados `wrangler.toml`, migrations D1 nem bindings Preview/Production.
+
+
 
 ### Security
 - Removido o caminho de autenticação privilegiada por `DEV_BYPASS=1` das Pages Functions. Uma variável legada remanescente no painel não concede acesso à API.

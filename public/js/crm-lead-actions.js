@@ -135,7 +135,7 @@
             document.getElementById('lead-submit-btn').textContent = 'Salvar Alterações';
             document.getElementById('lead-delete-btn').classList.remove('hidden');
             document.getElementById('lead-name').value = l.name;
-            document.getElementById('lead-phone').value = String(l.phone || '').replace(/^55/, '');
+            document.getElementById('lead-phone').value = window.YolandaMasks?.formatPhone(String(l.phone || '').replace(/^55/, '')) || String(l.phone || '').replace(/^55/, '');
             document.getElementById('lead-category').value = l.category || 'Interessado';
             syncLeadModalityOptions(l.modality);
             document.getElementById('lead-stage').value = l.stage;
@@ -144,7 +144,7 @@
             document.getElementById('lead-property-field-wrapper').classList.add('hidden');
             document.getElementById('lead-property').required = false;
             document.getElementById('lead-property').value = l.property;
-            document.getElementById('lead-value').value = l.value;
+            document.getElementById('lead-value').value = window.YolandaMasks?.formatMoney(l.value) || l.value;
             document.getElementById('lead-followup-date').value = l.followupAt || '';
             populateLeadPropertySelect(l);
             document.getElementById('lead-prop-mode').value = l.externalProperty ? 'external' : (l.propertyId ? 'internal' : 'none');

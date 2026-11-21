@@ -453,6 +453,22 @@ const clientAfter = (await api('GET', '/clients')).items.find(x => x.id === newC
 assert.equal(clientAfter.lastContactAt, oldTime);
 checks++;
 
+// 4.4.0: mesmo telefone, imóveis diferentes e mesmo imóvel novamente.
+const interestPropA = await prop('Site 4.4 - Imóvel A');
+const interestPropB = await prop('Site 4.4 - Imóvel B');
+const fromSite = { kind:'interesse', name:'Cliente Site Duplo', phone:'24989898989', website:'' };
+await api('POST','/public/contact',{...fromSite,property_code:interestPropA.code},201);
+await api('POST','/public/contact',{...fromSite,property_code:interestPropA.code},201);
+await api('POST','/public/contact',{...fromSite,property_code:interestPropB.code},201);
+const leadsForPhone = db.prepare("SELECT id,property_id,property FROM leads WHERE phone = ? AND source = 'Site' AND deleted_at IS NULL ORDER BY id").all('5524989898989');
+assert.equal(leadsForPhone.length,2,'dois imóveis distintos criam dois atendimentos, sem duplicar o mesmo'); checks++;
+assert.deepEqual(leadsForPhone.map(l=>l.property_id),[Number(interestPropA.code.slice(4)),Number(interestPropB.code.slice(4))]); checks++;
+assert.equal(db.prepare('SELECT count(*) AS n FROM clients WHERE phone = ? AND deleted_at IS NULL').get('5524989898989').n,1,'mesma ficha de cliente'); checks++;
+assert.equal(db.prepare("SELECT count(*) AS n FROM lead_events WHERE lead_id = ? AND kind='nota'").get(leadsForPhone[0].id).n,1,'repetição no mesmo imóvel apenas anota'); checks++;
+// Imóvel Reservado continua anunciado e pode receber interessado sem reservar novamente.
+await api('PATCH',`/properties/${interestPropB.code}`,{status:'Reservado'});
+await api('POST','/public/contact',{...fromSite,phone:'24987776655',property_code:interestPropB.code},201);
+assert.equal(db.prepare('SELECT property_id FROM leads WHERE phone = ?').get('5524987776655').property_id,Number(interestPropB.code.slice(4))); checks++;
 assert.equal(db.prepare('PRAGMA foreign_key_check').all().length, 0);
 checks++;
 console.log(`PASSOU: ${checks} verificações. Migrations ${migs.join(', ')}; reservas, disputas, troca, exclusão, reabertura, legado, CRC e sintaxe da UI.`);

@@ -99,6 +99,7 @@ check(pub.items[0].images[0].id === created[3].id,'galeria pública tem capa pri
 const file = await call(media,'GET',created[3].url.replace('/api/',''));
 check((await file.arrayBuffer()).byteLength === tinyWebp.byteLength,'stream arquivo público');
 check(file.headers.get('cache-control').includes('public'),'cache estático');
+check(file.headers.get('cache-control')==='public, max-age=31536000, immutable','cache R2 público com URL UUID');
 
 // 4.4.0: fotos de imóveis fora da vitrine exigem autenticação real.
 await call(main,'PATCH',`properties/${p.code}`,{status:'Inativo'});

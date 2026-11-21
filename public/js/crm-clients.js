@@ -48,8 +48,16 @@
             return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
         }
 
+        function clearCrcFollowupDates() {
+            document.getElementById('crc-followup-start').value = '';
+            document.getElementById('crc-followup-end').value = '';
+            renderCrc();
+        }
+
         function renderCrc() {
             const query = document.getElementById('crc-search').value.trim().toLowerCase();
+            const from = document.getElementById('crc-followup-start')?.value || '';
+            const to = document.getElementById('crc-followup-end')?.value || '';
             const grid = document.getElementById('crc-cards-grid');
 
             const filtered = crcClients.filter(c => {
@@ -70,7 +78,9 @@
                     matchFilter = bucket.key === activeCrcFilter;
                 }
                 else if (activeCrcFilter === 'Aniversariante') matchFilter = c.birthdayMonth;
-                return matchSearch && matchFilter;
+                const followup = (from || to) ? clientNextFollowup(c) : '';
+                const matchesDates = (!from && !to) || (!!followup && (!from || followup >= from) && (!to || followup <= to));
+                return matchSearch && matchFilter && matchesDates;
             });
 
             if (filtered.length === 0) {
@@ -125,9 +135,13 @@
 
                     <div class="pt-3 border-t border-sand-border flex items-center gap-2">
                         <a href="${esc(getCrcWhatsAppUrl(c))}" target="_blank" rel="noopener noreferrer"
-                           class="flex-1 py-2.5 px-3 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i>
-                            <span>WhatsApp</span>
+                           aria-label="Chamar ${esc(c.name)} no WhatsApp" title="Chamar ${esc(c.name)} no WhatsApp"
+                           class="shrink-0 p-2.5 rounded-xl bg-whatsapp hover:brightness-105 text-white inline-flex items-center justify-center">
+                            <i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>
+                        </a>
+                        <a href="tel:+${esc(normPhone(c.phone))}" aria-label="Ligar para ${esc(c.name)}" title="Ligar para ${esc(c.name)}"
+                           class="sm:hidden shrink-0 p-2.5 rounded-xl bg-sand text-moss inline-flex items-center justify-center">
+                            <i data-lucide="phone" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         <button onclick="openEditClient('${esc(c.id)}')" title="Editar cliente" class="py-2.5 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss text-xs transition-colors">✎</button>
                         <button onclick="markCrcContactDone('${esc(c.id)}')" title="Registrar contato realizado hoje"
@@ -170,7 +184,7 @@
             document.getElementById('crc-modal-title').textContent = 'Editar Cliente ' + c.id;
             document.getElementById('crc-delete-btn').classList.remove('hidden');
             document.getElementById('crc-name').value = c.name;
-            document.getElementById('crc-phone').value = String(c.phone || '').replace(/^55/, '');
+            document.getElementById('crc-phone').value = window.YolandaMasks?.formatPhone(String(c.phone || '').replace(/^55/, '')) || String(c.phone || '').replace(/^55/, '');
             document.getElementById('crc-modality').value = c.modality;
             document.getElementById('crc-regions').value = c.regions;
             document.getElementById('crc-budget').value = c.budget === 'A definir' ? '' : c.budget;

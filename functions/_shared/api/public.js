@@ -31,11 +31,18 @@ async function publicContact(env, b) {
       regions: p.neighborhood, property: `${propCode(p.id)} - ${p.title}`.slice(0, 200), value: p.price, temp: 'Quente',
       // Contato de imóvel disponível já entra vinculado; a reserva só virá
       // quando o corretor avançar o lead para Proposta ou Documentação.
-      propertyId: p.status === 'Disponível' ? p.id : null,
+      // Ambos os status publicados aceitam interesse; vincular não reserva o imóvel.
+      propertyId: p.id,
       note: `Interesse pelo site em ${propCode(p.id)} - ${p.title}.${msg ? ' Mensagem: ' + msg : ''}` };
   }
   const { row: client } = await ensureClient(env, { name, phone, modality: v.clientModality, regions: v.regions, source: 'Site', lastInteraction: 'Hoje • Contato pelo site' });
-  const open = await openLeadFor(env, phone, v.modality, v.category);
+  // Interesse em outro imóvel gera atendimento próprio; o vínculo em negociação
+  // no lead anterior não é sobrescrito. Repetições no mesmo imóvel apenas geram nota.
+  const open = v.category === 'Interessado'
+    ? await env.DB.prepare(`SELECT id FROM leads WHERE phone = ? AND modality = ?
+        AND category = 'Interessado' AND property_id = ? AND stage != 'Fechado'
+        AND deleted_at IS NULL LIMIT 1`).bind(phone, v.modality, v.propertyId).first()
+    : await openLeadFor(env, phone, v.modality, v.category);
   if (open) await addEvent(env, open.id, 'nota', 'Novo contato pelo site. ' + v.note);
   else await insertLead(env, { name, phone, modality: v.modality, stage: 'Novo Lead', temp: v.temp, property: v.property, value: v.value, followup: todayBR(), clientId: client.id, source: 'Site', category: v.category, propertyId: v.propertyId ?? null, note: v.note });
   return json({ ok: true }, 201);

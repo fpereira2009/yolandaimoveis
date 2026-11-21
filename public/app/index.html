@@ -348,14 +348,14 @@
                         </button>
                     </div>
 
-                    <div class="flex flex-col md:flex-row gap-3">
-                        <div class="relative flex-1">
+                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3 items-center">
+                        <div class="relative min-w-0">
                             <i data-lucide="search" class="w-4 h-4 text-moss/50 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
                             <input type="text" id="crc-search" oninput="renderCrc()" placeholder="Buscar por nome, bairro ou preferência (ex: 3 quartos, Manejo)..." 
                                    class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                         </div>
 
-                        <div class="flex gap-1.5 overflow-x-auto no-scrollbar">
+                        <div class="flex min-w-0 gap-1.5 overflow-x-auto no-scrollbar items-center min-h-[42px]">
                             <button onclick="setCrcFilter('Todos')" data-crc="Todos" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-moss text-white shrink-0">Todos</button>
                             <button onclick="setCrcFilter('Compra')" data-crc="Compra" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss shrink-0">Compra</button>
                             <button onclick="setCrcFilter('Venda')" data-crc="Venda" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-moss shrink-0">Venda</button>
@@ -366,6 +366,20 @@
                             <button onclick="setCrcFilter('inactive_old')" data-crc="inactive_old" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Inativos Antigos (+1 ano)</button>
                             <button onclick="setCrcFilter('Aniversariante')" data-crc="Aniversariante" class="crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand text-charcoal/80 shrink-0">Aniversariantes</button>
                         </div>
+                    </div>
+                    <!-- Linha 2: período de follow-up dos leads vinculados a cada cliente. -->
+                    <div class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:items-end border-t border-sand-border pt-3">
+                        <span class="text-xs font-bold text-moss sm:pb-3">Follow-up</span>
+                        <label class="text-[11px] font-semibold text-charcoal/70">De
+                            <input id="crc-followup-start" type="date" onchange="renderCrc()" aria-label="Data inicial do follow-up"
+                                   class="mt-1 block w-full min-w-0 px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs text-moss">
+                        </label>
+                        <label class="text-[11px] font-semibold text-charcoal/70">Até
+                            <input id="crc-followup-end" type="date" onchange="renderCrc()" aria-label="Data final do follow-up"
+                                   class="mt-1 block w-full min-w-0 px-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs text-moss">
+                        </label>
+                        <button type="button" onclick="clearCrcFollowupDates()" title="Limpar período de follow-up"
+                                class="px-3 py-2.5 rounded-xl bg-sand hover:bg-moss-soft text-moss text-xs font-bold">Limpar datas</button>
                     </div>
                 </div>
 
@@ -565,7 +579,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">WhatsApp / Telefone *</label>
-                            <input type="tel" id="lead-phone" required placeholder="(24) 99999-9999" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <input type="tel" id="lead-phone" required maxlength="16" inputmode="tel" placeholder="(24) 99999-9999" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                         </div>
                     </div>
 
@@ -608,7 +622,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">Valor Estimado (R$) *</label>
-                            <input type="number" id="lead-value" required placeholder="Ex: 650000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <input type="text" id="lead-value" required inputmode="numeric" autocomplete="off" maxlength="13" placeholder="Ex: 650.000" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                         </div>
                     </div>
 
@@ -730,7 +744,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">WhatsApp *</label>
-                            <input type="tel" id="crc-phone" required placeholder="(24) 99999-9999" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                            <input type="tel" id="crc-phone" required maxlength="16" inputmode="tel" placeholder="(24) 99999-9999" class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-moss mb-1">Modalidade *</label>
@@ -794,6 +808,7 @@
 
     <!-- ==================== JAVASCRIPT LOGIC ==================== -->
     <script src="/js/property-description.js?v=4.3.1"></script>
+    <script src="/js/crm-input-masks.js?v=4.4.0"></script>
     <script src="/js/crm-core.js?v=4.4.0"></script>
     <script src="/js/crm-navigation.js?v=4.4.0"></script>
     <script src="/js/crm-funnel.js?v=4.4.0"></script>
