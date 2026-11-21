@@ -613,8 +613,8 @@
             const BROKER_PHONE = "5524999040775";
             const BROKER_AVATAR = "/img/fotocorretora.jpeg";
 
-            const DEFAULT_ARCH_FALLBACK = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80";
-            const RESOLVING_PLACEHOLDER = "https://placehold.co/900x560/EAF0ED/2C4A3E?text=Carregando+Foto+do+Im%C3%B3vel...";
+            // Sem foto cadastrada ou com falha de carregamento: texto, nunca imagem ilustrativa.
+            const PROPERTY_IMAGE_UNAVAILABLE = "Imagem não disponível";
 
             // Mapa instantâneo para links ImgBB conhecidos
             const KNOWN_IMGBB_MAP = {
@@ -626,10 +626,20 @@
 
             // Último catálogo válido fica guardado no navegador; nunca se exibem imóveis de exemplo.
             const CATALOG_CACHE_KEY = "yti_catalog_v2";
+            function isDeprecatedPhotoPlaceholder(url) {
+                const value = String(url || "");
+                // Descarta fotos fictícias deixadas no cache por versões anteriores.
+                return value.includes("photo-1600585154340-be6161a56a0c") ||
+                    value.includes("Carregando+Foto+do+Im");
+            }
             function readCatalogCache() {
                 try {
                     const o = JSON.parse(safeGetStorage(CATALOG_CACHE_KEY, "null"));
-                    return o && Array.isArray(o.items) ? o.items : [];
+                    return o && Array.isArray(o.items) ? o.items.map(function (item) {
+                        if (isDeprecatedPhotoPlaceholder(item.foto_url)) item.foto_url = "";
+                        if (isDeprecatedPhotoPlaceholder(item.resolved_foto_url)) item.resolved_foto_url = "";
+                        return item;
+                    }) : [];
                 } catch (e) { return []; }
             }
             function saveCatalogCache(items) {
@@ -730,7 +740,14 @@
                 // Atualiza imediatamente todas as imagens (cards e modal aberto) com esse link
                 document.querySelectorAll("img[data-raw-img]").forEach(function (imgEl) {
                     if (imgEl.getAttribute("data-raw-img") === normalizedKey) {
-                        imgEl.src = directUrl;
+                        if (directUrl) {
+                            imgEl.style.display = "";
+                            const fallback = imgEl.closest(".property-image-frame")?.querySelector("[data-image-unavailable]");
+                            if (fallback) fallback.style.display = "none";
+                            imgEl.src = directUrl;
+                        } else {
+                            handlePropertyImgError(imgEl);
+                        }
                     }
                 });
             }
@@ -761,9 +778,9 @@
                             // Tenta o próximo proxy
                         }
                     }
-                    // Se nenhum proxy conseguir extrair, aplica fallback arquitetônico limpo
-                    applyResolvedUrlToDom(normalizedKey, DEFAULT_ARCH_FALLBACK);
-                    return DEFAULT_ARCH_FALLBACK;
+                    // URL de imagem não resolvida: mantém a mensagem, sem foto de substituição.
+                    applyResolvedUrlToDom(normalizedKey, "");
+                    return "";
                 })().finally(function () {
                     delete inFlightImageResolutions[normalizedKey];
                 });
@@ -776,8 +793,8 @@
             function resolvePropertyImageUrl(rawUrl, imgElement) {
                 const clean = String(rawUrl || "").trim();
                 if (!clean) {
-                    if (imgElement) imgElement.src = DEFAULT_ARCH_FALLBACK;
-                    return DEFAULT_ARCH_FALLBACK;
+                    if (imgElement) handlePropertyImgError(imgElement);
+                    return "";
                 }
 
                 // 1. Conversão automática para links de compartilhamento do Google Drive
@@ -810,10 +827,10 @@
                         return cachedUrl;
                     }
 
-                    // 2c. Dispara resolução assíncrona via proxy e retorna placeholder temporário
-                    if (imgElement) imgElement.src = RESOLVING_PLACEHOLDER;
+                    // 2c. Não exibe foto fictícia durante a tentativa de resolver URL legada.
+                    if (imgElement) handlePropertyImgError(imgElement);
                     fetchAndCacheImgbbDirectUrl(normalizedImgbb);
-                    return RESOLVING_PLACEHOLDER;
+                    return "";
                 }
 
                 // 3. URL já direta (i.ibb.co, Unsplash, etc.)
@@ -821,11 +838,31 @@
                 return clean;
             }
 
-            function handlePropertyImgError(imgEl, codigo) {
-                if (!imgEl || imgEl.dataset.fallbackApplied === "1") return;
+            function getPropertyCoverUrl(prop) {
+                // 4.3.3: fotos de anúncios vêm EXCLUSIVAMENTE da galeria R2.
+                // Nunca recorrer ao campo legado foto_url nem a imagens genéricas,
+                // inclusive quando há uma cópia antiga do catálogo no navegador.
+                const gallery = Array.isArray(prop.images) ? prop.images : [];
+                const cover = gallery.find(function (img) { return img && img.cover && img.url; }) ||
+                    gallery.find(function (img) { return img && img.url; });
+                return cover ? cover.url : "";
+            }
+
+            function unavailablePropertyImageHtml(visible) {
+                return '<div data-image-unavailable="1" class="absolute inset-0 items-center justify-center p-5 text-center" style="display:' + (visible ? 'flex' : 'none') + '">' +
+                    '<div class="flex flex-col items-center gap-2 text-moss/70">' +
+                        '<i data-lucide="image-off" aria-hidden="true" class="w-7 h-7"></i>' +
+                        '<span class="font-heading text-sm sm:text-base font-semibold">' + PROPERTY_IMAGE_UNAVAILABLE + '</span>' +
+                    '</div>' +
+                '</div>';
+            }
+
+            function handlePropertyImgError(imgEl) {
+                if (!imgEl) return;
                 imgEl.dataset.fallbackApplied = "1";
-                imgEl.onerror = null;
-                imgEl.src = DEFAULT_ARCH_FALLBACK;
+                imgEl.style.display = "none";
+                const fallback = imgEl.closest(".property-image-frame")?.querySelector("[data-image-unavailable]");
+                if (fallback) fallback.style.display = "flex";
             }
 
             function normalizeText(str) {
@@ -923,9 +960,10 @@
                     if (!resp.ok) throw new Error("HTTP " + resp.status);
                     const data = await resp.json();
                     const items = (data.items || []).map(function (p) {
-                        const raw = /^(https?:\/\/|\/api\/media\/file\/)/i.test(p.foto_url || "") ? p.foto_url : DEFAULT_ARCH_FALLBACK;
-                        p.foto_url = raw;
-                        p.resolved_foto_url = resolvePropertyImageUrl(raw);
+                        // Não importar ou resolver URLs legadas, mesmo que venham do D1.
+                        // Somente a galeria R2 define fotos de anúncios.
+                        p.foto_url = getPropertyCoverUrl(p);
+                        p.resolved_foto_url = "";
                         return p;
                     });
                     properties = items;
@@ -1079,18 +1117,21 @@
                         ? '<span class="px-2.5 py-1 rounded-full bg-white/95 text-moss font-heading font-bold text-[11px] shadow-xs">' + esc(prop.destaque) + '</span>'
                         : "";
 
-                    const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
+                    const resolvedImg = getPropertyCoverUrl(prop);
                     const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
 
                     return (
                         '<article class="bg-white rounded-3xl border border-sand-border shadow-card overflow-hidden flex flex-col justify-between group hover:border-moss/35 transition-all">' +
                             '<div>' +
-                                '<div class="relative aspect-[16/10] bg-moss-soft overflow-hidden">' +
-                                    '<img src="' + esc(resolvedImg) + '" ' +
-                                         'data-raw-img="' + esc(normalizedRawKey) + '" ' +
-                                         'onerror="handlePropertyImgError(this, \'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
-                                         'alt="' + esc(prop.titulo) + '" ' +
-                                         'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">' +
+                                '<div class="property-image-frame relative aspect-[16/10] bg-moss-soft overflow-hidden">' +
+                                    (resolvedImg ?
+                                        '<img src="' + esc(resolvedImg) + '" ' +
+                                             'data-raw-img="' + esc(normalizedRawKey) + '" ' +
+                                             'onerror="handlePropertyImgError(this)" ' +
+                                             'alt="' + esc(prop.titulo) + '" ' +
+                                             'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">'
+                                        : '') +
+                                    unavailablePropertyImageHtml(!resolvedImg) +
                                     '<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">' +
                                         '<span class="px-3 py-1 rounded-full text-[11px] font-heading font-bold ' + badgeClass + '">' + prop.finalidade + '</span>' +
                                         destaqueHtml +
@@ -1215,8 +1256,16 @@
                 const image = document.getElementById('modal-property-img');
                 const counter = document.getElementById('property-gallery-counter');
                 if (image) {
-                    image.dataset.fallbackApplied = '0';
-                    image.src = resolvePropertyImageUrl(activePropertyImages[activePropertyImageIndex]);
+                    const url = resolvePropertyImageUrl(activePropertyImages[activePropertyImageIndex]);
+                    if (url) {
+                        image.dataset.fallbackApplied = '0';
+                        image.style.display = '';
+                        const fallback = image.closest('.property-image-frame')?.querySelector('[data-image-unavailable]');
+                        if (fallback) fallback.style.display = 'none';
+                        image.src = url;
+                    } else {
+                        handlePropertyImgError(image);
+                    }
                 }
                 if (counter) counter.textContent = (activePropertyImageIndex + 1) + ' / ' + activePropertyImages.length;
             }
@@ -1305,20 +1354,23 @@
 
                 const isRental = prop.finalidade === "Alugar";
                 const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
-                const resolvedImg = prop.resolved_foto_url || resolvePropertyImageUrl(prop.foto_url);
+                const resolvedImg = getPropertyCoverUrl(prop);
                 const normalizedRawKey = normalizeImgbbViewerUrl(prop.foto_url) || String(prop.foto_url || "").trim();
                 activePropertyImages = Array.isArray(prop.images) && prop.images.length
-                    ? prop.images.map(i => i.url).filter(Boolean) : [resolvedImg];
+                    ? prop.images.map(i => i.url).filter(Boolean) : (resolvedImg ? [resolvedImg] : []);
                 activePropertyImageIndex = 0;
 
                 content.innerHTML =
-                    '<div id="property-gallery-swipe" class="relative aspect-[16/9] bg-moss-soft touch-pan-y overflow-hidden" aria-label="Dê dois cliques ou dois toques para ampliar a foto">' +
-                        '<img id="modal-property-img" ' +
-                             'src="' + esc(resolvedImg) + '" ' +
-                             'data-raw-img="' + esc(normalizedRawKey) + '" ' +
-                             'onerror="handlePropertyImgError(this, \'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
-                             'alt="' + esc(prop.titulo) + '" ' +
-                             'class="w-full h-full object-cover" draggable="false">' +
+                    '<div id="property-gallery-swipe" class="property-image-frame relative aspect-[16/9] bg-moss-soft touch-pan-y overflow-hidden" aria-label="' + (resolvedImg ? 'Dê dois cliques ou dois toques para ampliar a foto' : PROPERTY_IMAGE_UNAVAILABLE) + '">' +
+                        (resolvedImg ?
+                            '<img id="modal-property-img" ' +
+                                 'src="' + esc(resolvedImg) + '" ' +
+                                 'data-raw-img="' + esc(normalizedRawKey) + '" ' +
+                                 'onerror="handlePropertyImgError(this)" ' +
+                                 'alt="' + esc(prop.titulo) + '" ' +
+                                 'class="w-full h-full object-cover" draggable="false">'
+                            : '') +
+                        unavailablePropertyImageHtml(!resolvedImg) +
                         (activePropertyImages.length > 1 ?
                             '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
                                 '<i data-lucide="chevron-left" class="w-5 h-5"></i></button>' +
@@ -1407,12 +1459,8 @@
                 modal.classList.remove("hidden");
                 document.body.style.overflow = "hidden";
 
-                const modalImgEl = document.getElementById("modal-property-img");
-                if (modalImgEl) {
-                    resolvePropertyImageUrl(prop.foto_url, modalImgEl);
-                }
                 const swipeArea = document.getElementById('property-gallery-swipe');
-                if (swipeArea) attachPropertyImageGestures(swipeArea);
+                if (swipeArea && activePropertyImages.length) attachPropertyImageGestures(swipeArea);
 
                 safeRefreshIcons();
             }

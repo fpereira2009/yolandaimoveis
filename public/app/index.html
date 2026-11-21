@@ -617,12 +617,12 @@
                         <label class="block text-xs font-bold text-moss">Imóvel associado ao atendimento</label>
                         <select id="lead-prop-mode" onchange="syncLeadPropertyBox()" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-sm">
                             <option value="none">Nenhum imóvel associado</option>
-                            <option value="internal">Imóvel do nosso portfólio (somente disponíveis)</option>
+                            <option value="internal">Imóvel do nosso portfólio (disponíveis ou em negociação)</option>
                             <option value="external">Imóvel de outra imobiliária (parceria)</option>
                         </select>
                         <div id="lead-prop-internal" class="hidden space-y-1.5">
                             <input id="lead-prop-id" type="hidden">
-                            <span id="lead-prop-selected" class="inline-flex max-w-full items-center px-2.5 py-1 rounded-lg bg-white border border-sand-border text-moss text-xs font-semibold break-words">Selecione um imóvel disponível no campo abaixo.</span>
+                            <span id="lead-prop-selected" class="inline-flex max-w-full items-center px-2.5 py-1 rounded-lg bg-white border border-sand-border text-moss text-xs font-semibold break-words">Selecione um imóvel disponível ou reservado em negociação no campo abaixo.</span>
                             <p id="lead-prop-hint" class="hidden text-[11px] font-semibold text-amber-800">Em “Proposta Enviada” ou “Documentação/Crédito” o imóvel é reservado automaticamente.</p>
                         </div>
                         <div id="lead-prop-external" class="hidden">
@@ -632,7 +632,7 @@
 
                     <div id="lead-property-field-wrapper">
                         <label class="block text-xs font-bold text-moss mb-1">Imóvel / Região de Interesse *</label>
-                        <input type="text" id="lead-property" list="property-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event); onLeadPropertyInput()" onchange="onLeadPropertyInput()" onblur="restoreDatalistOnBlur(event)" maxlength="200" required placeholder="Selecione um imóvel disponível ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
+                        <input type="text" id="lead-property" list="property-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event); onLeadPropertyInput()" onchange="onLeadPropertyInput()" onblur="restoreDatalistOnBlur(event)" maxlength="200" required placeholder="Selecione um imóvel disponível, reservado ou digite..." class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-sm">
                     </div>
 
                     <div>
@@ -1482,12 +1482,12 @@
                         <label for="detail-prop-mode" class="block text-xs font-heading font-bold text-moss">Imóvel associado ao atendimento</label>
                         <select id="detail-prop-mode" onchange="syncDetailPropertyBox()" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-xs sm:text-sm">
                             <option value="none" ${!lead.propertyId && !lead.externalProperty ? 'selected' : ''}>Nenhum imóvel associado</option>
-                            <option value="internal" ${lead.propertyId ? 'selected' : ''}>Imóvel do nosso portfólio (somente disponíveis)</option>
+                            <option value="internal" ${lead.propertyId ? 'selected' : ''}>Imóvel do nosso portfólio (disponíveis ou em negociação)</option>
                             <option value="external" ${lead.externalProperty ? 'selected' : ''}>Imóvel de outra imobiliária (parceria)</option>
                         </select>
                         <input id="detail-prop-id" type="hidden" value="${esc(lead.propertyId || '')}">
                         <div id="detail-prop-internal" class="${lead.propertyId ? '' : 'hidden'} space-y-1.5">
-                            <span id="detail-prop-selected" class="inline-flex max-w-full items-center px-2.5 py-1 rounded-lg bg-white border border-sand-border text-moss text-xs font-semibold break-words">${lead.propertyId ? esc(lead.propertyId + ' — ' + (lead.propertyTitle || 'Imóvel vinculado')) : 'Selecione um imóvel disponível no campo abaixo.'}</span>
+                            <span id="detail-prop-selected" class="inline-flex max-w-full items-center px-2.5 py-1 rounded-lg bg-white border border-sand-border text-moss text-xs font-semibold break-words">${lead.propertyId ? esc(lead.propertyId + ' — ' + (lead.propertyTitle || 'Imóvel vinculado')) : 'Selecione um imóvel disponível ou reservado em negociação no campo abaixo.'}</span>
                             <p class="text-[11px] font-semibold text-amber-800">Em “Proposta Enviada” ou “Documentação/Crédito” o imóvel é reservado automaticamente.</p>
                         </div>
                         <div id="detail-prop-external" class="${lead.externalProperty ? '' : 'hidden'}">
@@ -1497,12 +1497,12 @@
                     <div class="space-y-1.5">
                         <label for="detail-property" class="block text-xs font-heading font-bold text-moss">Imóvel / Região de Interesse *</label>
                         <div class="flex flex-col sm:flex-row gap-2">
-                            <input type="text" id="detail-property" list="detail-property-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event); onDetailPropertyInput('${esc(lead.id)}')" onchange="onDetailPropertyInput('${esc(lead.id)}')" onblur="restoreDatalistOnBlur(event)" required maxlength="200" value="${esc(lead.property || '')}" placeholder="Selecione um imóvel disponível ou digite..."
+                            <input type="text" id="detail-property" list="detail-property-options" onpointerdown="openFullDatalist(event)" onfocus="openFullDatalist(event)" oninput="commitDatalistEdit(event); onDetailPropertyInput('${esc(lead.id)}')" onchange="onDetailPropertyInput('${esc(lead.id)}')" onblur="restoreDatalistOnBlur(event)" required maxlength="200" value="${esc(lead.property || '')}" placeholder="Selecione um imóvel disponível, reservado ou digite..."
                                    class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-white border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                             <button type="submit" class="px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs shrink-0">Associar imóvel</button>
                         </div>
                         <datalist id="detail-property-options">
-                            ${lead.category === 'Captação' ? '' : crmProps.filter(p => p.status === 'Disponível' || p.code === lead.propertyId).map(p => `<option value="${esc(p.code + ' - ' + p.title)}"></option>`).join('')}
+                            ${lead.category === 'Captação' ? '' : crmProps.filter(p => isLinkableProperty(p, lead.propertyId)).map(p => `<option value="${esc(p.code + ' - ' + p.title)}"></option>`).join('')}
                         </datalist>
                     </div>`}
                 </form>
@@ -1677,7 +1677,7 @@
             const prop = crmProps.find(p => p.code === code);
             document.getElementById('detail-prop-selected').textContent = code
                 ? `${code} — ${prop ? prop.title : 'Imóvel vinculado'}`
-                : 'Selecione um imóvel disponível no campo abaixo.';
+                : 'Selecione um imóvel disponível ou reservado em negociação no campo abaixo.';
         }
 
         function onDetailPropertyInput(leadId) {
@@ -1686,7 +1686,7 @@
             const field = document.getElementById('detail-property');
             if (!lead || !mode || !field || isDatalistPreviewOnly(field)) return;
             const value = field.value.trim();
-            const chosen = crmProps.find(p => (p.status === 'Disponível' || p.code === lead.propertyId) &&
+            const chosen = crmProps.find(p => isLinkableProperty(p, lead.propertyId) &&
                 (value === `${p.code} - ${p.title}` || value === p.code));
             if (chosen) {
                 mode.value = 'internal';
@@ -1711,7 +1711,7 @@
             body.link_mode = mode;
             if (mode === 'internal') {
                 const code = document.getElementById('detail-prop-id').value;
-                if (!code) { showToast('Selecione um imóvel disponível no campo "Imóvel / Região de Interesse".'); return null; }
+                if (!code) { showToast('Selecione um imóvel disponível ou reservado em negociação no campo "Imóvel / Região de Interesse".'); return null; }
                 body.property_code = code;
             } else if (mode === 'external') {
                 const ref = document.getElementById('detail-prop-ext').value.trim();
@@ -1818,13 +1818,23 @@
         const LINK_STAGES = ['Novo Lead', 'Qualificação', 'Visita Agendada', 'Proposta Enviada', 'Documentação/Crédito'];
         const HOLDING_STAGES = ['Proposta Enviada', 'Documentação/Crédito'];
 
+        // 4.3.3: um imóvel reservado permanece selecionável se houver
+        // pelo menos um lead ativo associado. Fechamentos e exclusões não contam.
+        function isLinkableProperty(prop, alreadyLinkedCode = '') {
+            if (!prop) return false;
+            if (prop.code === alreadyLinkedCode) return true; // preserva vínculo histórico
+            if (prop.status === 'Disponível') return true;
+            return prop.status === 'Reservado' && leads.some(l =>
+                l.propertyId === prop.code && l.stage !== 'Fechado' && l.category === 'Interessado');
+        }
+
         function syncPropertyDatalist() {
             const dl = document.getElementById('property-options');
             if (!dl) return;
             const isCaptacao = (document.getElementById('lead-category') || {}).value === 'Captação';
             dl.innerHTML = isCaptacao
                 ? ''
-                : crmProps.filter(p => p.status === 'Disponível')
+                : crmProps.filter(p => isLinkableProperty(p))
                     .map(p => `<option value="${esc(p.code + ' - ' + p.title)}"></option>`)
                     .join('');
         }
@@ -1836,7 +1846,7 @@
             if (document.getElementById('lead-category').value === 'Captação') return;
             const text = field.value.trim();
             const editing = leads.find(l => l.id === document.getElementById('lead-edit-id').value);
-            const chosen = crmProps.find(p => (p.status === 'Disponível' || p.code === editing?.propertyId) &&
+            const chosen = crmProps.find(p => isLinkableProperty(p, editing?.propertyId) &&
                 (text === `${p.code} - ${p.title}` || text === p.code));
             const selected = document.getElementById('lead-prop-id');
             if (chosen) {
@@ -1856,7 +1866,7 @@
             const p = crmProps.find(x => x.code === code);
             document.getElementById('lead-prop-selected').textContent = code
                 ? `${code} — ${p ? p.title : 'Imóvel vinculado'}`
-                : 'Selecione um imóvel disponível no campo abaixo.';
+                : 'Selecione um imóvel disponível ou reservado em negociação no campo abaixo.';
         }
 
         function populateLeadPropertySelect(lead) {
@@ -1966,7 +1976,7 @@
             const editId = document.getElementById('lead-edit-id').value;
             const body = leadBody();
             if (body.link_mode === 'internal' && !body.property_code) {
-                showToast('Selecione um imóvel disponível no campo "Imóvel / Região de Interesse".');
+                showToast('Selecione um imóvel disponível ou reservado em negociação no campo "Imóvel / Região de Interesse".');
                 return;
             }
             const curLead = editId ? leads.find(l => l.id === editId) : null;

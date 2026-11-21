@@ -76,8 +76,8 @@ const html = fs.readFileSync(path.join(root, 'public/app/index.html'), 'utf8');
 const script = html.match(/<script>\s*([\s\S]*?)<\/script>/g)?.at(-1)?.replace(/^<script>/, '').replace(/<\/script>$/, '');
 assert.ok(script, 'script inline do CRM não encontrado');
 new vm.Script(script, { filename: 'public/app/index.html' });
-assert.ok(html.includes('oninput="onLeadPropertyInput()"'));
-assert.ok(html.includes('const kanbanStages = STAGES;'));
+assert.ok(html.includes('oninput="commitDatalistEdit(event); onLeadPropertyInput()"'));
+assert.ok(html.includes("const kanbanStages = STAGES.filter(stage => stage !== 'Fechado');"));
 checks += 3;
 
 // Movimentação: campos em ordem correta, edição sem link/property e PATCH atômico por etapa.
@@ -120,6 +120,40 @@ const mockLead = { id: 'LD-TEST', name: 'Cliente Teste UI', phone: '552499999999
   propertyStatus: null, externalProperty: false, externalPropertyRef: '' };
 vm.runInContext(`leads = [${JSON.stringify(mockLead)}]; crmProps = [${JSON.stringify({code:'YTI-0099',title:'Casa UI',status:'Disponível'})}];`, uiCtx);
 uiCtx.showToast = () => {};
+
+// Kanban exclui Fechado (Ganho e Perdido) sem esconder o histórico da visão por etapas.
+// Contagens e filtros acompanham o modo da visualização, sem persistir alterações no D1.
+uiCtx.document.querySelectorAll = () => [];
+const wonLeadUI = { ...mockLead, id: 'LD-CLOSED-WON', name: 'Fechado Ganho', stage: 'Fechado', closeResult: 'Ganho' };
+const lostLeadUI = { ...mockLead, id: 'LD-CLOSED-LOST', name: 'Fechado Perdido', stage: 'Fechado', closeResult: 'Perdido' };
+vm.runInContext(`leads = ${JSON.stringify([mockLead, wonLeadUI, lostLeadUI])}; selectedStage = 'Fechado'; setFunnelMode('kanban')`, uiCtx);
+let kanbanHTML = uiEl('kanban-columns-wrapper').innerHTML;
+assert.equal((kanbanHTML.match(/<h4 class=\"font-heading font-bold text-moss text-sm\">/g) || []).length, 5);
+assert.ok(kanbanHTML.includes('lead-card-LD-TEST'));
+assert.equal(kanbanHTML.includes('lead-card-LD-CLOSED-WON'), false);
+assert.equal(kanbanHTML.includes('lead-card-LD-CLOSED-LOST'), false);
+assert.equal(uiEl('count-cat-todas').textContent, 1);
+assert.equal(uiEl('count-funnel-todos').textContent, 1);
+checks += 6;
+
+vm.runInContext(`setFunnelMode('tabs')`, uiCtx);
+const tabsHTML = uiEl('stage-cards-grid').innerHTML;
+assert.ok(tabsHTML.includes('lead-card-LD-CLOSED-WON'));
+assert.ok(tabsHTML.includes('lead-card-LD-CLOSED-LOST'));
+assert.equal(uiEl('count-cat-todas').textContent, 3);
+checks += 3;
+
+vm.runInContext(`leads.find(l => l.id === 'LD-CLOSED-WON').stage = 'Qualificação'; setFunnelMode('kanban')`, uiCtx);
+kanbanHTML = uiEl('kanban-columns-wrapper').innerHTML;
+assert.ok(kanbanHTML.includes('lead-card-LD-CLOSED-WON'), 'Lead reaberto reaparece no Kanban');
+assert.equal(uiEl('count-cat-todas').textContent, 2);
+vm.runInContext(`leads.find(l => l.id === 'LD-TEST').stage = 'Fechado'; renderFunnel()`, uiCtx);
+kanbanHTML = uiEl('kanban-columns-wrapper').innerHTML;
+assert.equal(kanbanHTML.includes('lead-card-LD-TEST'), false, 'Lead fechado desaparece do Kanban');
+assert.ok(kanbanHTML.includes('lead-card-LD-CLOSED-WON'));
+assert.equal(uiEl('count-cat-todas').textContent, 1);
+checks += 5;
+vm.runInContext(`leads = [${JSON.stringify(mockLead)}]; selectedStage = 'Novo Lead'; setFunnelMode('tabs')`, uiCtx);
 
 // Refinamento exclusivo do modal de movimentação: hierarquia, eventos e contato mobile.
 vm.runInContext('openLeadDetail("LD-TEST")', uiCtx);
@@ -230,6 +264,33 @@ vm.runInContext('openCloseLead("LD-TEST")', uiCtx);
 assert.ok(warnings.some(msg => msg.includes('Salve primeiro')));
 checks++;
 
+// 4.3.3: opções do CRM incluem Reservado COM negociação ativa, mas não
+// Reservado sem interessado ativo nem Vendido/Alugado/Inativo.
+vm.runInContext(`crmProps = [
+    { code:'YTI-0901', title:'Reservado Vivo', status:'Reservado' },
+    { code:'YTI-0902', title:'Reservado Encerrado', status:'Reservado' },
+    { code:'YTI-0903', title:'Imóvel Vendido', status:'Vendido' },
+    { code:'YTI-0904', title:'Imóvel Disponível', status:'Disponível' }
+  ]; leads = [
+    { id:'LD-901', propertyId:'YTI-0901', category:'Interessado', stage:'Proposta Enviada' },
+    { id:'LD-902', propertyId:'YTI-0902', category:'Interessado', stage:'Fechado' }
+  ];`, uiCtx);
+uiEl('lead-category').value = 'Interessado';
+vm.runInContext('syncPropertyDatalist()', uiCtx);
+const openOptions = uiEl('property-options').innerHTML;
+assert.ok(openOptions.includes('YTI-0901 - Reservado Vivo'));
+assert.ok(openOptions.includes('YTI-0904 - Imóvel Disponível'));
+assert.equal(openOptions.includes('YTI-0902'), false);
+assert.equal(openOptions.includes('YTI-0903'), false);
+checks += 4;
+const eligibleReservedUI = vm.runInContext(`isLinkableProperty(crmProps[0])`, uiCtx);
+assert.equal(eligibleReservedUI, true); checks++;
+vm.runInContext(`leads[0].stage = 'Fechado'; syncPropertyDatalist()`, uiCtx);
+assert.equal(uiEl('property-options').innerHTML.includes('YTI-0901'), false);
+checks++;
+// Repor dados simulados para as verificações posteriores.
+vm.runInContext(`leads = [${JSON.stringify(mockLead)}]; crmProps = [${JSON.stringify({code:'YTI-0099',title:'Casa UI',status:'Disponível'})}];`, uiCtx);
+
 // Na API, uma única requisição troca vínculo + etapa, reservando o imóvel no DB.batch.
 const combinedProp = await prop('Imóvel Reserva por Movimentação');
 const combinedLead = await lead('Lead Reserva por Movimentação', null);
@@ -285,10 +346,32 @@ checkProp(b.code, 'Reservado');
 await api('DELETE', `/leads/${l3.id}`);
 checkProp(b.code, 'Disponível');
 
-// Seleção de um imóvel com status Reservado por outro lead continua proibida.
+// 4.3.3: Imóvel reservado por um lead ativo aceita um segundo/terceiro interessado.
 const l4 = await lead('Cliente Teste Quatro', c.code, 'Proposta Enviada');
 checkProp(c.code, 'Reservado');
-await api('PATCH', `/leads/${l2.id}`, { link_mode: 'internal', property_code: c.code }, 409);
+const secondLink = await api('PATCH', `/leads/${l2.id}`, { link_mode: 'internal', property_code: c.code });
+assert.equal(secondLink.propertyId, c.code);
+checks++;
+checkProp(c.code, 'Reservado');
+const thirdLink = await lead('Cliente Teste Dez', c.code, 'Qualificação');
+assert.equal(thirdLink.propertyId, c.code);
+checks++;
+// Encerrar uma negociação perdida não libera a reserva mantida pelo outro lead.
+await api('POST', `/leads/${l4.id}/close`, { result: 'Perdido', note: 'Cliente desistiu da proposta.' });
+checkProp(c.code, 'Reservado');
+await api('PATCH', `/leads/${l2.id}`, { stage: 'Qualificação' });
+checkProp(c.code, 'Disponível'); // Terceiro interessado ainda em Qualificação não segura reserva.
+await api('PATCH', `/leads/${thirdLink.id}`, { stage: 'Documentação/Crédito' });
+checkProp(c.code, 'Reservado');
+await api('POST', `/leads/${thirdLink.id}/close`, { result: 'Ganho', note: 'Compra fechada com sucesso.' });
+checkProp(c.code, 'Vendido');
+// Um lead ainda ativo vinculado não deve permitir novas associações a Vendido.
+const cannotReassign = await lead('Lead Candidato a Imóvel Vendido', null);
+await api('PATCH', `/leads/${cannotReassign.id}`, { link_mode: 'internal', property_code: c.code }, 409);
+// Um reservado sem qualquer lead ativo associado também não pode ser selecionado.
+const unheld = await prop('Imóvel Reserva Manual Sem Leads');
+await api('PATCH', `/properties/${unheld.code}`, { status: 'Reservado' });
+await api('PATCH', `/leads/${cannotReassign.id}`, { link_mode: 'internal', property_code: unheld.code }, 409);
 
 // Exclusão de um entre dois titulares: o imóvel deve permanecer Reservado.
 const l7 = await lead('Cliente Teste Sete', a.code, 'Qualificação');

@@ -211,8 +211,21 @@ async function parseLink(env, b, cur, nextStage, nextCategory) {
   }
   const prop = await env.DB.prepare('SELECT * FROM properties WHERE id = ? AND deleted_at IS NULL').bind(parseId(b.property_code)).first();
   if (!prop) throw new HttpError(404, 'Imóvel não encontrado.');
-  if (prop.id !== (cur && cur.property_id) && prop.status !== 'Disponível')
-    throw new HttpError(409, `O imóvel ${propCode(prop.id)} não está disponível (status atual: ${prop.status}).`);
+  // 4.3.3: um imóvel Reservado pode receber outros interessados enquanto
+  // houver ao menos um lead associado ainda ativo (não Fechado/excluído).
+  // Imóveis Vendido/Alugado/Inativo seguem bloqueados para novos vínculos.
+  if (prop.id !== (cur && cur.property_id)) {
+    let canAssociate = prop.status === 'Disponível';
+    if (!canAssociate && prop.status === 'Reservado') {
+      const active = await env.DB.prepare(
+        `SELECT 1 FROM leads WHERE property_id = ? AND deleted_at IS NULL
+           AND category = 'Interessado' AND stage != 'Fechado' LIMIT 1`
+      ).bind(prop.id).first();
+      canAssociate = !!active;
+    }
+    if (!canAssociate) throw new HttpError(409,
+      `O imóvel ${propCode(prop.id)} não aceita novas associações (status atual: ${prop.status}).`);
+  }
   return { propertyId: prop.id, external: 0, ref: '', prop };
 }
 
