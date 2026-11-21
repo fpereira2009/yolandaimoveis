@@ -23,8 +23,25 @@ export async function onRequest(ctx) {
     if (!isCrc && !isPreview) return protectedResponse(new Response('Não encontrado', { status: 404 }));
     try { await authenticate(ctx.request, ctx.env); }
     catch (e) {
-      return protectedResponse(new Response(JSON.stringify({ error: e.status === 503 ? 'Acesso não configurado.' : 'Não autenticado.' }), {
-        status: e.status === 503 ? 503 : 401,
+      const isServiceUnavailable = e?.status === 503;
+      const accessErrorCode = isServiceUnavailable
+        ? (e?.message === 'Acesso não configurado no servidor.' ? 'ACCESS_CONFIG_INVALID' : 'ACCESS_VERIFICATION_UNAVAILABLE')
+        : 'ACCESS_UNAUTHORIZED';
+      if (isPreview && isServiceUnavailable) {
+        // Somente diagnósticos de presença: nunca logar JWT, AUD, domínio ou valores secretos.
+        console.error('[preview-access]', accessErrorCode, {
+          teamDomainDefined: typeof ctx.env?.ACCESS_TEAM_DOMAIN === 'string' && !!ctx.env.ACCESS_TEAM_DOMAIN.trim(),
+          audienceDefined: typeof ctx.env?.ACCESS_AUD === 'string' && !!ctx.env.ACCESS_AUD.trim(),
+        });
+      }
+      const body = isPreview
+        ? {
+            error: isServiceUnavailable ? 'Falha na configuração ou validação do Cloudflare Access.' : 'Não autenticado.',
+            code: accessErrorCode,
+          }
+        : { error: isServiceUnavailable ? 'Serviço de autenticação indisponível.' : 'Não autenticado.' };
+      return protectedResponse(new Response(JSON.stringify(body), {
+        status: isServiceUnavailable ? 503 : 401,
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
       }));
     }
