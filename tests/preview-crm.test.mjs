@@ -42,7 +42,7 @@ const DB = {
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   },
 };
-const env = { DB, DEV_BYPASS: '1' };
+const env = { DB, DEV_BYPASS: '1', MEDIA_ENV: 'preview' };
 let checks = 0;
 async function api(method, target, body, expected = 200) {
   const request = new Request(`https://preview.example.test/api${target}`, {

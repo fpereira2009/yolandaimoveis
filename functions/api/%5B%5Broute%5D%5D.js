@@ -192,6 +192,31 @@ const releaseStmt = (env, propId, t) => env.DB.prepare(
 const closeWonStmt = (env, propId, t) => env.DB.prepare(
   `UPDATE properties SET status = CASE purpose WHEN 'Alugar' THEN 'Alugado' ELSE 'Vendido' END, updated_at = ?
     WHERE id = ? AND deleted_at IS NULL AND status IN ('Disponível','Reservado')`).bind(t, propId);
+// 4.3.4: fechamento Perdido só libera a reserva quando não há MAIS NENHUM
+// interessado ativo associado. A transição normal de etapas continua usando
+// releaseStmt (que considera apenas as etapas que efetivamente reservam).
+const releaseAfterLossStmt = (env, propId, t) => env.DB.prepare(
+  `UPDATE properties SET status = 'Disponível', updated_at = ?
+   WHERE id = ? AND status = 'Reservado' AND deleted_at IS NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM leads o WHERE o.property_id = properties.id
+         AND o.deleted_at IS NULL AND o.category = 'Interessado' AND o.stage != 'Fechado'
+     )`).bind(t, propId);
+// Registro de auditoria ANTES da requalificação, na mesma transação do fechamento.
+const competingLeadEventStmt = (env, propId, winnerId, t) => env.DB.prepare(
+  `INSERT INTO lead_events (lead_id, kind, text, created_at)
+   SELECT l.id, 'etapa', 'Etapa alterada automaticamente de "' || l.stage || '" para "Qualificação". '
+     || 'Imóvel ' || ? || ' desvinculado após fechamento como Ganho do lead ' || ?
+     || '. Próximo follow-up: hoje.', ?
+   FROM leads l WHERE l.property_id = ? AND l.id != ?
+     AND l.deleted_at IS NULL AND l.stage != 'Fechado'`).bind(propCode(propId), leadCode(winnerId), t, propId, winnerId);
+// Reseta vínculo interno e texto de imóvel/região; mantém dados pessoais, valor
+// e histórico de outros interessados. Aplicar após competirLeadEventStmt.
+const requalifyCompetingLeadsStmt = (env, propId, winnerId, t, today) => env.DB.prepare(
+  `UPDATE leads SET stage = 'Qualificação', property_id = NULL, property = '',
+      external_property = 0, external_property_ref = '', followup_at = ?, updated_at = ?
+   WHERE property_id = ? AND id != ? AND deleted_at IS NULL AND stage != 'Fechado'`
+).bind(today, t, propId, winnerId);
 const eventStmt = (env, leadId, kind, text, t) =>
   env.DB.prepare('INSERT INTO lead_events (lead_id, kind, text, created_at) VALUES (?,?,?,?)').bind(leadId, kind, String(text).slice(0, 1000), t);
 
@@ -456,10 +481,20 @@ async function closeLead(env, id, b) {
     const code = propCode(cur.property_id);
     if (result === 'Ganho' && cur.category === 'Interessado' && (cur.p_status === 'Disponível' || cur.p_status === 'Reservado')) {
       const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
+      // Somente Preview 4.3.4. A atualização dos outros leads, a trilha de auditoria
+      // e a baixa do imóvel pertencem à MESMA transação atômica do fechamento.
+      if (env.MEDIA_ENV === 'preview') {
+        stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
+        stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
+      }
       stmts.push(closeWonStmt(env, cur.property_id, t));
       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
     } else if ((result === 'Perdido' || cur.category === 'Captação') && cur.p_status === 'Reservado') {
-      stmts.push(releaseStmt(env, cur.property_id, t));
+      // Em 4.3.4 um fechamento perdido NÃO altera outros leads; enquanto
+      // houver qualquer outro interessado ativo, preserva a reserva existente.
+      stmts.push(env.MEDIA_ENV === 'preview'
+        ? releaseAfterLossStmt(env, cur.property_id, t)
+        : releaseStmt(env, cur.property_id, t));
       events.push(['nota', `Reserva do imóvel ${code} reavaliada após fechamento perdido.`]);
     }
   }

@@ -1019,7 +1019,7 @@
             const active = leads.filter(l => l.stage !== 'Fechado');
             const followups = active.filter(l => l.followupStatus === 'Hoje' || l.followupStatus === 'Atrasado');
             const visits = leads.filter(l => l.stage === 'Visita Agendada');
-            const proposals = leads.filter(l => l.stage === 'Proposta Enviada' || l.stage === 'Documentação/Crédito');
+            const proposals = leads.filter(l => l.closeResult !== 'Perdido' && (l.stage === 'Proposta Enviada' || l.stage === 'Documentação/Crédito'));
             const comm = getCommissionBreakdown();
 
             document.getElementById('kpi-active-leads').textContent = active.length;
@@ -1825,7 +1825,7 @@
             if (prop.code === alreadyLinkedCode) return true; // preserva vínculo histórico
             if (prop.status === 'Disponível') return true;
             return prop.status === 'Reservado' && leads.some(l =>
-                l.propertyId === prop.code && l.stage !== 'Fechado' && l.category === 'Interessado');
+                l.propertyId === prop.code && l.stage !== 'Fechado' && l.closeResult !== 'Perdido' && l.category === 'Interessado');
         }
 
         function syncPropertyDatalist() {
@@ -2046,7 +2046,9 @@
             let msg = '';
             if (lead && lead.propertyId && lead.propertyStatus && res) {
                 if (res === 'Ganho' && (lead.propertyStatus === 'Disponível' || lead.propertyStatus === 'Reservado')) {
+                    const competing = leads.filter(l => l.id !== lead.id && l.propertyId === lead.propertyId && l.stage !== 'Fechado');
                     msg = `O imóvel ${lead.propertyId} será marcado como ${lead.propertyPurpose === 'Alugar' ? 'Alugado' : 'Vendido'}.`;
+                    if (competing.length) msg += ` ${competing.length} outro(s) lead(s) serão movidos para Qualificação, sem imóvel associado, com follow-up para hoje.`;
                 } else if (res === 'Perdido' && lead.propertyStatus === 'Reservado') {
                     msg = `O imóvel ${lead.propertyId} voltará para Disponível (se nenhum outro lead ativo o mantiver reservado).`;
                 }
@@ -2067,11 +2069,13 @@
             try {
                 const before = (leads.find(l => l.id === id) || {}).propertyStatus;
                 const upd = await api('/leads/' + id + '/close', { method: 'POST', body: { result, note } });
+                // 4.3.4: o fechamento como Ganho altera outros leads no servidor.
+                // Recarregar o conjunto evita contadores, Kanban e cards obsoletos.
                 upsert(leads, upd);
-                if (upd.propertyId) await reloadProps();
                 selectedStage = 'Fechado';
                 closeModal('lead-close-modal');
-                refreshAll(); openLeadDetail(id, false);
+                await loadAll();
+                openLeadDetail(id, false);
                 let msg = `Lead fechado como ${result === 'Ganho' ? 'Ganho' : 'Perdido'}.`;
                 if (upd.propertyId && upd.propertyStatus !== before) msg += ` Imóvel ${upd.propertyId}: ${upd.propertyStatus}.`;
                 showToast(msg);
@@ -2305,7 +2309,7 @@
             document.getElementById('prop-count').textContent = list.length + (list.length === 1 ? ' imóvel' : ' imóveis') + (list.length !== crmProps.length ? ' (de ' + crmProps.length + ')' : '');
             syncPropertyDatalist();
             document.getElementById('prop-grid').innerHTML = list.length ? list.map(p => {
-                const activeLinkedLeads = leads.filter(l => l.stage !== 'Fechado' && l.category !== 'Captação' && l.propertyId === p.code);
+                const activeLinkedLeads = leads.filter(l => l.stage !== 'Fechado' && l.closeResult !== 'Perdido' && l.category !== 'Captação' && l.propertyId === p.code);
                 const negotiationBadge = activeLinkedLeads.length
                     ? `<span title="${esc(activeLinkedLeads.map(l => l.name).join(', '))}" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-terracotta-soft text-terracotta border border-terracotta/25 text-[11px] font-bold"><i data-lucide="handshake" class="w-3 h-3"></i> Em negociação${activeLinkedLeads.length > 1 ? ' (' + activeLinkedLeads.length + ')' : ''}</span>`
                     : '';
