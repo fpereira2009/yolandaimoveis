@@ -135,7 +135,7 @@
             document.getElementById('lead-submit-btn').textContent = 'Salvar Alterações';
             document.getElementById('lead-delete-btn').classList.remove('hidden');
             document.getElementById('lead-name').value = l.name;
-            document.getElementById('lead-phone').value = window.YolandaMasks?.formatPhone(String(l.phone || '').replace(/^55/, '')) || String(l.phone || '').replace(/^55/, '');
+            document.getElementById('lead-phone').value = window.YolandaMasks?.formatPhone(l.phone) || String(l.phone || '').replace(/^55(?=\d{10,11}$)/, '');
             document.getElementById('lead-category').value = l.category || 'Interessado';
             syncLeadModalityOptions(l.modality);
             document.getElementById('lead-stage').value = l.stage;

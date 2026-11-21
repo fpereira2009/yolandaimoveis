@@ -323,7 +323,7 @@
                 openNewLeadModal();
                 const isVenda = client.modality === 'Venda';
                 document.getElementById('lead-name').value = client.name || '';
-                document.getElementById('lead-phone').value = String(client.phone || '').replace(/^55/, '');
+                document.getElementById('lead-phone').value = window.YolandaMasks?.formatPhone(client.phone) || String(client.phone || '').replace(/^55(?=\d{10,11}$)/, '');
                 document.getElementById('lead-category').value = isVenda ? 'Captação' : 'Interessado';
                 syncLeadModalityOptions(client.modality || 'Compra');
                 document.getElementById('lead-property').value = client.regions || '';

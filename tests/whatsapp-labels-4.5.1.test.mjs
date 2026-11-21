@@ -28,9 +28,9 @@ for (const [name,code] of [['clients',clients],['funnel',funnel],['detail',detai
  check(code.includes('href="tel:+${esc(normPhone('), `${name} mobile phone link`);
  check(code.includes('aria-label='), `${name} accessible WhatsApp action`);
 }
-check(home.includes('?v=4.5.1') && crm.includes('?v=4.5.1'), 'cache-busting release version');
-check(JSON.parse(read('package.json')).version === '4.5.1', 'package version');
-check(JSON.parse(read('package-lock.json')).version === '4.5.1', 'lockfile version');
+check(home.includes('?v=4.5.2') && crm.includes('?v=4.5.2'), 'cache-busting release version');
+check(JSON.parse(read('package.json')).version === '4.5.2', 'package version');
+check(JSON.parse(read('package-lock.json')).version === '4.5.2', 'lockfile version');
 check(read('functions/_shared/access-auth.js').includes("redirect: 'manual'"), 'JWT JWKS fix retained');
 const wrangler = read('wrangler.toml');
 check(wrangler.includes('database_name = "yolanda-crm-dev"') && wrangler.includes('database_name = "yolanda-crm"'), 'D1 environments separate');

@@ -24,14 +24,17 @@
             activeCrcFilter = filter;
             document.querySelectorAll('.crc-filter-btn').forEach(btn => {
                 const active = btn.dataset.crc === filter;
+                // Altera somente classes de cor/ênfase, preservando a grade responsiva da 2ª linha.
+                btn.classList.remove('bg-moss', 'bg-terracotta', 'bg-sand', 'text-white',
+                    'text-moss', 'text-terracotta', 'text-charcoal/80', 'font-bold', 'font-semibold');
                 if (active) {
-                    btn.className = filter === 'Aluguel'
-                        ? 'crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-terracotta text-white shrink-0'
-                        : 'crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-moss text-white shrink-0';
+                    btn.classList.add(btn.dataset.crc === 'Aluguel' ? 'bg-terracotta' : 'bg-moss', 'text-white', 'font-bold');
                 } else {
-                    const color = btn.dataset.crc === 'Aluguel' ? 'text-terracotta' : 'text-charcoal/80';
-                    btn.className = `crc-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-sand ${color} shrink-0`;
+                    const color = btn.dataset.crc === 'Aluguel' ? 'text-terracotta'
+                        : ['Compra', 'Venda'].includes(btn.dataset.crc) ? 'text-moss' : 'text-charcoal/80';
+                    btn.classList.add('bg-sand', color, 'font-semibold');
                 }
+                btn.setAttribute('aria-pressed', String(active));
             });
             renderCrc();
         }
@@ -48,16 +51,8 @@
             return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
         }
 
-        function clearCrcFollowupDates() {
-            document.getElementById('crc-followup-start').value = '';
-            document.getElementById('crc-followup-end').value = '';
-            renderCrc();
-        }
-
         function renderCrc() {
             const query = document.getElementById('crc-search').value.trim().toLowerCase();
-            const from = document.getElementById('crc-followup-start')?.value || '';
-            const to = document.getElementById('crc-followup-end')?.value || '';
             const grid = document.getElementById('crc-cards-grid');
 
             const filtered = crcClients.filter(c => {
@@ -78,9 +73,7 @@
                     matchFilter = bucket.key === activeCrcFilter;
                 }
                 else if (activeCrcFilter === 'Aniversariante') matchFilter = c.birthdayMonth;
-                const followup = (from || to) ? clientNextFollowup(c) : '';
-                const matchesDates = (!from && !to) || (!!followup && (!from || followup >= from) && (!to || followup <= to));
-                return matchSearch && matchFilter && matchesDates;
+                return matchSearch && matchFilter;
             });
 
             if (filtered.length === 0) {
@@ -185,7 +178,7 @@
             document.getElementById('crc-modal-title').textContent = 'Editar Cliente ' + c.id;
             document.getElementById('crc-delete-btn').classList.remove('hidden');
             document.getElementById('crc-name').value = c.name;
-            document.getElementById('crc-phone').value = window.YolandaMasks?.formatPhone(String(c.phone || '').replace(/^55/, '')) || String(c.phone || '').replace(/^55/, '');
+            document.getElementById('crc-phone').value = window.YolandaMasks?.formatPhone(c.phone) || String(c.phone || '').replace(/^55(?=\d{10,11}$)/, '');
             document.getElementById('crc-modality').value = c.modality;
             document.getElementById('crc-regions').value = c.regions;
             document.getElementById('crc-budget').value = c.budget === 'A definir' ? '' : c.budget;

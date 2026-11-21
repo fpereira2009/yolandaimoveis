@@ -7,6 +7,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 Nenhuma alteração pendente registrada.
 
+## [4.5.2] - 2026-11-21
+
+### Fixed
+- Máscara telefônica reativa para todos os campos de telefone existentes dos formulários de Leads, Clientes CRC e contatos públicos: DDD + 8 dígitos `(24) 3333-4444` e DDD + 9 dígitos `(24) 99999-9999`. A máscara mantém o cursor lógico ao digitar no meio do número e permite Backspace/Delete sobre parênteses, espaços e hífen sem travar o campo.
+- Na edição de Leads/Clientes ou ao criar atendimento a partir de um cliente CRC, números normalizados com DDI `55` são apresentados já mascarados sem remover por engano um DDD regional `55`.
+- Formatação progressiva de valores inteiros em reais, como `150.000` e `1.250.000`, mantida em `lead-value`; o envio para a API retém somente os dígitos. O campo `crc-budget` permanece texto descritivo livre (`Até R$ ...`), sem alterar o contrato da API.
+
+### Changed
+- Painel do CRC organizado em duas linhas sem alterar o mecanismo de seleção: linha 1 com busca, **Todos / Compra / Venda / Aluguel / Follow-ups**; linha 2 com **Recentes / Ativos / Inativos Recentes (+30d) / Inativos Antigos (+1 ano) / Aniversariantes** (quatro botões de grupos).
+- Removidos apenas os controles de intervalo de datas do próximo follow-up (`crc-followup-start`, `crc-followup-end` e **Limpar datas**) e a condição correspondente no front-end. O filtro rápido **Follow-ups** continua disponível na primeira linha.
+- Botões de grupos do CRC usam duas colunas no celular e quatro no desktop. A troca de filtro altera somente as classes de ênfase e `aria-pressed`, preservando as classes responsivas de dimensionamento.
+- Atualizados número de versão do pacote, diagnóstico de API e resultado de resolução de disputa para `4.5.2`, além do versionamento dos scripts (`?v=4.5.2`). Adicionados testes de regressão próprios para máscara, cursor, payload do lead e filtros.
+
+### Compatibility
+- **Nenhuma nova rota, migration, binding, mudança de regra comercial ou atualização jurídica nesta release.** A versão legal vigente continua sendo a revisão de 21/11/2026 (4.4.0).
+- Mantidos WhatsApp com texto (4.5.1), deep linking, vínculo Lead–Imóvel, cache R2, validação JWT Cloudflare Access e segregação dos ambientes D1/R2. Os IDs removidos são exclusivamente os dois campos de data explicitamente excluídos do CRC.
+- Testes locais concluídos; Preview/Production não publicados por este pacote. Homologação visual ainda necessária no Preview.
+
 ## [4.5.1] - 2026-11-21
 
 ### Changed
