@@ -467,32 +467,47 @@ async function addNote(env, id, b) {
   return loadLead(env, id);
 }
 
+// A v4.3.4 era condicionada a MEDIA_ENV === 'preview'. Em Pages Preview o
+// binding pode não ter sido sincronizado com o dashboard, e a regra era
+// silenciosamente ignorada. O ambiente production permanece explicitamente
+// isolado. Uma ausência de MEDIA_ENV é tratada como preview neste pacote
+// de homologação (NÃO publicar em produção sem confirmar a variável production).
+const disputeRulesEnabled = (env) => String(env.MEDIA_ENV || '').trim().toLowerCase() !== 'production';
+
 async function closeLead(env, id, b) {
   const cur = await loadLeadRow(env, id);
   if (cur.stage === 'Fechado') throw new HttpError(409, 'Este lead já está fechado.');
   const result = oneOf(b.result, CLOSE_RESULTS, 'resultado');
   const note = str(b.note, 'observação do resultado', { min: 3, max: 800, required: true });
+  const rulesEnabled = disputeRulesEnabled(env);
+  // Um imóvel definitivamente negociado não pode ser ganho de novo por outro lead.
+  if (rulesEnabled && result === 'Ganho' && cur.property_id &&
+      ['Vendido', 'Alugado', 'Inativo'].includes(cur.p_status)) {
+    throw new HttpError(409, `O imóvel ${propCode(cur.property_id)} já está ${cur.p_status}. Revise a associação antes de fechar como Ganho.`);
+  }
   const t = nowIso();
   const stmts = [env.DB.prepare(
     "UPDATE leads SET stage = 'Fechado', closed_at = ?, close_result = ?, close_note = ?, followup_at = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NULL AND stage != 'Fechado'")
     .bind(t, result, note, t, id)];
   const events = [];
+  let rivalsUpdateIndex = -1;
   if (cur.property_id && cur.p_status) {
     const code = propCode(cur.property_id);
     if (result === 'Ganho' && cur.category === 'Interessado' && (cur.p_status === 'Disponível' || cur.p_status === 'Reservado')) {
       const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
-      // Somente Preview 4.3.4. A atualização dos outros leads, a trilha de auditoria
-      // e a baixa do imóvel pertencem à MESMA transação atômica do fechamento.
-      if (env.MEDIA_ENV === 'preview') {
+      // Audita e requalifica os outros leads ativos dentro do MESMO D1.batch.
+      // O filtro usa property_id, nunca somente a descrição livre do imóvel.
+      if (rulesEnabled) {
         stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
+        rivalsUpdateIndex = stmts.length;
         stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
       }
       stmts.push(closeWonStmt(env, cur.property_id, t));
       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
     } else if ((result === 'Perdido' || cur.category === 'Captação') && cur.p_status === 'Reservado') {
-      // Em 4.3.4 um fechamento perdido NÃO altera outros leads; enquanto
-      // houver qualquer outro interessado ativo, preserva a reserva existente.
-      stmts.push(env.MEDIA_ENV === 'preview'
+      // Perdido não altera os demais; só libera se nenhum interessado ativo
+      // continuar associado. Regras antigas ficam restritas à produção.
+      stmts.push(rulesEnabled
         ? releaseAfterLossStmt(env, cur.property_id, t)
         : releaseStmt(env, cur.property_id, t));
       events.push(['nota', `Reserva do imóvel ${code} reavaliada após fechamento perdido.`]);
@@ -500,8 +515,21 @@ async function closeLead(env, id, b) {
   }
   events.push(['etapa', `Lead fechado como ${result === 'Ganho' ? 'Ganho (Convertido)' : 'Perdido (Não Convertido)'}. Observação: ${note}`]);
   stmts.push(...events.map(([k, txt]) => eventStmt(env, id, k, txt, t)));
-  await env.DB.batch(stmts);
-  return loadLead(env, id);
+  const batchResult = await env.DB.batch(stmts);
+  const lead = await loadLead(env, id);
+  // Evidência objetiva da execução real: no Network do navegador é possível
+  // ver quantos concorrentes a transação D1 efetivamente requalificou.
+  return {
+    ...lead,
+    disputeResolution: {
+      version: '4.3.4-revisao-1',
+      enabled: rulesEnabled,
+      linkedProperty: cur.property_id ? propCode(cur.property_id) : null,
+      competitorsRequalified: rivalsUpdateIndex >= 0
+        ? Number(batchResult[rivalsUpdateIndex]?.meta?.changes || 0) : 0,
+      outcome: result,
+    },
+  };
 }
 
 async function deleteLead(env, id) {
@@ -770,6 +798,16 @@ export async function onRequest({ request, env, params }) {
     await authenticate(request, env);
     authed = true;
     const [res, id, sub] = parts;
+    // Diagnóstico autenticado: confira que a API publicada contém a revisão
+    // da regra de disputa e que MEDIA_ENV não herdou 'production' no Preview.
+    if (res === 'diagnostics' && id === 'disputes' && !sub && method === 'GET') {
+      return json({
+        apiVersion: '4.3.4-revisao-1',
+        mediaEnv: env.MEDIA_ENV || null,
+        disputeRulesEnabled: disputeRulesEnabled(env),
+        dbBindingAvailable: Boolean(env.DB),
+      });
+    }
     if (res === 'export' && method === 'GET' && id) return await exportCsv(env, id.replace(/\.csv$/, ''));
     if (res === 'leads') {
       if (!id) { if (method === 'GET') return json(await listLeads(env)); if (method === 'POST') return json(await createLead(env, body), 201); }

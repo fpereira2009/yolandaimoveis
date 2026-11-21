@@ -71,6 +71,13 @@ const rawProp = code => db.prepare('SELECT * FROM properties WHERE id = ?').get(
 const ok = (condition, message) => { assert.ok(condition, message); checks++; };
 const eq = (actual, expected, message) => { assert.equal(actual, expected, message); checks++; };
 
+// Diagnóstico ajuda a confirmar qual Function responde no Preview publicado.
+const diagnostic = await call('GET', '/diagnostics/disputes');
+eq(diagnostic.apiVersion, '4.3.4-revisao-1');
+eq(diagnostic.mediaEnv, 'preview');
+eq(diagnostic.disputeRulesEnabled, true);
+eq(diagnostic.dbBindingAvailable, true);
+
 // Cenário 1: venda ganha por um dentre quatro associados (um já Perdido).
 const sale = await makeProperty('Casa de conflito 4.3.4');
 const winner = await makeLead('Lead vencedor', sale, 'Documentação/Crédito');
@@ -82,6 +89,7 @@ eq(rawProp(sale.code).status, 'Reservado');
 const previousLostBefore = rawLead(previouslyLost.id);
 const won = await call('POST', `/leads/${winner.id}/close`, { result: 'Ganho', note: 'Escritura assinada.' });
 eq(won.closeResult, 'Ganho');
+eq(won.disputeResolution.competitorsRequalified, 2, 'API confirma requalificação de dois concorrentes');
 eq(rawProp(sale.code).status, 'Vendido');
 for (const competitor of [competitorProposal, competitorQualifying]) {
   const row = rawLead(competitor.id);
@@ -167,8 +175,47 @@ const autoEvents = db.prepare("SELECT COUNT(*) AS n FROM lead_events WHERE lead_
   .get(leadId(atomicOther.id)).n;
 eq(autoEvents, 0, 'Rollback dos eventos de auditoria');
 
+// Cenário adicional: o binding MEDIA_ENV pode estar ausente em Preview Git.
+// Antes desta revisão, um 'Ganho' fechava o vencedor sem tocar os concorrentes.
+const oldEnvironment = env.MEDIA_ENV;
+delete env.MEDIA_ENV;
+const noBindingDiagnosis = await call('GET', '/diagnostics/disputes');
+eq(noBindingDiagnosis.mediaEnv, null);
+eq(noBindingDiagnosis.disputeRulesEnabled, true);
+const noBinding = await makeProperty('Sem MEDIA_ENV no Pages Preview');
+const noBindingWinner = await makeLead('Ganhador sem MEDIA_ENV', noBinding, 'Documentação/Crédito');
+const noBindingOther = await makeLead('Concorrente sem MEDIA_ENV', noBinding, 'Proposta Enviada');
+const noBindingResult = await call('POST', `/leads/${noBindingWinner.id}/close`, { result: 'Ganho', note: 'Assinado sem variável MEDIA_ENV.' });
+eq(noBindingResult.disputeResolution.version, '4.3.4-revisao-1');
+eq(noBindingResult.disputeResolution.enabled, true, 'Sem MEDIA_ENV ativa a lógica no pacote Preview');
+eq(noBindingResult.disputeResolution.competitorsRequalified, 1, 'Resposta da API informa quantos concorrentes foram corrigidos');
+eq(rawLead(noBindingOther.id).stage, 'Qualificação');
+eq(rawLead(noBindingOther.id).property_id, null);
+eq(rawLead(noBindingOther.id).followup_at, todayBR());
+eq(rawProp(noBinding.code).status, 'Vendido');
+// Se uma transação terminou, não aceitar um segundo Ganho no imóvel já vendido.
+const prior = rawLead(noBindingOther.id);
+await call('PATCH', `/leads/${noBindingOther.id}`, { property: `${noBinding.code} - ${noBinding.title}`, stage: 'Proposta Enviada' });
+// A atualização textual não gera associação interna: validar resposta explícita.
+eq(rawLead(noBindingOther.id).property_id, null);
+await call('POST', `/leads/${noBindingOther.id}/close`, { result: 'Ganho', note: 'Sem vínculo interno.' });
+// Testar associação histórica impedida de ganhar uma segunda vez.
+const historic = await makeProperty('Segundo Ganho impedido');
+const historicA = await makeLead('Primeiro Ganhador', historic, 'Proposta Enviada');
+const historicB = await makeLead('Segundo Ganhador', historic, 'Proposta Enviada');
+await call('POST', `/leads/${historicA.id}/close`, { result: 'Ganho', note: 'Primeiro fechamento concluído.' });
+// O lead B foi desvinculado. Simular vínculo legado ainda pendente de uma
+// negociação anterior para provar que a API recusa fechamento duplo.
+db.prepare("UPDATE leads SET property_id = ?, stage = 'Proposta Enviada' WHERE id = ?")
+  .run(propId(historic.code), leadId(historicB.id));
+await call('POST', `/leads/${historicB.id}/close`, { result: 'Ganho', note: 'Não deve fechar duplicado.' }, 409);
+eq(rawLead(historicB.id).stage, 'Proposta Enviada');
+env.MEDIA_ENV = oldEnvironment;
+
 // Segurança do escopo: production mantém regras anteriores até homologação e promoção.
 env.MEDIA_ENV = 'production';
+const prodDiagnosis = await call('GET', '/diagnostics/disputes');
+eq(prodDiagnosis.disputeRulesEnabled, false, 'Produção explicitamente desativada');
 const isolated = await makeProperty('Casa com regra antiga em produção');
 const prodWinner = await makeLead('Lead vencedor antigo', isolated, 'Proposta Enviada');
 const prodOther = await makeLead('Lead concorrente antigo', isolated, 'Qualificação');

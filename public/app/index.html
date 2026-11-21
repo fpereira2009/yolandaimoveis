@@ -2053,6 +2053,9 @@
                     msg = `O imóvel ${lead.propertyId} voltará para Disponível (se nenhum outro lead ativo o mantiver reservado).`;
                 }
             }
+            if (lead && res === 'Ganho' && !lead.propertyId && /YTI-\d{4,}/i.test(lead.property || '')) {
+                msg = 'A referência do imóvel está apenas no texto. Para aplicar a disputa, associe primeiro o imóvel do portfólio no card acima e salve a associação.';
+            }
             box.textContent = msg;
             box.classList.toggle('hidden', !msg);
         }
@@ -2078,7 +2081,14 @@
                 openLeadDetail(id, false);
                 let msg = `Lead fechado como ${result === 'Ganho' ? 'Ganho' : 'Perdido'}.`;
                 if (upd.propertyId && upd.propertyStatus !== before) msg += ` Imóvel ${upd.propertyId}: ${upd.propertyStatus}.`;
-                showToast(msg);
+                if (result === 'Ganho' && upd.disputeResolution?.enabled) {
+                    msg += ` ${upd.disputeResolution.competitorsRequalified} outro(s) lead(s) requalificado(s).`;
+                }
+                if (result === 'Ganho' && upd.propertyId && !upd.disputeResolution?.enabled) {
+                    showToast('Lead fechado, mas a API não confirmou a regra 4.3.4. Verifique a configuração de preview e a versão publicada.', { persistent: true, icon: 'alert-triangle', iconColor: 'text-amber-300' });
+                } else {
+                    showToast(msg);
+                }
             } catch (e) { showToast(e.message); }
             finally { btn.disabled = false; }
         }
