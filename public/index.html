@@ -82,14 +82,16 @@
         .property-description ol { list-style: decimal; padding-left: 1.5em; margin: .5em 0; }
         .property-description li + li { margin-top: .25em; }
         #modal-property-img { transition: transform 180ms ease; -webkit-user-select: none; user-select: none; }
-        /* Fotos dos anuncios: dificulta selecao, arraste e menu de salvar no mobile.
-           Nao interfere nos gestos de zoom e carrossel nem em outras imagens do site. */
-        .property-image-frame, .property-image-frame img {
+        /* Imagens publicas da vitrine: dificulta selecao, arraste e salvamento casual
+           para fotos dos anuncios, logos e imagens institucionais, sem afetar a navegacao. */
+        body img,
+        .property-image-frame,
+        .property-image-frame img {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
-        .property-image-frame img { -webkit-user-drag: none; }
+        body img { -webkit-user-drag: none; user-drag: none; }
         #property-gallery-swipe.is-zoomed { cursor: grab; touch-action: none; }
         #property-gallery-swipe.is-zoomed:active { cursor: grabbing; }
     </style>
@@ -1513,28 +1515,28 @@
                 if (menu) menu.classList.toggle("hidden");
             }
 
-            // Protecao de uso casual das fotografias da vitrine (nao protege capturas
-            // de tela nem requisicoes de rede). Ouvintes delegados cobrem cards e modal
-            // gerados dinamicamente sem impedir o duplo clique, swipe ou zoom.
+            // Protecao de uso casual das imagens publicas da vitrine (nao protege capturas
+            // de tela nem requisicoes de rede). Ouvintes delegados cobrem fotos de anuncios,
+            // logos e imagens institucionais sem impedir o duplo clique, swipe ou zoom.
             let propertyPhotoProtectionInstalled = false;
             function installPropertyPhotoProtection() {
                 if (propertyPhotoProtectionInstalled) return;
                 propertyPhotoProtectionInstalled = true;
                 document.addEventListener('contextmenu', function (event) {
                     if (event.target && typeof event.target.closest === 'function' &&
-                        event.target.closest('.property-image-frame')) {
+                        event.target.closest('img, .property-image-frame')) {
                         event.preventDefault();
                     }
                 }, true);
                 document.addEventListener('dragstart', function (event) {
                     if (event.target && typeof event.target.closest === 'function' &&
-                        event.target.closest('.property-image-frame img')) {
+                        event.target.closest('img')) {
                         event.preventDefault();
                     }
                 }, true);
                 document.addEventListener('selectstart', function (event) {
                     if (event.target && typeof event.target.closest === 'function' &&
-                        event.target.closest('.property-image-frame img')) {
+                        event.target.closest('img')) {
                         event.preventDefault();
                     }
                 }, true);
