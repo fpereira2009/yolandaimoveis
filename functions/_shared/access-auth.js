@@ -41,7 +41,7 @@ async function loadJwks(domain, kid) {
   if (!entry || Date.now() - entry.at > 3600_000 || !entry.keys.some(key => key.kid === kid)) {
     let response;
     try {
-      response = await fetch(`https://${domain}/cdn-cgi/access/certs`, { redirect: 'error' });
+      response = await fetch(`https://${domain}/cdn-cgi/access/certs`, { redirect: 'manual' });
     } catch {
       jwksUnavailable('FETCH_FAILED_OR_REDIRECT_BLOCKED');
     }
