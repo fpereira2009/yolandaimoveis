@@ -27,17 +27,28 @@ function accessConfig(env) {
   return { domain, aud };
 }
 
+// Diagnostico seguro do JWKS: informa apenas a etapa e o status HTTP,
+// sem registrar credenciais, certificados, JWT, emails ou nomes de host.
+function jwksUnavailable(stage, status) {
+  const details = { stage };
+  if (Number.isInteger(status) && status >= 100 && status <= 599) details.httpStatus = status;
+  console.error('[access-jwks]', 'JWKS_UNAVAILABLE', details);
+  throw new HttpError(503, 'Falha ao validar acesso.');
+}
+
 async function loadJwks(domain, kid) {
   let entry = jwksCache.get(domain);
   if (!entry || Date.now() - entry.at > 3600_000 || !entry.keys.some(key => key.kid === kid)) {
     let response;
     try {
       response = await fetch(`https://${domain}/cdn-cgi/access/certs`, { redirect: 'error' });
-    } catch { throw new HttpError(503, 'Falha ao validar acesso.'); }
-    if (!response.ok) throw new HttpError(503, 'Falha ao validar acesso.');
+    } catch {
+      jwksUnavailable('FETCH_FAILED_OR_REDIRECT_BLOCKED');
+    }
+    if (!response.ok) jwksUnavailable('HTTP_NON_OK', response.status);
     let parsed;
-    try { parsed = await response.json(); } catch { throw new HttpError(503, 'Falha ao validar acesso.'); }
-    if (!Array.isArray(parsed.keys)) throw new HttpError(503, 'Falha ao validar acesso.');
+    try { parsed = await response.json(); } catch { jwksUnavailable('INVALID_JSON'); }
+    if (!Array.isArray(parsed?.keys)) jwksUnavailable('KEYS_MISSING');
     entry = { at: Date.now(), keys: parsed.keys.filter(k => k.kty === 'RSA' && k.alg !== 'none') };
     if (jwksCache.size >= 16) jwksCache.clear();
     jwksCache.set(domain, entry);
