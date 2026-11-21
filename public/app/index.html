@@ -1504,6 +1504,13 @@
                         <datalist id="detail-property-options">
                             ${lead.category === 'Captação' ? '' : crmProps.filter(p => isLinkableProperty(p, lead.propertyId)).map(p => `<option value="${esc(p.code + ' - ' + p.title)}"></option>`).join('')}
                         </datalist>
+                        ${lead.category !== 'Captação' ? `
+                        <div class="flex justify-end">
+                            <button id="detail-clear-association" type="button" onclick="clearLeadAssociation('${esc(lead.id)}')" class="px-3.5 py-2 rounded-xl bg-white border border-sand-border text-terracotta hover:bg-sand font-heading font-bold text-xs inline-flex items-center justify-center gap-2 transition-colors">
+                                <i data-lucide="unlink" class="w-4 h-4" aria-hidden="true"></i>
+                                <span>Limpar associação</span>
+                            </button>
+                        </div>` : ''}
                     </div>`}
                 </form>
 
@@ -1554,12 +1561,6 @@
                     </div>` : ''}
                 </div>
 
-                ${lead.stage !== 'Fechado' ? `
-                <button type="button" onclick="openCloseLead('${esc(lead.id)}')" class="w-full py-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors">
-                    <i data-lucide="flag" class="w-4 h-4"></i>
-                    <span>Fechar Lead (Ganho / Perdido)</span>
-                </button>` : ''}
-
                 <!-- Add New Follow-up Note -->
                 <form onsubmit="addLeadNote(event, '${esc(lead.id)}')" class="space-y-2">
                     <label class="block text-xs font-heading font-bold text-moss">Registrar Nova Interação / Follow-up:</label>
@@ -1593,12 +1594,14 @@
                     `).join('')}
                 </div>
 
-                <!-- Rodapé: saída do modal -->
-                <div class="pt-2 flex justify-end">
-                    <button onclick="closeModal('lead-detail-modal')" class="px-5 py-3.5 rounded-xl bg-sand text-moss font-bold text-sm">
-                        Fechar Janela
+                <!-- Ação final do atendimento: o X no cabeçalho fecha a janela -->
+                ${lead.stage !== 'Fechado' ? `
+                <div class="pt-2">
+                    <button type="button" onclick="openCloseLead('${esc(lead.id)}')" class="w-full py-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="flag" class="w-4 h-4" aria-hidden="true"></i>
+                        <span>Encerramento</span>
                     </button>
-                </div>
+                </div>` : ''}
             `;
 
             document.getElementById('lead-detail-modal').classList.remove('hidden');
@@ -1719,6 +1722,47 @@
                 body.external_ref = ref;
             }
             return body;
+        }
+
+        // 4.3.5: remove o vínculo interno/externo sem apagar o texto livre de
+        // imóvel/região de interesse. O PATCH existente libera a reserva somente
+        // se nenhum outro lead ativo ainda a mantiver (DB.batch na API).
+        async function clearLeadAssociation(leadId) {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead || lead.stage === 'Fechado' || lead.category === 'Captação') return;
+
+            const mode = document.getElementById('detail-prop-mode');
+            const code = document.getElementById('detail-prop-id');
+            const external = document.getElementById('detail-prop-ext');
+            const btn = document.getElementById('detail-clear-association');
+            const linked = Boolean(lead.propertyId || lead.externalProperty);
+
+            // Sem vínculo salvo: apenas desfaz a seleção ainda não confirmada.
+            if (!linked) {
+                mode.value = 'none';
+                code.value = '';
+                external.value = '';
+                syncDetailPropertyBox();
+                showToast('Seleção de imóvel limpa. A região de interesse foi mantida.');
+                return;
+            }
+
+            const display = lead.propertyId || lead.externalPropertyRef || 'o imóvel associado';
+            if (!confirm(`Remover a associação com ${display}? A região de interesse será mantida. Se o imóvel estiver reservado, a reserva será reavaliada para os demais leads.`)) return;
+            if (btn) btn.disabled = true;
+            try {
+                const updated = await api('/leads/' + leadId, {
+                    method: 'PATCH', body: { link_mode: 'none' }
+                });
+                upsert(leads, updated);
+                await reloadProps();
+                refreshAll();
+                openLeadDetail(leadId, false);
+                showToast('Associação removida. A região de interesse foi mantida.');
+            } catch (error) {
+                showToast(error.message);
+                if (btn) btn.disabled = false;
+            }
         }
 
         async function saveLeadProperty(event, leadId) {
@@ -1981,7 +2025,7 @@
             }
             const curLead = editId ? leads.find(l => l.id === editId) : null;
             if (body.stage === 'Fechado' && (!curLead || curLead.stage !== 'Fechado')) {
-                showToast('Para fechar um lead use o botão "Fechar Lead" no detalhe do atendimento (resultado + observação).');
+                showToast('Para fechar um lead use o botão "Encerramento" no detalhe do atendimento (resultado + observação).');
                 return;
             }
             try {
