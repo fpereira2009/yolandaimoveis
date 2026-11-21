@@ -133,11 +133,12 @@
                         </div>
                     </div>
 
-                    <div class="pt-3 border-t border-sand-border flex items-center gap-2">
+                    <div class="pt-3 border-t border-sand-border flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <a href="${esc(getCrcWhatsAppUrl(c))}" target="_blank" rel="noopener noreferrer"
                            aria-label="Chamar ${esc(c.name)} no WhatsApp" title="Chamar ${esc(c.name)} no WhatsApp"
-                           class="shrink-0 p-2.5 rounded-xl bg-whatsapp hover:brightness-105 text-white inline-flex items-center justify-center">
+                           class="flex-1 min-w-0 py-2.5 px-3 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5">
                             <i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>
+                            <span>WhatsApp</span>
                         </a>
                         <a href="tel:+${esc(normPhone(c.phone))}" aria-label="Ligar para ${esc(c.name)}" title="Ligar para ${esc(c.name)}"
                            class="sm:hidden shrink-0 p-2.5 rounded-xl bg-sand text-moss inline-flex items-center justify-center">

@@ -337,7 +337,7 @@ async function closeLead(env, id, b) {
   return {
     ...lead,
     disputeResolution: {
-      version: '4.4.0' ,
+      version: '4.5.1' ,
       enabled: true,
       linkedProperty: cur.property_id ? propCode(cur.property_id) : null,
       competitorsRequalified: rivalsUpdateIndex >= 0

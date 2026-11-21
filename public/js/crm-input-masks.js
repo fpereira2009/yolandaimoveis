@@ -1,4 +1,4 @@
-// Yolanda CRM 4.4.0 — máscaras não intrusivas de telefone e valor inteiro.
+// Yolanda CRM 4.5.1 — máscaras não intrusivas de telefone e valor inteiro.
 // Não cria campos adicionais e não altera contratos das APIs.
 (function () {
     'use strict';

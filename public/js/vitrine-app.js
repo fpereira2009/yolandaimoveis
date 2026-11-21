@@ -631,9 +631,9 @@
                                 '</button>' +
                                 '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
                                    'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
-                                   'class="shrink-0 p-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center transition-colors">' +
+                                   'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
                                     '<i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>' +
-                                    '' +
+                                    '<span>Tenho Interesse</span>' +
                                 '</button>' +
                                 '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
                                    'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
@@ -910,8 +910,9 @@
                             '</div>' +
 
                             '<button type="submit" form="interest-form" id="interest-submit" title="Enviar e chamar no WhatsApp" aria-label="Enviar e chamar no WhatsApp" ' +
-                               'class="p-3.5 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-sm flex items-center justify-center shadow-sm transition-all">' +
+                               'class="py-3.5 px-6 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all">' +
                                 '<i data-lucide="message-circle" class="w-5 h-5" aria-hidden="true"></i>' +
+                                '<span>Enviar e chamar no WhatsApp</span>' +
                             '</button>' +
                         '</div>' +
                     '</div>';

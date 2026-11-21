@@ -7,6 +7,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 Nenhuma alteração pendente registrada.
 
+## [4.5.1] - 2026-11-21
+
+### Changed
+- Restaurados os textos originais dos botões de contato via WhatsApp na vitrine pública e no CRM, mantendo os ícones e os atributos de acessibilidade: "WhatsApp", "Falar diretamente no WhatsApp", "Falar com Iêda", "Enviar pelo WhatsApp", "Tenho Interesse", "Enviar e chamar no WhatsApp" e "Chamar no WhatsApp".
+- No card do imóvel, "Tenho Interesse" volta a exibir seu rótulo ao lado do ícone, mas **mantém a correção de conversão**: abre diretamente o WhatsApp com código, título e link `?imovel=...`, sem abrir o modal. "Ver Detalhes" permanece independente.
+- Botões de Leads e Clientes no CRC recuperam o texto, preservando o atalho de chamada telefônica `tel:` ao lado no mobile.
+- Atualizados número da versão do pacote Node, metadados de API/diagnóstico e parâmetro de cache dos scripts `?v=4.5.1` para evitar o carregamento da interface anterior.
+
+### Compatibility
+- Todas as nove melhorias funcionais entregues na 4.4.0 são mantidas: deep linking, associação Lead–Imóvel, máscaras, filtros, tratamento R2 e controle de acesso.
+- Nenhuma migration D1, binding do `wrangler.toml`, rota de API, política de autenticação Cloudflare Access, cor institucional ou texto legal foi modificado neste ajuste.
+- Os documentos legais continuam identificando sua última revisão em 21/11/2026 (versão 4.4.0), pois **o conteúdo legal não foi revisado** na versão 4.5.1.
+- Versão preparada para teste na branch `dev`. Publicação em Production não realizada.
+
 ## [4.4.0] - 2026-11-21
 
 ### Fixed — correção de autenticação e homologação

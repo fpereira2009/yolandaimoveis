@@ -179,11 +179,12 @@
                     </div>
 
                     <!-- Touch-friendly Action Footer -->
-                    <div class="pt-2 border-t border-sand-border flex items-center gap-2">
+                    <div class="pt-2 border-t border-sand-border flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <a href="${esc(getLeadWhatsAppUrl(lead))}" target="_blank" rel="noopener noreferrer"
                            aria-label="Chamar ${esc(lead.name)} no WhatsApp" title="Chamar ${esc(lead.name)} no WhatsApp"
-                           class="p-2.5 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs inline-flex items-center justify-center shadow-xs">
+                           class="py-2.5 px-3 rounded-xl bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 shadow-xs">
                             <i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>
+                            <span>WhatsApp</span>
                         </a>
                         <a href="tel:+${esc(normPhone(lead.phone))}" aria-label="Ligar para ${esc(lead.name)}" title="Ligar para ${esc(lead.name)}"
                            class="sm:hidden p-2.5 rounded-xl bg-sand text-moss inline-flex items-center justify-center">

@@ -181,7 +181,7 @@ for (let i = 1; i < positions.length; i++) {
 assert.ok(detailHtml.includes('>Associar imóvel</button>'));
 assert.equal(detailHtml.includes('Modalidade do Atendimento:'), false);
 assert.equal(detailHtml.includes('changeLeadModality('), false);
-assert.equal((detailHtml.match(/Chamar no WhatsApp/g) || []).length, 1);
+assert.equal((detailHtml.match(/<span>Chamar no WhatsApp<\/span>/g) || []).length, 1);
 assert.ok(detailHtml.includes('href="tel:+5524999999999"'));
 assert.match(detailHtml, /<a href="tel:\+5524999999999"[^>]*class="[^"]*sm:hidden[^"]*"/);
 assert.match(detailHtml, /aria-label="Ligar para Cliente Teste UI"/);
