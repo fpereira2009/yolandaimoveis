@@ -82,6 +82,14 @@
         .property-description ol { list-style: decimal; padding-left: 1.5em; margin: .5em 0; }
         .property-description li + li { margin-top: .25em; }
         #modal-property-img { transition: transform 180ms ease; -webkit-user-select: none; user-select: none; }
+        /* Fotos dos anuncios: dificulta selecao, arraste e menu de salvar no mobile.
+           Nao interfere nos gestos de zoom e carrossel nem em outras imagens do site. */
+        .property-image-frame, .property-image-frame img {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .property-image-frame img { -webkit-user-drag: none; }
         #property-gallery-swipe.is-zoomed { cursor: grab; touch-action: none; }
         #property-gallery-swipe.is-zoomed:active { cursor: grabbing; }
     </style>
@@ -1128,7 +1136,7 @@
                                         '<img src="' + esc(resolvedImg) + '" ' +
                                              'data-raw-img="' + esc(normalizedRawKey) + '" ' +
                                              'onerror="handlePropertyImgError(this)" ' +
-                                             'alt="' + esc(prop.titulo) + '" ' +
+                                             'alt="' + esc(prop.titulo) + '" draggable="false" ' +
                                              'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">'
                                         : '') +
                                     unavailablePropertyImageHtml(!resolvedImg) +
@@ -1505,6 +1513,33 @@
                 if (menu) menu.classList.toggle("hidden");
             }
 
+            // Protecao de uso casual das fotografias da vitrine (nao protege capturas
+            // de tela nem requisicoes de rede). Ouvintes delegados cobrem cards e modal
+            // gerados dinamicamente sem impedir o duplo clique, swipe ou zoom.
+            let propertyPhotoProtectionInstalled = false;
+            function installPropertyPhotoProtection() {
+                if (propertyPhotoProtectionInstalled) return;
+                propertyPhotoProtectionInstalled = true;
+                document.addEventListener('contextmenu', function (event) {
+                    if (event.target && typeof event.target.closest === 'function' &&
+                        event.target.closest('.property-image-frame')) {
+                        event.preventDefault();
+                    }
+                }, true);
+                document.addEventListener('dragstart', function (event) {
+                    if (event.target && typeof event.target.closest === 'function' &&
+                        event.target.closest('.property-image-frame img')) {
+                        event.preventDefault();
+                    }
+                }, true);
+                document.addEventListener('selectstart', function (event) {
+                    if (event.target && typeof event.target.closest === 'function' &&
+                        event.target.closest('.property-image-frame img')) {
+                        event.preventDefault();
+                    }
+                }, true);
+            }
+
             // Expor funções no escopo global para atributos onclick/onsubmit
             window.resolvePropertyImageUrl = resolvePropertyImageUrl;
             window.handlePropertyImgError = handlePropertyImgError;
@@ -1522,6 +1557,7 @@
             // Inicialização Protegida com DOMContentLoaded + try/catch
             function initApp() {
                 try {
+                    installPropertyPhotoProtection();
                     const yearEl = document.getElementById("current-year");
                     if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
