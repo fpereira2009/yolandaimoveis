@@ -1,5 +1,7 @@
 // Integração local (sem Cloudflare remota): D1 SQLite real + mock de R2 + Functions.
 // node --experimental-sqlite tests/r2-media.test.mjs
+import { configureTestAuth, authHeaders } from './helpers/access-fixture.mjs';
+import { crmScript, vitrineScript, crmComposite, vitrineComposite, crmHtml, vitrineHtml } from './helpers/source-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -44,13 +46,13 @@ const R2 = {
   async get(key) { return bucket.get(key) || null; },
   async delete(key) { bucket.delete(key); },
 };
-const env = {DB, MEDIA_BUCKET:R2, MEDIA_ENV:'preview', DEV_BYPASS:'1'};
+const env = configureTestAuth({DB, MEDIA_BUCKET:R2, MEDIA_ENV:'preview'});
 let tests = 0;
 const check = (test, message) => { assert.ok(test, message); tests++; };
 async function call(handler, method, pathname, data = null, expected = 200, opts = {}) {
   const body = opts.binary ? data : data == null ? undefined : JSON.stringify(data);
   const headers = (body || (handler === main && method !== 'GET')) ? { 'Content-Type':opts.binary ? 'image/webp' : 'application/json', ...(opts.headers || {}) } : (opts.headers || {});
-  const request = new Request(`https://preview.example.test/api/${pathname}`, {method, body, headers});
+  const request = new Request(`https://preview.example.test/api/${pathname}`, {method, body, headers:{ ...(!opts.unauthenticated ? authHeaders() : {}), ...headers }});
   const params = handler === main ? {route:pathname.split('/')} : {path:pathname.replace(/^media\//,'').split('/')};
   const response = await handler({request, env:opts.env || env, params});
   const result = (response.headers.get('content-type') || '').includes('json') ? await response.json() : response;
@@ -66,7 +68,7 @@ check(p.photo_url === '', 'preview não aceita URL de imagem externa');
 check(!('legacy_photo_url' in p), 'API preview não expõe campo legado');
 check(p.description.includes('**Ambientes amplos**'), 'descrição formatada preservada');
 check(p.images.length === 0,'sem fotos inicialmente');
-const tinyWebp = Uint8Array.from([82,73,70,70,20,0,0,0,87,69,66,80,86,80,56,32,0,0,0,0]);
+const tinyWebp = Uint8Array.from(Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAgA0JaQAA3AA/vuUAAA=', 'base64'));
 const created = [];
 for (let i=0;i<10;i++) {
   const r = await call(media,'PUT',`media/properties/${p.code}/images`,tinyWebp,201,{binary:true});
@@ -97,16 +99,33 @@ check(pub.items[0].images[0].id === created[3].id,'galeria pública tem capa pri
 const file = await call(media,'GET',created[3].url.replace('/api/',''));
 check((await file.arrayBuffer()).byteLength === tinyWebp.byteLength,'stream arquivo público');
 check(file.headers.get('cache-control').includes('public'),'cache estático');
+
+// 4.4.0: fotos de imóveis fora da vitrine exigem autenticação real.
+await call(main,'PATCH',`properties/${p.code}`,{status:'Inativo'});
+const deniedPrivate = await call(media,'GET',created[3].url.replace('/api/',''),null,404,{unauthenticated:true});
+check(!!deniedPrivate.error,'foto de imóvel inativo não fica pública');
+const privateFile = await call(media,'GET',created[3].url.replace('/api/',''));
+check(privateFile.headers.get('cache-control').includes('no-store'),'foto interna sem cache público');
+await call(main,'PATCH',`properties/${p.code}`,{status:'Disponível'});
+// Rejeitar extensões enganosas, MIME incorreto e falsos containers WEBP.
+const malformedWebp = Uint8Array.from(tinyWebp); malformedWebp[4] ^= 1;
+await call(media,'PUT',`media/properties/${p.code}/images`,malformedWebp,409,{binary:true}); // galeria cheia não aceita mais de 10
+
 await call(media,'DELETE',`media/properties/${p.code}/images/${created[3].id}`);
 check(bucket.size === 9,'objeto R2 excluído');
 check(db.prepare('SELECT count(*) AS n FROM property_images').get().n === 9,'registro D1 excluído');
 check(db.prepare('SELECT count(*) AS n FROM property_images WHERE is_cover=1').get().n === 1,'capa realocada');
 await call(media,'GET',created[3].url.replace('/api/',''),null,404);
 await call(media,'PUT',`media/properties/${p.code}/images`,Uint8Array.from([1,2,3]),415,{binary:true});
+
+const forgedWebp = Uint8Array.from(tinyWebp); forgedWebp[4] ^= 1;
+await call(media,'PUT',`media/properties/${p.code}/images`,forgedWebp,415,{binary:true});
+await call(media,'PUT',`media/properties/${p.code}/images`,tinyWebp,403,{binary:true,headers:{'Sec-Fetch-Site':'cross-site'}});
+
 check(bucket.size === 9,'upload inválido não armazenado');
 const wrongOrigin = await call(media,'PATCH',`media/properties/${p.code}/images/${created[4].id}`,{cover:true},403,{headers:{Origin:'https://evil.example'}});
 check(!!wrongOrigin.error,'origem externa bloqueada');
-await call(media,'GET',`media/properties/${p.code}/images`,null,401,{env:{ ...env, DEV_BYPASS:'0', ACCESS_TEAM_DOMAIN:'example.cloudflareaccess.com', ACCESS_AUD:'test-aud' }});
+await call(media,'GET',`media/properties/${p.code}/images`,null,401,{unauthenticated:true});
 const prodGallery = await call(media,'GET',`media/properties/${p.code}/images`,null,200,{env:{...env,MEDIA_ENV:'production'}});
 check(prodGallery.images.length===9,'produção consulta mesma galeria R2 via binding');
 await call(media,'GET',`media/properties/${p.code}/images`,null,503,{env:{...env,MEDIA_ENV:undefined}});
@@ -168,8 +187,8 @@ for(let i=0;i<10;i++) db.prepare('INSERT INTO property_images (property_id,objec
 assert.throws(()=>db.prepare('INSERT INTO property_images (property_id,object_key,content_type,size_bytes,position,created_at) VALUES (?,?,?,?,?,?)').run(2,'test-999999999','image/jpeg',100,10,now),/Limite de 10 fotos/);
 tests++;
 // Cada HTML permanece com handlers e os controles novos.
-const crm=fs.readFileSync(path.join(root,'public/app/index.html'),'utf8');
-const site=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+const crm=crmComposite;
+const site=vitrineComposite;
 for(const token of ['id="prop-files"','id="prop-gallery-editor"','selectPropertyPhotos(event)','optimizePropertyPhoto(file)','sendPropertyImage(code, blob)','setPropertyCover(type, id)','removePropertyImage(id)','onsubmit="handleSaveProperty(event)"']) check(crm.includes(token),`CRM mantém ${token}`);
 for(const token of ['window.movePropertyGallery = movePropertyGallery','id="property-gallery-swipe"','function movePropertyGallery(step)','property-gallery-counter','touchstart','touchend','movePropertyGallery(-1)','movePropertyGallery(1)']) check(site.includes(token),`vitrine mantém ${token}`);
 check(!crm.includes('id="prop-photo"'), 'entrada URL removida do CRM');

@@ -1,5 +1,7 @@
 // Teste local de integração para Pages Functions + schema REAL das migrations D1.
 // Executar: node --experimental-sqlite tests/preview-crm.test.mjs
+import { configureTestAuth, authHeaders } from './helpers/access-fixture.mjs';
+import { crmScript, vitrineScript, crmComposite, vitrineComposite, crmHtml, vitrineHtml } from './helpers/source-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,11 +44,11 @@ const DB = {
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   },
 };
-const env = { DB, DEV_BYPASS: '1', MEDIA_ENV: 'preview' };
+const env = configureTestAuth({ DB, MEDIA_ENV: 'preview' });
 let checks = 0;
 async function api(method, target, body, expected = 200) {
   const request = new Request(`https://preview.example.test/api${target}`, {
-    method, headers: method !== 'GET' ? { 'Content-Type': 'application/json' } : {},
+    method, headers: { ...authHeaders(), ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const response = await onRequest({ request, env, params: { route: target.slice(1).split('/') } });
@@ -72,8 +74,8 @@ async function lead(name, propCode, stage = 'Novo Lead', category = 'Interessado
 }
 
 // Tests de frontend sem transformar institucional/copy: sintaxe e elementos existentes.
-const html = fs.readFileSync(path.join(root, 'public/app/index.html'), 'utf8');
-const script = html.match(/<script>\s*([\s\S]*?)<\/script>/g)?.at(-1)?.replace(/^<script>/, '').replace(/<\/script>$/, '');
+const html = crmComposite;
+const script = crmScript;
 assert.ok(script, 'script inline do CRM não encontrado');
 new vm.Script(script, { filename: 'public/app/index.html' });
 assert.ok(html.includes('oninput="commitDatalistEdit(event); onLeadPropertyInput()"'));

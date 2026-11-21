@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const read = p => fs.readFileSync(path.join(root, p), 'utf8');
+export const crmScriptPaths = ['crm-core.js', 'crm-navigation.js', 'crm-funnel.js', 'crm-lead-detail.js', 'crm-lead-actions.js', 'crm-clients.js', 'crm-properties.js', 'crm-social-card.js', 'crm-export.js'].map(n=>`public/js/${n}`);
+export const crmScript = crmScriptPaths.map(read).join('\n');
+export const vitrineScript = read('public/js/vitrine-app.js');
+export const crmHtml = read('public/app/index.html');
+export const vitrineHtml = read('public/index.html');
+export const crmComposite = crmHtml + '\n' + crmScript;
+export const vitrineComposite = vitrineHtml + '\n' + vitrineScript;

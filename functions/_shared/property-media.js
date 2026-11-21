@@ -3,12 +3,9 @@
 // O isolamento de dados é feito pelos bindings DB / MEDIA_BUCKET definidos no wrangler.toml.
 export const mediaEnabled = (env) =>
   ['preview', 'production'].includes(env?.MEDIA_ENV) && !!env?.MEDIA_BUCKET && !!env?.DB;
-export const mediaPath = (key, env) => {
-  const base = String(env?.MEDIA_PUBLIC_BASE_URL || '').trim();
-  return /^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(base)
-    ? base.replace(/\/+$/, '') + '/' + key
-    : `/api/media/file/${key}`;
-};
+// Acesso somente via Pages Functions; um domínio R2 público contornaria
+// a autorização adicional de fotos de imóveis inativos/vendidos/excluídos.
+export const mediaPath = (key, env) => `/api/media/file/${key}`;
 export const parsePropertyCode = (value) => {
   const s = String(value || '');
   const match = /^YTI-(\d{4,})$/.exec(s);

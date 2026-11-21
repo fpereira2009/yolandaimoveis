@@ -3,8 +3,8 @@
     "wrangler": "^4.164.0"
   },
   "name": "01_producao",
-  "version": "1.0.0",
-  "description": "",
+  "version": "4.4.0",
+  "description": "Yolanda Transações Imobiliárias — Site e CRM Cloudflare Pages",
   "main": "index.js",
   "dependencies": {
     "blake3-wasm": "^2.1.5",
@@ -27,7 +27,7 @@
     "youch-core": "^0.3.3"
   },
   "scripts": {
-    "test": "node --experimental-sqlite tests/preview-crm.test.mjs && node --experimental-sqlite tests/conflicts-4.3.4.test.mjs && node --experimental-sqlite tests/r2-media.test.mjs && node tests/vitrine-sem-imagem.test.mjs && node --experimental-sqlite tests/env-parity-4.3.8.test.mjs"
+    "test": "node --experimental-sqlite tests/preview-crm.test.mjs && node --experimental-sqlite tests/conflicts-4.3.4.test.mjs && node --experimental-sqlite tests/r2-media.test.mjs && node tests/vitrine-sem-imagem.test.mjs && node --experimental-sqlite tests/env-parity-4.3.8.test.mjs && node tests/security-4.4.0.test.mjs"
   },
   "keywords": [],
   "author": "",
