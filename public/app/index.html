@@ -1599,7 +1599,11 @@
                 <div class="pt-2">
                     <button type="button" onclick="openCloseLead('${esc(lead.id)}')" class="w-full py-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors">
                         <i data-lucide="flag" class="w-4 h-4" aria-hidden="true"></i>
-                        <span>Encerramento (Ganho ou Perdido)</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="flag" class="lucide lucide-flag w-4 h-4">
+                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                            <line x1="4" x2="4" y1="22" y2="15"></line>
+                        </svg>
+                        <span>Encerrar Lead (Ganho ou Perda)</span>
                     </button>
                 </div>` : ''}
             `;
