@@ -73,7 +73,7 @@ const eq = (actual, expected, message) => { assert.equal(actual, expected, messa
 
 // Diagnóstico ajuda a confirmar qual Function responde no Preview publicado.
 const diagnostic = await call('GET', '/diagnostics/disputes');
-eq(diagnostic.apiVersion, '4.3.4-revisao-1');
+eq(diagnostic.apiVersion, '4.3.8-regras-unificadas');
 eq(diagnostic.mediaEnv, 'preview');
 eq(diagnostic.disputeRulesEnabled, true);
 eq(diagnostic.dbBindingAvailable, true);
@@ -186,7 +186,7 @@ const noBinding = await makeProperty('Sem MEDIA_ENV no Pages Preview');
 const noBindingWinner = await makeLead('Ganhador sem MEDIA_ENV', noBinding, 'Documentação/Crédito');
 const noBindingOther = await makeLead('Concorrente sem MEDIA_ENV', noBinding, 'Proposta Enviada');
 const noBindingResult = await call('POST', `/leads/${noBindingWinner.id}/close`, { result: 'Ganho', note: 'Assinado sem variável MEDIA_ENV.' });
-eq(noBindingResult.disputeResolution.version, '4.3.4-revisao-1');
+eq(noBindingResult.disputeResolution.version, '4.3.8-regras-unificadas');
 eq(noBindingResult.disputeResolution.enabled, true, 'Sem MEDIA_ENV ativa a lógica no pacote Preview');
 eq(noBindingResult.disputeResolution.competitorsRequalified, 1, 'Resposta da API informa quantos concorrentes foram corrigidos');
 eq(rawLead(noBindingOther.id).stage, 'Qualificação');
@@ -212,17 +212,19 @@ await call('POST', `/leads/${historicB.id}/close`, { result: 'Ganho', note: 'Nã
 eq(rawLead(historicB.id).stage, 'Proposta Enviada');
 env.MEDIA_ENV = oldEnvironment;
 
-// Segurança do escopo: production mantém regras anteriores até homologação e promoção.
+// Paridade: Production aplica a mesma requalificação da regra homologada em Preview.
 env.MEDIA_ENV = 'production';
 const prodDiagnosis = await call('GET', '/diagnostics/disputes');
-eq(prodDiagnosis.disputeRulesEnabled, false, 'Produção explicitamente desativada');
-const isolated = await makeProperty('Casa com regra antiga em produção');
-const prodWinner = await makeLead('Lead vencedor antigo', isolated, 'Proposta Enviada');
-const prodOther = await makeLead('Lead concorrente antigo', isolated, 'Qualificação');
-await call('POST', `/leads/${prodWinner.id}/close`, { result: 'Ganho', note: 'Regra antiga isolada.' });
+eq(prodDiagnosis.disputeRulesEnabled, true, 'Regras comerciais também ativas em Production');
+const isolated = await makeProperty('Casa com regras unificadas em produção');
+const prodWinner = await makeLead('Lead vencedor em produção', isolated, 'Proposta Enviada');
+const prodOther = await makeLead('Lead concorrente em produção', isolated, 'Documentação/Crédito');
+const prodWon = await call('POST', `/leads/${prodWinner.id}/close`, { result: 'Ganho', note: 'Regra unificada aplicada.' });
+eq(prodWon.disputeResolution.competitorsRequalified, 1);
 eq(rawProp(isolated.code).status, 'Vendido');
 eq(rawLead(prodOther.id).stage, 'Qualificação');
-eq(rawLead(prodOther.id).property_id, propId(isolated.code), 'Nova regra não deve rodar em produção');
+eq(rawLead(prodOther.id).property_id, null, 'Production desvincula o concorrente como Preview');
+eq(rawLead(prodOther.id).followup_at, todayBR());
 
 // Verificações estáticas do front-end: contador ignora Perdido e depois do
 // fechamento um reload integral atualiza os concorrentes em todos os quadros.
@@ -233,4 +235,4 @@ ok(html.includes("l.closeResult !== 'Perdido' && l.category !== 'Captação'"), 
 ok(html.includes("l.closeResult !== 'Perdido' && (l.stage === 'Proposta Enviada'"), 'KPI propostas não contabiliza Perdido');
 ok(/async function submitCloseLead[\s\S]*?await loadAll\(\);[\s\S]*?openLeadDetail/.test(html), 'Recarrega todos os leads após fechamento');
 eq(db.prepare('PRAGMA foreign_key_check').all().length, 0);
-console.log(`PASSOU: ${checks} verificações 4.3.4 (Ganho, Perdido, vínculos, disputa, histórico, hoje, produção isolada, UI).`);
+console.log(`PASSOU: ${checks} verificações 4.3.4 (Ganho, Perdido, vínculos, disputa, histórico, hoje, paridade de regras, UI).`);

@@ -2133,7 +2133,7 @@
                     msg += ` ${upd.disputeResolution.competitorsRequalified} outro(s) lead(s) requalificado(s).`;
                 }
                 if (result === 'Ganho' && upd.propertyId && !upd.disputeResolution?.enabled) {
-                    showToast('Lead fechado, mas a API não confirmou a regra 4.3.4. Verifique a configuração de preview e a versão publicada.', { persistent: true, icon: 'alert-triangle', iconColor: 'text-amber-300' });
+                    showToast('Lead fechado, mas a API não confirmou a requalificação automática. Verifique a versão publicada.', { persistent: true, icon: 'alert-triangle', iconColor: 'text-amber-300' });
                 } else {
                     showToast(msg);
                 }

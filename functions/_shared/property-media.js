@@ -1,5 +1,8 @@
-// Utilitários de galeria: apenas recursos preview. Não consulta a tabela nova em produção.
-export const mediaEnabled = (env) => env?.MEDIA_ENV === 'preview' && !!env?.MEDIA_BUCKET && !!env?.DB;
+// A galeria R2 segue a mesma regra em Preview e Production.
+// Exigir um ambiente explícito e ambos os bindings evita operações de mídia sem configuração.
+// O isolamento de dados é feito pelos bindings DB / MEDIA_BUCKET definidos no wrangler.toml.
+export const mediaEnabled = (env) =>
+  ['preview', 'production'].includes(env?.MEDIA_ENV) && !!env?.MEDIA_BUCKET && !!env?.DB;
 export const mediaPath = (key, env) => {
   const base = String(env?.MEDIA_PUBLIC_BASE_URL || '').trim();
   return /^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(base)
@@ -40,7 +43,8 @@ export async function propertyImageMap(env) {
 }
 export function withGallery(property, list = [], env) {
   const images = list.map((r) => r && r.url ? r : serializeImage(r, env));
-  const coverUrl = images.length ? images[0].url : (env?.MEDIA_ENV === 'preview' ? '' : (property.photo_url || property.foto_url || ''));
+  // Sem galeria R2, nunca renderizar a URL legada nem uma imagem genérica.
+  const coverUrl = images.length ? images[0].url : '';
   return {
     ...property,
     ...(Object.hasOwn(property, 'foto_url') ? { foto_url: coverUrl } : { photo_url: coverUrl }),

@@ -1,0 +1,861 @@
+--- a/LEIA-ME-UNIFICACAO-4.3.8.md
++++ b/LEIA-ME-UNIFICACAO-4.3.8.md
+@@ -0,0 +1,101 @@
++# Yolanda CRM 4.3.8 — Unificação de regras Preview / Production
++
++**Base auditada:** arquivo `yolanda imoveis 4.3.8.zip`, pasta `02_desenvolvimento` (working tree fornecida). Não foram consultados bancos remotos nem efetuados deploys.
++
++## Objetivo
++
++Utilizar a **mesma implementação de regras de negócio** em Preview e Production, mantendo o D1 e o R2 fisicamente separados em cada ambiente.
++
++## Divergências encontradas e correção (diff lógico)
++
++| Funcionalidade | Código recebido | Código unificado |
++| --- | --- | --- |
++| Fechamento Ganho com concorrentes | Em `production`, a requalificação era desativada por `disputeRulesEnabled(env)` | Sempre requalifica leads ativos concorrentes para **Qualificação**, remove `property_id` e referência externa, ajusta follow-up para hoje e grava histórico, tudo em `env.DB.batch` |
++| Fechamento Perdido | `releaseStmt` em produção e `releaseAfterLossStmt` em Preview | Em ambos, mantém os demais leads intactos e libera o imóvel somente quando não resta outro interessado ativo |
++| Conclusão de imóvel já vendido/alugado | A proteção contra segundo Ganho dependia do ambiente | A mesma validação rejeita novo Ganho com imóvel `Vendido`, `Alugado` ou `Inativo` |
++| Galeria R2 | `mediaEnabled` aceitava somente `preview` | Aceita `MEDIA_ENV=preview` **ou** `production`, desde que `DB` e `MEDIA_BUCKET` estejam presentes; valores ausentes/inválidos falham fechados |
++| URLs legadas | Em produção havia fallback para `properties.photo_url` e `legacy_photo_url` na API | Em ambos, capa vem apenas da tabela `property_images`. Sem R2, retorna **sem foto** e a vitrine mostra “Imagem não disponível”. Nenhum dado legado foi apagado |
++| Criação/edição/importação de imóvel | Produção ainda aceitava nova URL de foto | Ambos rejeitam links não vazios em `photo_url` e exigem upload R2 |
++| Exclusão de imóvel sem configuração de R2 | Produção executava apenas soft-delete, podendo abandonar arquivos | Não executa exclusão incompleta se os bindings da galeria estiverem indisponíveis (503) |
++| Diagnóstico da disputa | `disputeRulesEnabled` dependia de `MEDIA_ENV` | `GET /api/diagnostics/disputes` autenticado confirma a regra ativa em ambos e indica disponibilidade de mídia sem revelar IDs ou segredos |
++| Erro interno | Resposta de erro autenticado poderia expor mensagem SQL/exceção | Retorno 500 é genérico; detalhes permanecem em logs do servidor |
++
++**Atenção:** o código inclui duas rotas espelhadas (`[[route]].js` e `%5B%5Broute%5D%5D.js`), mantidas idênticas para não introduzir regressões nesta atualização.
++
++## Isolamento mantido no wrangler.toml
++
++O arquivo de configuração foi alterado **somente nos comentários**. Os bindings, nomes e identificadores originais foram mantidos integralmente.
++
++| Ambiente | MEDIA_ENV | DB (D1) | MEDIA_BUCKET (R2) |
++| --- | --- | --- | --- |
++| Production | `production` | `yolanda-crm` | `yolanda-imoveis-prod` |
++| Preview | `preview` | `yolanda-crm-dev` | `yolanda-imoveis-dev` |
++
++Não copiar dados entre os bancos nem alterar IDs de bindings. `MEDIA_ENV` **não ativa ou desativa regras comerciais**; apenas valida a disponibilidade do subsistema de mídia.
++
++## Diferença de branches identificada no ZIP
++
++O histórico Git fornecido mostra `main` (produção) na revisão **4.3.6** e `dev` / `teste` na **4.3.8**. A diferença de código entre essas revisões inclui a proteção de imagens da vitrine em `public/index.html`. Por isso, o **ZIP de arquivos atualizados também inclui `public/index.html` da 4.3.8**, mesmo que esse arquivo não precisasse de edição para unificar as regras do backend. Isso evita publicar o hotfix sobre a 4.3.6 mantendo a vitrine desatualizada. Compare sempre com seu repositório atual antes de substituir arquivos.
++
++## Antes de publicar em Production
++
++1. **Confirmar a configuração do Pages**: `MEDIA_ENV=production`, `DB=yolanda-crm`, `MEDIA_BUCKET=yolanda-imoveis-prod`. No Preview usar os três recursos de teste. Conferir os bindings do deploy efetivo, não apenas do repositório.
++2. **Confirmar a migration 0008** em produção, sem reaplicar ou editar SQL já aplicado:
++
++   ```bash
++   npx wrangler d1 migrations list yolanda-crm --remote --config wrangler.toml
++   npx wrangler d1 execute yolanda-crm --remote --config wrangler.toml --command "PRAGMA table_info(property_images);"
++   npx wrangler d1 execute yolanda-crm --remote --config wrangler.toml --command "PRAGMA foreign_key_check;"
++   ```
++
++   Para Preview:
++
++   ```bash
++   npx wrangler d1 migrations list yolanda-crm-dev --env preview --remote --config wrangler.toml
++   npx wrangler d1 execute yolanda-crm-dev --env preview --remote --config wrangler.toml --command "PRAGMA table_info(property_images);"
++   ```
++
++3. **Fazer backup antes de qualquer migração pendente ou implantação de produção**:
++
++   ```bash
++   npx wrangler d1 export yolanda-crm --remote --output=./backup-yolanda-crm-antes-unificacao.sql --config wrangler.toml
++   ```
++
++4. Verificar a rota de diagnóstico no domínio autenticado de cada ambiente:
++
++   ```json
++   {
++     "apiVersion": "4.3.8-regras-unificadas",
++     "mediaEnv": "production",
++     "disputeRulesEnabled": true,
++     "mediaEnabled": true,
++     "dbBindingAvailable": true,
++     "mediaBucketBindingAvailable": true
++   }
++   ```
++
++   Em Preview o valor esperado de `mediaEnv` é `preview`. A rota **não confirma a identidade do banco**: confirme isso nas configurações de binding.
++
++5. Testar: dois leads em proposta no mesmo imóvel, fechar um como **Ganho**, verificar o outro em **Qualificação**, sem imóvel, follow-up hoje; repetir com **Perdido** e verificar que o outro não mudou; enviar uma foto R2 e abrir a vitrine pública.
++6. **Publicar apenas após validar Preview e planejar a liberação de produção**. A mudança de regra passa a atingir dados reais quando a nova API estiver publicada em Production. Não há alteração retroativa automática de leads previamente fechados.
++
++## Segurança — ponto de atenção
++
++A captura do painel mostra `DEV_BYPASS` configurado no **Preview**. No código recebido, se o valor for `1`, a autenticação da API é ignorada nesse ambiente, inclusive se o site de Preview estiver acessível pela internet. **Verifique o valor real, remova o bypass remoto e proteja o Preview com Cloudflare Access** antes de utilizar dados reais. Não habilite `DEV_BYPASS` em Production. Esta atualização não altera automaticamente sua política de autenticação; preserva as validações existentes.
++
++Os arquivos `.git`, `.wrangler` e caches locais do ZIP fornecido foram **intencionalmente excluídos** do pacote de entrega.
++
++## Testes
++
++```bash
++npm test
++```
++
++Node 22+ recomendado. O pacote corrige `package.json` para `type: module` (as Functions e os testes já usam ESM) e inclui testes com dois bancos SQLite e dois R2 em memória, além das suítes legadas atualizadas. Nenhuma migration nova.
++
++## Limitações
++
++- O teste de isolamento é local; **não é prova de como os bindings estão atualmente resolvidos no deploy remoto**.
++- R2 e D1 não suportam transação distribuída. O projeto mantém a estratégia existente de compensação/repetição na remoção de fotos.
++- URLs antigas permanecem em `properties.photo_url` para auditoria, mas a vitrine exige fotos cadastradas em `property_images`.
++- A UI protege contra download casual de imagens, não contra captura de tela ou requisições técnicas ao recurso público.
+--- a/functions/_shared/property-media.js
++++ b/functions/_shared/property-media.js
+@@ -1,5 +1,8 @@
+-// Utilitários de galeria: apenas recursos preview. Não consulta a tabela nova em produção.
+-export const mediaEnabled = (env) => env?.MEDIA_ENV === 'preview' && !!env?.MEDIA_BUCKET && !!env?.DB;
++// A galeria R2 segue a mesma regra em Preview e Production.
++// Exigir um ambiente explícito e ambos os bindings evita operações de mídia sem configuração.
++// O isolamento de dados é feito pelos bindings DB / MEDIA_BUCKET definidos no wrangler.toml.
++export const mediaEnabled = (env) =>
++  ['preview', 'production'].includes(env?.MEDIA_ENV) && !!env?.MEDIA_BUCKET && !!env?.DB;
+ export const mediaPath = (key, env) => {
+   const base = String(env?.MEDIA_PUBLIC_BASE_URL || '').trim();
+   return /^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(base)
+@@ -40,7 +43,8 @@
+ }
+ export function withGallery(property, list = [], env) {
+   const images = list.map((r) => r && r.url ? r : serializeImage(r, env));
+-  const coverUrl = images.length ? images[0].url : (env?.MEDIA_ENV === 'preview' ? '' : (property.photo_url || property.foto_url || ''));
++  // Sem galeria R2, nunca renderizar a URL legada nem uma imagem genérica.
++  const coverUrl = images.length ? images[0].url : '';
+   return {
+     ...property,
+     ...(Object.hasOwn(property, 'foto_url') ? { foto_url: coverUrl } : { photo_url: coverUrl }),
+--- a/functions/api/%5B%5Broute%5D%5D.js
++++ b/functions/api/%5B%5Broute%5D%5D.js
+@@ -148,7 +148,7 @@
+ const propOut = (r, images = [], env) => withGallery({
+   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
+   city: r.city, price: r.price, area_m2: r.area_m2, bedrooms: r.bedrooms, bathrooms: r.bathrooms, parking: r.parking,
+-  photo_url: r.photo_url, ...(env?.MEDIA_ENV === 'preview' ? {} : { legacy_photo_url: r.photo_url }), badge: r.badge, status: r.status, description: r.description,
++  photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
+ }, images, env);
+ const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
+   codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
+@@ -467,21 +467,16 @@
+   return loadLead(env, id);
+ }
+ 
+-// A v4.3.4 era condicionada a MEDIA_ENV === 'preview'. Em Pages Preview o
+-// binding pode não ter sido sincronizado com o dashboard, e a regra era
+-// silenciosamente ignorada. O ambiente production permanece explicitamente
+-// isolado. Uma ausência de MEDIA_ENV é tratada como preview neste pacote
+-// de homologação (NÃO publicar em produção sem confirmar a variável production).
+-const disputeRulesEnabled = (env) => String(env.MEDIA_ENV || '').trim().toLowerCase() !== 'production';
++// Regra comercial unificada: nunca usar MEDIA_ENV para ativar/desativar
++// disputa entre leads. O ambiente só seleciona bindings de D1 e R2.
+ 
+ async function closeLead(env, id, b) {
+   const cur = await loadLeadRow(env, id);
+   if (cur.stage === 'Fechado') throw new HttpError(409, 'Este lead já está fechado.');
+   const result = oneOf(b.result, CLOSE_RESULTS, 'resultado');
+   const note = str(b.note, 'observação do resultado', { min: 3, max: 800, required: true });
+-  const rulesEnabled = disputeRulesEnabled(env);
+   // Um imóvel definitivamente negociado não pode ser ganho de novo por outro lead.
+-  if (rulesEnabled && result === 'Ganho' && cur.property_id &&
++  if (result === 'Ganho' && cur.property_id &&
+       ['Vendido', 'Alugado', 'Inativo'].includes(cur.p_status)) {
+     throw new HttpError(409, `O imóvel ${propCode(cur.property_id)} já está ${cur.p_status}. Revise a associação antes de fechar como Ganho.`);
+   }
+@@ -497,19 +492,14 @@
+       const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
+       // Audita e requalifica os outros leads ativos dentro do MESMO D1.batch.
+       // O filtro usa property_id, nunca somente a descrição livre do imóvel.
+-      if (rulesEnabled) {
+-        stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
+-        rivalsUpdateIndex = stmts.length;
+-        stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
+-      }
++      stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
++      rivalsUpdateIndex = stmts.length;
++      stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
+       stmts.push(closeWonStmt(env, cur.property_id, t));
+       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
+     } else if ((result === 'Perdido' || cur.category === 'Captação') && cur.p_status === 'Reservado') {
+-      // Perdido não altera os demais; só libera se nenhum interessado ativo
+-      // continuar associado. Regras antigas ficam restritas à produção.
+-      stmts.push(rulesEnabled
+-        ? releaseAfterLossStmt(env, cur.property_id, t)
+-        : releaseStmt(env, cur.property_id, t));
++      // Perdido não altera os demais; só libera se não houver interessado ativo.
++      stmts.push(releaseAfterLossStmt(env, cur.property_id, t));
+       events.push(['nota', `Reserva do imóvel ${code} reavaliada após fechamento perdido.`]);
+     }
+   }
+@@ -522,8 +512,8 @@
+   return {
+     ...lead,
+     disputeResolution: {
+-      version: '4.3.4-revisao-1',
+-      enabled: rulesEnabled,
++      version: '4.3.8-regras-unificadas',
++      enabled: true,
+       linkedProperty: cur.property_id ? propCode(cur.property_id) : null,
+       competitorsRequalified: rivalsUpdateIndex >= 0
+         ? Number(batchResult[rivalsUpdateIndex]?.meta?.changes || 0) : 0,
+@@ -610,22 +600,8 @@
+ }
+ 
+ // ---------- Imóveis ----------
+-async function resolveImage(url) {
+-  try {
+-    if (new URL(url).hostname === 'ibb.co') {
+-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+-      const m = (await r.text()).match(/<meta property="og:image" content="([^"]+)"/i);
+-      if (m && /^https:\/\//.test(m[1])) return m[1];
+-    }
+-  } catch (e) { /* mantém o link original */ }
+-  return url;
+-}
+-async function photoField(v, resolve = true) {
+-  const u = String(v ?? '').trim();
+-  if (!u) return '';
+-  if (!/^https:\/\/[^\s]+$/i.test(u) || u.length > 500) throw new HttpError(400, 'URL da foto inválida (use um link https de até 500 caracteres).');
+-  return resolve ? resolveImage(u) : u;
+-}
++// Novas fotos entram exclusivamente via upload R2. Links antigos permanecem
++// armazenados na coluna legada, mas não são aceitos ou exibidos pela API.
+ const PROP_FIELDS = {
+   title: (v) => str(v, 'título', { min: 3, max: 150, required: true }),
+   purpose: (v) => oneOf(v, PURPOSES, 'finalidade'),
+@@ -637,12 +613,12 @@
+   badge: (v) => str(v, 'destaque', { max: 40 }), status: (v) => oneOf(v, PSTATUS, 'status'),
+   description: (v) => str(v, 'descrição', { max: 2000 }),
+ };
+-async function propValues(b, { resolvePhoto = true, defaults = false, r2Only = false } = {}) {
++async function propValues(b, { defaults = false } = {}) {
+   const out = {};
+   const src = defaults ? { type: 'Casa', city: 'Resende - RJ', status: 'Disponível', purpose: 'Comprar', ...b } : b;
+   for (const [k, fn] of Object.entries(PROP_FIELDS)) if (src[k] !== undefined) out[k] = fn(src[k]);
+-  if (r2Only && src.photo_url !== undefined && String(src.photo_url || '').trim()) throw new HttpError(400, 'Fotos por URL não são aceitas no preview. Utilize o upload R2.');
+-  if (!r2Only && src.photo_url !== undefined) out.photo_url = await photoField(src.photo_url, resolvePhoto);
++  if (src.photo_url !== undefined && String(src.photo_url || '').trim())
++    throw new HttpError(400, 'Fotos por URL não são aceitas. Utilize o upload R2.');
+   if (defaults && (!out.title || !out.neighborhood)) { PROP_FIELDS.title(src.title); PROP_FIELDS.neighborhood(src.neighborhood); }
+   return out;
+ }
+@@ -653,7 +629,7 @@
+   return propOut(row, [], env);
+ }
+ async function patchProperty(env, id, b) {
+-  const vals = await propValues(b, { r2Only: env?.MEDIA_ENV === 'preview' });
++  const vals = await propValues(b);
+   // Impede a liberação MANUAL de uma reserva que outro lead ainda mantém.
+   // Vendido/Alugado não são revertidos automaticamente; a reversão desses
+   // estados finais permanece uma decisão manual do corretor.
+@@ -677,7 +653,8 @@
+ // da vitrine. Exclui em seguida os objetos R2 e os metadados D1; DELETE é idempotente
+ // para permitir limpeza manual em caso de falha transitória do R2 (sem 2PC entre serviços).
+ async function deletePropertyWithMedia(env, id) {
+-  if (!mediaEnabled(env)) return softDelete(env, 'properties', id);
++  // Não apagar o registro sem limpar fotos: falhar fechado se o R2/D1 não estiver configurado.
++  if (!mediaEnabled(env)) throw new HttpError(503, 'Galeria R2 indisponível. Confira MEDIA_ENV, DB e MEDIA_BUCKET.');
+   const row = await env.DB.prepare('SELECT id, deleted_at FROM properties WHERE id = ?').bind(id).first();
+   if (!row) throw new HttpError(404, 'Imóvel não encontrado.');
+   if (!row.deleted_at) {
+@@ -698,7 +675,7 @@
+   const rows = Array.isArray(b.rows) ? b.rows.slice(0, 200) : [];
+   const created = [], skipped = [];
+   for (let i = 0; i < rows.length; i++) {
+-    try { created.push(await insertProperty(env, await propValues(rows[i], { resolvePhoto: false, defaults: true, r2Only: env?.MEDIA_ENV === 'preview' }))); }
++    try { created.push(await insertProperty(env, await propValues(rows[i], { defaults: true }))); }
+     catch (e) { skipped.push({ row: i + 1, error: e.message }); }
+   }
+   return { created: created.length, skipped };
+@@ -778,7 +755,6 @@
+ 
+ // ---------- Roteador ----------
+ export async function onRequest({ request, env, params }) {
+-  let authed = false;
+   try {
+     const method = request.method;
+     const parts = [].concat(params.route || []);
+@@ -796,16 +772,17 @@
+     }
+ 
+     await authenticate(request, env);
+-    authed = true;
+     const [res, id, sub] = parts;
+-    // Diagnóstico autenticado: confira que a API publicada contém a revisão
+-    // da regra de disputa e que MEDIA_ENV não herdou 'production' no Preview.
++    // Diagnóstico autenticado: mesma regra de disputa para ambos os ambientes;
++    // MEDIA_ENV controla apenas a disponibilidade da integração R2.
+     if (res === 'diagnostics' && id === 'disputes' && !sub && method === 'GET') {
+       return json({
+-        apiVersion: '4.3.4-revisao-1',
++        apiVersion: '4.3.8-regras-unificadas',
+         mediaEnv: env.MEDIA_ENV || null,
+-        disputeRulesEnabled: disputeRulesEnabled(env),
++        disputeRulesEnabled: true,
++        mediaEnabled: mediaEnabled(env),
+         dbBindingAvailable: Boolean(env.DB),
++        mediaBucketBindingAvailable: Boolean(env.MEDIA_BUCKET),
+       });
+     }
+     if (res === 'export' && method === 'GET' && id) return await exportCsv(env, id.replace(/\.csv$/, ''));
+@@ -833,7 +810,7 @@
+           const galleries = await propertyImageMap(env);
+           return json({ items: rows.map(r => propOut(r, galleries.get(r.id) || [], env)) });
+         }
+-        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true, r2Only: env?.MEDIA_ENV === 'preview' })), 201);
++        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true })), 201);
+       } else if (id === 'import' && method === 'POST') return json(await importProperties(env, body));
+       else if (!sub) {
+         if (method === 'PATCH') return json(await patchProperty(env, parseId(id), body));
+@@ -845,6 +822,7 @@
+     if (e instanceof HttpError) return json({ error: e.message, ...(e.extra || {}) }, e.status);
+     if (isUnique(e)) return json({ error: 'Registro duplicado.' }, 409);
+     console.error(e);
+-    return json({ error: authed ? 'Erro interno: ' + String((e && e.message) || e).slice(0, 300) : 'Erro interno.' }, 500);
+-  }
+-}
++    // Não enviar detalhes de exceção, SQL ou nomes internos de infraestrutura.
++    return json({ error: 'Erro interno. Tente novamente ou contate o suporte.' }, 500);
++  }
++}
+--- a/functions/api/[[route]].js
++++ b/functions/api/[[route]].js
+@@ -148,7 +148,7 @@
+ const propOut = (r, images = [], env) => withGallery({
+   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
+   city: r.city, price: r.price, area_m2: r.area_m2, bedrooms: r.bedrooms, bathrooms: r.bathrooms, parking: r.parking,
+-  photo_url: r.photo_url, ...(env?.MEDIA_ENV === 'preview' ? {} : { legacy_photo_url: r.photo_url }), badge: r.badge, status: r.status, description: r.description,
++  photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
+ }, images, env);
+ const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
+   codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
+@@ -467,21 +467,16 @@
+   return loadLead(env, id);
+ }
+ 
+-// A v4.3.4 era condicionada a MEDIA_ENV === 'preview'. Em Pages Preview o
+-// binding pode não ter sido sincronizado com o dashboard, e a regra era
+-// silenciosamente ignorada. O ambiente production permanece explicitamente
+-// isolado. Uma ausência de MEDIA_ENV é tratada como preview neste pacote
+-// de homologação (NÃO publicar em produção sem confirmar a variável production).
+-const disputeRulesEnabled = (env) => String(env.MEDIA_ENV || '').trim().toLowerCase() !== 'production';
++// Regra comercial unificada: nunca usar MEDIA_ENV para ativar/desativar
++// disputa entre leads. O ambiente só seleciona bindings de D1 e R2.
+ 
+ async function closeLead(env, id, b) {
+   const cur = await loadLeadRow(env, id);
+   if (cur.stage === 'Fechado') throw new HttpError(409, 'Este lead já está fechado.');
+   const result = oneOf(b.result, CLOSE_RESULTS, 'resultado');
+   const note = str(b.note, 'observação do resultado', { min: 3, max: 800, required: true });
+-  const rulesEnabled = disputeRulesEnabled(env);
+   // Um imóvel definitivamente negociado não pode ser ganho de novo por outro lead.
+-  if (rulesEnabled && result === 'Ganho' && cur.property_id &&
++  if (result === 'Ganho' && cur.property_id &&
+       ['Vendido', 'Alugado', 'Inativo'].includes(cur.p_status)) {
+     throw new HttpError(409, `O imóvel ${propCode(cur.property_id)} já está ${cur.p_status}. Revise a associação antes de fechar como Ganho.`);
+   }
+@@ -497,19 +492,14 @@
+       const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
+       // Audita e requalifica os outros leads ativos dentro do MESMO D1.batch.
+       // O filtro usa property_id, nunca somente a descrição livre do imóvel.
+-      if (rulesEnabled) {
+-        stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
+-        rivalsUpdateIndex = stmts.length;
+-        stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
+-      }
++      stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
++      rivalsUpdateIndex = stmts.length;
++      stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
+       stmts.push(closeWonStmt(env, cur.property_id, t));
+       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
+     } else if ((result === 'Perdido' || cur.category === 'Captação') && cur.p_status === 'Reservado') {
+-      // Perdido não altera os demais; só libera se nenhum interessado ativo
+-      // continuar associado. Regras antigas ficam restritas à produção.
+-      stmts.push(rulesEnabled
+-        ? releaseAfterLossStmt(env, cur.property_id, t)
+-        : releaseStmt(env, cur.property_id, t));
++      // Perdido não altera os demais; só libera se não houver interessado ativo.
++      stmts.push(releaseAfterLossStmt(env, cur.property_id, t));
+       events.push(['nota', `Reserva do imóvel ${code} reavaliada após fechamento perdido.`]);
+     }
+   }
+@@ -522,8 +512,8 @@
+   return {
+     ...lead,
+     disputeResolution: {
+-      version: '4.3.4-revisao-1',
+-      enabled: rulesEnabled,
++      version: '4.3.8-regras-unificadas',
++      enabled: true,
+       linkedProperty: cur.property_id ? propCode(cur.property_id) : null,
+       competitorsRequalified: rivalsUpdateIndex >= 0
+         ? Number(batchResult[rivalsUpdateIndex]?.meta?.changes || 0) : 0,
+@@ -610,22 +600,8 @@
+ }
+ 
+ // ---------- Imóveis ----------
+-async function resolveImage(url) {
+-  try {
+-    if (new URL(url).hostname === 'ibb.co') {
+-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
+-      const m = (await r.text()).match(/<meta property="og:image" content="([^"]+)"/i);
+-      if (m && /^https:\/\//.test(m[1])) return m[1];
+-    }
+-  } catch (e) { /* mantém o link original */ }
+-  return url;
+-}
+-async function photoField(v, resolve = true) {
+-  const u = String(v ?? '').trim();
+-  if (!u) return '';
+-  if (!/^https:\/\/[^\s]+$/i.test(u) || u.length > 500) throw new HttpError(400, 'URL da foto inválida (use um link https de até 500 caracteres).');
+-  return resolve ? resolveImage(u) : u;
+-}
++// Novas fotos entram exclusivamente via upload R2. Links antigos permanecem
++// armazenados na coluna legada, mas não são aceitos ou exibidos pela API.
+ const PROP_FIELDS = {
+   title: (v) => str(v, 'título', { min: 3, max: 150, required: true }),
+   purpose: (v) => oneOf(v, PURPOSES, 'finalidade'),
+@@ -637,12 +613,12 @@
+   badge: (v) => str(v, 'destaque', { max: 40 }), status: (v) => oneOf(v, PSTATUS, 'status'),
+   description: (v) => str(v, 'descrição', { max: 2000 }),
+ };
+-async function propValues(b, { resolvePhoto = true, defaults = false, r2Only = false } = {}) {
++async function propValues(b, { defaults = false } = {}) {
+   const out = {};
+   const src = defaults ? { type: 'Casa', city: 'Resende - RJ', status: 'Disponível', purpose: 'Comprar', ...b } : b;
+   for (const [k, fn] of Object.entries(PROP_FIELDS)) if (src[k] !== undefined) out[k] = fn(src[k]);
+-  if (r2Only && src.photo_url !== undefined && String(src.photo_url || '').trim()) throw new HttpError(400, 'Fotos por URL não são aceitas no preview. Utilize o upload R2.');
+-  if (!r2Only && src.photo_url !== undefined) out.photo_url = await photoField(src.photo_url, resolvePhoto);
++  if (src.photo_url !== undefined && String(src.photo_url || '').trim())
++    throw new HttpError(400, 'Fotos por URL não são aceitas. Utilize o upload R2.');
+   if (defaults && (!out.title || !out.neighborhood)) { PROP_FIELDS.title(src.title); PROP_FIELDS.neighborhood(src.neighborhood); }
+   return out;
+ }
+@@ -653,7 +629,7 @@
+   return propOut(row, [], env);
+ }
+ async function patchProperty(env, id, b) {
+-  const vals = await propValues(b, { r2Only: env?.MEDIA_ENV === 'preview' });
++  const vals = await propValues(b);
+   // Impede a liberação MANUAL de uma reserva que outro lead ainda mantém.
+   // Vendido/Alugado não são revertidos automaticamente; a reversão desses
+   // estados finais permanece uma decisão manual do corretor.
+@@ -677,7 +653,8 @@
+ // da vitrine. Exclui em seguida os objetos R2 e os metadados D1; DELETE é idempotente
+ // para permitir limpeza manual em caso de falha transitória do R2 (sem 2PC entre serviços).
+ async function deletePropertyWithMedia(env, id) {
+-  if (!mediaEnabled(env)) return softDelete(env, 'properties', id);
++  // Não apagar o registro sem limpar fotos: falhar fechado se o R2/D1 não estiver configurado.
++  if (!mediaEnabled(env)) throw new HttpError(503, 'Galeria R2 indisponível. Confira MEDIA_ENV, DB e MEDIA_BUCKET.');
+   const row = await env.DB.prepare('SELECT id, deleted_at FROM properties WHERE id = ?').bind(id).first();
+   if (!row) throw new HttpError(404, 'Imóvel não encontrado.');
+   if (!row.deleted_at) {
+@@ -698,7 +675,7 @@
+   const rows = Array.isArray(b.rows) ? b.rows.slice(0, 200) : [];
+   const created = [], skipped = [];
+   for (let i = 0; i < rows.length; i++) {
+-    try { created.push(await insertProperty(env, await propValues(rows[i], { resolvePhoto: false, defaults: true, r2Only: env?.MEDIA_ENV === 'preview' }))); }
++    try { created.push(await insertProperty(env, await propValues(rows[i], { defaults: true }))); }
+     catch (e) { skipped.push({ row: i + 1, error: e.message }); }
+   }
+   return { created: created.length, skipped };
+@@ -778,7 +755,6 @@
+ 
+ // ---------- Roteador ----------
+ export async function onRequest({ request, env, params }) {
+-  let authed = false;
+   try {
+     const method = request.method;
+     const parts = [].concat(params.route || []);
+@@ -796,16 +772,17 @@
+     }
+ 
+     await authenticate(request, env);
+-    authed = true;
+     const [res, id, sub] = parts;
+-    // Diagnóstico autenticado: confira que a API publicada contém a revisão
+-    // da regra de disputa e que MEDIA_ENV não herdou 'production' no Preview.
++    // Diagnóstico autenticado: mesma regra de disputa para ambos os ambientes;
++    // MEDIA_ENV controla apenas a disponibilidade da integração R2.
+     if (res === 'diagnostics' && id === 'disputes' && !sub && method === 'GET') {
+       return json({
+-        apiVersion: '4.3.4-revisao-1',
++        apiVersion: '4.3.8-regras-unificadas',
+         mediaEnv: env.MEDIA_ENV || null,
+-        disputeRulesEnabled: disputeRulesEnabled(env),
++        disputeRulesEnabled: true,
++        mediaEnabled: mediaEnabled(env),
+         dbBindingAvailable: Boolean(env.DB),
++        mediaBucketBindingAvailable: Boolean(env.MEDIA_BUCKET),
+       });
+     }
+     if (res === 'export' && method === 'GET' && id) return await exportCsv(env, id.replace(/\.csv$/, ''));
+@@ -833,7 +810,7 @@
+           const galleries = await propertyImageMap(env);
+           return json({ items: rows.map(r => propOut(r, galleries.get(r.id) || [], env)) });
+         }
+-        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true, r2Only: env?.MEDIA_ENV === 'preview' })), 201);
++        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true })), 201);
+       } else if (id === 'import' && method === 'POST') return json(await importProperties(env, body));
+       else if (!sub) {
+         if (method === 'PATCH') return json(await patchProperty(env, parseId(id), body));
+@@ -845,6 +822,7 @@
+     if (e instanceof HttpError) return json({ error: e.message, ...(e.extra || {}) }, e.status);
+     if (isUnique(e)) return json({ error: 'Registro duplicado.' }, 409);
+     console.error(e);
+-    return json({ error: authed ? 'Erro interno: ' + String((e && e.message) || e).slice(0, 300) : 'Erro interno.' }, 500);
+-  }
+-}
++    // Não enviar detalhes de exceção, SQL ou nomes internos de infraestrutura.
++    return json({ error: 'Erro interno. Tente novamente ou contate o suporte.' }, 500);
++  }
++}
+--- a/functions/api/media/[[path]].js
++++ b/functions/api/media/[[path]].js
+@@ -1,4 +1,4 @@
+-// Rotas dedicadas ao R2 (preview): API binária separada do CRUD de imóveis/leads.
++// Rotas dedicadas ao R2 (Preview e Production): API binária separada do CRUD.
+ // GET /api/media/file/properties/:id/:uuid.webp          (público)
+ // GET|PUT /api/media/properties/:code/images             (CRC / Access)
+ // PATCH|DELETE /api/media/properties/:code/images/:id    (CRC / Access)
+@@ -132,7 +132,7 @@
+ }
+ export async function onRequest({ request, env, params }) {
+   try {
+-    if (!mediaEnabled(env)) throw new ApiError(503, 'Galeria R2 disponível somente em preview configurado.');
++    if (!mediaEnabled(env)) throw new ApiError(503, 'Galeria R2 indisponível. Confira MEDIA_ENV, DB e MEDIA_BUCKET.');
+     const parts = [].concat(params.path || []);
+     const method = request.method;
+     if (parts[0] === 'file' && (method === 'GET' || method === 'HEAD')) {
+--- a/package.json
++++ b/package.json
+@@ -27,10 +27,10 @@
+     "youch-core": "^0.3.3"
+   },
+   "scripts": {
+-    "test": "echo \"Error: no test specified\" && exit 1"
++    "test": "node --experimental-sqlite tests/preview-crm.test.mjs && node --experimental-sqlite tests/conflicts-4.3.4.test.mjs && node --experimental-sqlite tests/r2-media.test.mjs && node tests/vitrine-sem-imagem.test.mjs && node --experimental-sqlite tests/env-parity-4.3.8.test.mjs"
+   },
+   "keywords": [],
+   "author": "",
+   "license": "ISC",
+-  "type": "commonjs"
++  "type": "module"
+ }
+--- a/public/app/index.html
++++ b/public/app/index.html
+@@ -2133,7 +2133,7 @@
+                     msg += ` ${upd.disputeResolution.competitorsRequalified} outro(s) lead(s) requalificado(s).`;
+                 }
+                 if (result === 'Ganho' && upd.propertyId && !upd.disputeResolution?.enabled) {
+-                    showToast('Lead fechado, mas a API não confirmou a regra 4.3.4. Verifique a configuração de preview e a versão publicada.', { persistent: true, icon: 'alert-triangle', iconColor: 'text-amber-300' });
++                    showToast('Lead fechado, mas a API não confirmou a requalificação automática. Verifique a versão publicada.', { persistent: true, icon: 'alert-triangle', iconColor: 'text-amber-300' });
+                 } else {
+                     showToast(msg);
+                 }
+--- a/tests/conflicts-4.3.4.test.mjs
++++ b/tests/conflicts-4.3.4.test.mjs
+@@ -73,7 +73,7 @@
+ 
+ // Diagnóstico ajuda a confirmar qual Function responde no Preview publicado.
+ const diagnostic = await call('GET', '/diagnostics/disputes');
+-eq(diagnostic.apiVersion, '4.3.4-revisao-1');
++eq(diagnostic.apiVersion, '4.3.8-regras-unificadas');
+ eq(diagnostic.mediaEnv, 'preview');
+ eq(diagnostic.disputeRulesEnabled, true);
+ eq(diagnostic.dbBindingAvailable, true);
+@@ -186,7 +186,7 @@
+ const noBindingWinner = await makeLead('Ganhador sem MEDIA_ENV', noBinding, 'Documentação/Crédito');
+ const noBindingOther = await makeLead('Concorrente sem MEDIA_ENV', noBinding, 'Proposta Enviada');
+ const noBindingResult = await call('POST', `/leads/${noBindingWinner.id}/close`, { result: 'Ganho', note: 'Assinado sem variável MEDIA_ENV.' });
+-eq(noBindingResult.disputeResolution.version, '4.3.4-revisao-1');
++eq(noBindingResult.disputeResolution.version, '4.3.8-regras-unificadas');
+ eq(noBindingResult.disputeResolution.enabled, true, 'Sem MEDIA_ENV ativa a lógica no pacote Preview');
+ eq(noBindingResult.disputeResolution.competitorsRequalified, 1, 'Resposta da API informa quantos concorrentes foram corrigidos');
+ eq(rawLead(noBindingOther.id).stage, 'Qualificação');
+@@ -212,17 +212,19 @@
+ eq(rawLead(historicB.id).stage, 'Proposta Enviada');
+ env.MEDIA_ENV = oldEnvironment;
+ 
+-// Segurança do escopo: production mantém regras anteriores até homologação e promoção.
++// Paridade: Production aplica a mesma requalificação da regra homologada em Preview.
+ env.MEDIA_ENV = 'production';
+ const prodDiagnosis = await call('GET', '/diagnostics/disputes');
+-eq(prodDiagnosis.disputeRulesEnabled, false, 'Produção explicitamente desativada');
+-const isolated = await makeProperty('Casa com regra antiga em produção');
+-const prodWinner = await makeLead('Lead vencedor antigo', isolated, 'Proposta Enviada');
+-const prodOther = await makeLead('Lead concorrente antigo', isolated, 'Qualificação');
+-await call('POST', `/leads/${prodWinner.id}/close`, { result: 'Ganho', note: 'Regra antiga isolada.' });
++eq(prodDiagnosis.disputeRulesEnabled, true, 'Regras comerciais também ativas em Production');
++const isolated = await makeProperty('Casa com regras unificadas em produção');
++const prodWinner = await makeLead('Lead vencedor em produção', isolated, 'Proposta Enviada');
++const prodOther = await makeLead('Lead concorrente em produção', isolated, 'Documentação/Crédito');
++const prodWon = await call('POST', `/leads/${prodWinner.id}/close`, { result: 'Ganho', note: 'Regra unificada aplicada.' });
++eq(prodWon.disputeResolution.competitorsRequalified, 1);
+ eq(rawProp(isolated.code).status, 'Vendido');
+ eq(rawLead(prodOther.id).stage, 'Qualificação');
+-eq(rawLead(prodOther.id).property_id, propId(isolated.code), 'Nova regra não deve rodar em produção');
++eq(rawLead(prodOther.id).property_id, null, 'Production desvincula o concorrente como Preview');
++eq(rawLead(prodOther.id).followup_at, todayBR());
+ 
+ // Verificações estáticas do front-end: contador ignora Perdido e depois do
+ // fechamento um reload integral atualiza os concorrentes em todos os quadros.
+@@ -233,4 +235,4 @@
+ ok(html.includes("l.closeResult !== 'Perdido' && (l.stage === 'Proposta Enviada'"), 'KPI propostas não contabiliza Perdido');
+ ok(/async function submitCloseLead[\s\S]*?await loadAll\(\);[\s\S]*?openLeadDetail/.test(html), 'Recarrega todos os leads após fechamento');
+ eq(db.prepare('PRAGMA foreign_key_check').all().length, 0);
+-console.log(`PASSOU: ${checks} verificações 4.3.4 (Ganho, Perdido, vínculos, disputa, histórico, hoje, produção isolada, UI).`);
++console.log(`PASSOU: ${checks} verificações 4.3.4 (Ganho, Perdido, vínculos, disputa, histórico, hoje, paridade de regras, UI).`);
+--- a/tests/env-parity-4.3.8.test.mjs
++++ b/tests/env-parity-4.3.8.test.mjs
+@@ -0,0 +1,159 @@
++// Homologação local: mesma lógica de negócios, dois D1 e dois R2 fisicamente separados.
++// node --experimental-sqlite tests/env-parity-4.3.8.test.mjs
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { DatabaseSync } from 'node:sqlite';
++import { onRequest as api } from '../functions/api/[[route]].js';
++import { onRequest as media } from '../functions/api/media/[[path]].js';
++import { mediaEnabled } from '../functions/_shared/property-media.js';
++
++const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
++const migrations = fs.readdirSync(path.join(root, 'migrations')).filter(x => x.endsWith('.sql')).sort();
++let verified = 0;
++const eq = (actual, expected, note) => { assert.equal(actual, expected, note); verified++; };
++const ok = (condition, note) => { assert.ok(condition, note); verified++; };
++
++function newEnvironment(name) {
++  const sqlite = new DatabaseSync(':memory:');
++  sqlite.exec('PRAGMA foreign_keys = ON');
++  for (const migration of migrations) sqlite.exec(fs.readFileSync(path.join(root, 'migrations', migration), 'utf8'));
++  class Bound {
++    constructor(sql, args = []) { this.sql = sql; this.args = args; }
++    bind(...args) { return new Bound(this.sql, args); }
++    async first() { return sqlite.prepare(this.sql).get(...this.args) || null; }
++    async all() { return {results: sqlite.prepare(this.sql).all(...this.args)}; }
++    async run() { const {changes} = sqlite.prepare(this.sql).run(...this.args); return {meta:{changes}}; }
++  }
++  const DB = {
++    prepare(sql) { return new Bound(sql); },
++    async batch(statements) {
++      sqlite.exec('BEGIN');
++      try {
++        const results = statements.map(statement => {
++          const stmt = sqlite.prepare(statement.sql);
++          if (stmt.columns().length) return {results: stmt.all(...statement.args)};
++          const x = stmt.run(...statement.args);
++          return {results:[],meta:{changes:x.changes}};
++        });
++        sqlite.exec('COMMIT');
++        return results;
++      } catch (err) { sqlite.exec('ROLLBACK'); throw err; }
++    },
++  };
++  const objects = new Map();
++  const MEDIA_BUCKET = {
++    async put(key, data, options) { objects.set(key, {body: data, httpMetadata: options.httpMetadata, httpEtag:'"test-etag"'}); },
++    async get(key) { return objects.get(key) || null; },
++    async delete(key) { objects.delete(key); },
++  };
++  // Bypass existe apenas no fixture local; no remoto, exigir Cloudflare Access.
++  return {name, sqlite, objects, env:{MEDIA_ENV:name, DB, MEDIA_BUCKET, DEV_BYPASS:'1'}};
++}
++const fixtures = [newEnvironment('preview'), newEnvironment('production')];
++const [preview, production] = fixtures;
++ok(preview.env.DB !== production.env.DB, 'bindings DB independentes');
++ok(preview.env.MEDIA_BUCKET !== production.env.MEDIA_BUCKET, 'bindings R2 independentes');
++
++async function request(fixture, method, route, body, expected = 200, binary = false, overrides = {}) {
++  const isMedia = route.startsWith('/media/');
++  const handler = isMedia ? media : api;
++  const headers = method === 'GET' ? {} : {'Content-Type':binary?'image/webp':'application/json'};
++  const req = new Request(`https://${fixture.name}.example.test/api${route}`, {
++    method, headers, body: body === undefined ? undefined : binary ? body : JSON.stringify(body),
++  });
++  const params = isMedia ? {path:route.slice('/media/'.length).split('/')} : {route:route.slice(1).split('/')};
++  const response = await handler({request:req,env:{...fixture.env,...overrides},params});
++  const value = (response.headers.get('content-type')||'').includes('application/json') ? await response.json() : response;
++  eq(response.status, expected, `${fixture.name}: ${method} ${route}; ${JSON.stringify(value?.error||'')}`);
++  return value;
++}
++let phoneCounter = 0;
++async function createProperty(fixture, title) {
++  return request(fixture, 'POST', '/properties', {title,purpose:'Comprar',neighborhood:'Centro',status:'Disponível',price:300000},201);
++}
++async function createLead(fixture, property, stage, name) {
++  return request(fixture,'POST','/leads',{
++    name, phone:String(24990000000 + (++phoneCounter)), category:'Interessado', modality:'Compra',
++    stage, temp:'Morno', property:`${property.code} - ${property.title}`,
++    link_mode:'internal',property_code:property.code,followup_at:'2099-12-20',
++  },201);
++}
++function propertyRow(fixture, code) { return fixture.sqlite.prepare('SELECT * FROM properties WHERE id=?').get(Number(code.slice(4))); }
++function leadRow(fixture, code) { return fixture.sqlite.prepare('SELECT * FROM leads WHERE id=?').get(Number(code.slice(3))-100); }
++function count(fixture, table) { return fixture.sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get().n; }
++const tinyWebp = Uint8Array.from([82,73,70,70,20,0,0,0,87,69,66,80,86,80,56,32,0,0,0,0]);
++
++// Um anúncio de ID igual em cada banco é um registro distinto, assim como seus arquivos.
++const homes = [];
++for (const fixture of fixtures) {
++  eq(mediaEnabled(fixture.env), true, `${fixture.name}: R2 pronto`);
++  const diag = await request(fixture,'GET','/diagnostics/disputes');
++  eq(diag.disputeRulesEnabled,true, 'disputa ativa nos dois');
++  eq(diag.mediaEnabled,true, 'mídia ativa nos dois');
++  eq(diag.mediaEnv,fixture.name, 'diagnóstico do ambiente');
++  await request(fixture,'POST','/properties',{title:'URL bloqueada',purpose:'Comprar',neighborhood:'Centro',photo_url:'https://example.com/photo.jpg'},400);
++  const home = await createProperty(fixture,`${fixture.name} - Casa`);
++  homes.push(home);
++  eq(home.photo_url,'','sem capa legada');
++  ok(!Object.hasOwn(home,'legacy_photo_url'),'campo legado não exposto');
++  const lead1 = await createLead(fixture,home,'Proposta Enviada',`Vencedor ${fixture.name}`);
++  const lead2 = await createLead(fixture,home,'Documentação/Crédito',`Concorrente ${fixture.name}`);
++  eq(propertyRow(fixture,home.code).status,'Reservado','reserva com dois leads');
++  fixture.competition = {lead1,lead2};
++}
++eq(homes[0].code,homes[1].code,'IDs iguais não significam banco compartilhado');
++eq(count(preview,'properties'),1,'Preview tem apenas seu imóvel');
++eq(count(production,'properties'),1,'Production tem apenas seu imóvel');
++
++const uploadPreview = await request(preview,'PUT',`/media/properties/${homes[0].code}/images`,tinyWebp,201,true);
++eq(preview.objects.size,1,'objeto armazenado somente no R2 Preview');
++eq(production.objects.size,0,'R2 Production permanece vazio');
++const publicProdBefore = await request(production,'GET','/public/properties');
++eq(publicProdBefore.items[0].foto_url,'','produção sem foto própria não usa imagem alheia');
++const uploadProd = await request(production,'PUT',`/media/properties/${homes[1].code}/images`,tinyWebp,201,true);
++eq(production.objects.size,1,'objeto armazenado no R2 Production');
++eq(preview.objects.size,1,'upload Production não modifica R2 Preview');
++const mediaPreview = await request(preview,'GET','/public/properties');
++const mediaProd = await request(production,'GET','/public/properties');
++eq(mediaPreview.items[0].foto_url,uploadPreview.item.url,'capa Preview retorna seu objeto');
++eq(mediaProd.items[0].foto_url,uploadProd.item.url,'capa Production retorna seu objeto');
++assert.notEqual(mediaPreview.items[0].foto_url, mediaProd.items[0].foto_url, 'as chaves de objeto são diferentes'); verified++;
++
++for (const fixture of fixtures) {
++  const {lead1,lead2} = fixture.competition;
++  const won = await request(fixture,'POST',`/leads/${lead1.id}/close`,{result:'Ganho',note:'Contrato assinado e registrado.'});
++  eq(won.disputeResolution.enabled,true,'resolução ativa');
++  eq(won.disputeResolution.competitorsRequalified,1,'requalifica concorrente');
++  eq(propertyRow(fixture,homes[fixtures.indexOf(fixture)].code).status,'Vendido','fecha imóvel');
++  eq(leadRow(fixture,lead2.id).stage,'Qualificação','concorrente volta à Qualificação');
++  eq(leadRow(fixture,lead2.id).property_id,null,'concorrente perde associação');
++  eq(leadRow(fixture,lead2.id).followup_at,new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),'follow-up hoje');
++  eq(fixture.sqlite.prepare('PRAGMA foreign_key_check').all().length,0,'chaves estrangeiras íntegras');
++}
++// Fechamento Perdido não altera outro lead ativo em nenhuma das duas bases.
++for (const fixture of fixtures) {
++  const home = await createProperty(fixture,`${fixture.name} - disputa perdida`);
++  const a = await createLead(fixture,home,'Proposta Enviada',`Perdedor ${fixture.name}`);
++  const b = await createLead(fixture,home,'Documentação/Crédito',`Ativo ${fixture.name}`);
++  const snapshot = leadRow(fixture,b.id);
++  await request(fixture,'POST',`/leads/${a.id}/close`,{result:'Perdido',note:'Cliente desistiu do negócio.'});
++  eq(propertyRow(fixture,home.code).status,'Reservado','outro lead mantém reserva');
++  eq(leadRow(fixture,b.id).property_id,snapshot.property_id,'Perdido não desvincula outro');
++  eq(leadRow(fixture,b.id).stage,snapshot.stage,'Perdido não muda etapa de outro');
++}
++// Falha fechada: sem MEDIA_ENV ou sem bucket não excluir metadados deixando fotos órfãs.
++for (const fixture of fixtures) {
++  const propCode = homes[fixtures.indexOf(fixture)].code;
++  await request(fixture,'GET',`/media/properties/${propCode}/images`,undefined,503,false,{MEDIA_ENV:undefined});
++  await request(fixture,'GET',`/media/properties/${propCode}/images`,undefined,503,false,{MEDIA_BUCKET:undefined});
++  await request(fixture,'DELETE',`/properties/${propCode}`,undefined,503,false,{MEDIA_BUCKET:undefined});
++  eq(propertyRow(fixture,propCode).deleted_at,null,'exclusão bloqueada preserva imóvel');
++}
++// Sem cópias cruzadas no cadastro e nos objetos.
++eq(count(preview,'properties'),2,'Preview mantém duas propriedades');
++eq(count(production,'properties'),2,'Production mantém duas propriedades');
++eq(preview.objects.size,1,'Preview mantém seu objeto');
++eq(production.objects.size,1,'Production mantém seu objeto');
++console.log(`PASSOU: ${verified} verificações de paridade Preview/Production com D1 e R2 isolados.`);
+--- a/tests/preview-crm.test.mjs
++++ b/tests/preview-crm.test.mjs
+@@ -83,7 +83,7 @@
+ // Movimentação: campos em ordem correta, edição sem link/property e PATCH atômico por etapa.
+ const createForm = html.slice(html.indexOf('id="new-lead-modal"'), html.indexOf('MODAL: FECHAMENTO DE LEAD'));
+ assert.ok(createForm.indexOf('id="lead-prop-box"') < createForm.indexOf('id="lead-property-field-wrapper"'));
+-assert.ok(html.indexOf('<!-- Imóvel associado + região: posicionados junto à movimentação do funil -->') < html.indexOf('<span>Fechar Lead (Ganho / Perdido)</span>'));
++assert.ok(html.indexOf('<!-- Imóvel associado + região: posicionados junto à movimentação do funil -->') < html.indexOf('<span>Encerrar Lead (Ganho ou Perda)</span>'));
+ assert.equal((html.match(/id="detail-property"/g) || []).length, 1);
+ checks += 3;
+ 
+@@ -163,9 +163,9 @@
+   'Mover Etapa no Funil (Toque para alterar):',
+   'Chamar no WhatsApp',
+   'Próximo follow-up:',
+-  'Fechar Lead (Ganho / Perdido)',
+   'Registrar Nova Interação / Follow-up:',
+-  'Fechar Janela',
++  'Histórico de Atendimento:',
++  'Encerrar Lead (Ganho ou Perda)',
+ ].map(label => {
+   const n = detailHtml.indexOf(label);
+   assert.ok(n >= 0, `Bloco ausente no modal: ${label}`);
+--- a/tests/r2-media.test.mjs
++++ b/tests/r2-media.test.mjs
+@@ -107,7 +107,9 @@
+ const wrongOrigin = await call(media,'PATCH',`media/properties/${p.code}/images/${created[4].id}`,{cover:true},403,{headers:{Origin:'https://evil.example'}});
+ check(!!wrongOrigin.error,'origem externa bloqueada');
+ await call(media,'GET',`media/properties/${p.code}/images`,null,401,{env:{ ...env, DEV_BYPASS:'0', ACCESS_TEAM_DOMAIN:'example.cloudflareaccess.com', ACCESS_AUD:'test-aud' }});
+-await call(media,'PUT',`media/properties/${p.code}/images`,tinyWebp,503,{binary:true,env:{...env,MEDIA_ENV:'production'}});
++const prodGallery = await call(media,'GET',`media/properties/${p.code}/images`,null,200,{env:{...env,MEDIA_ENV:'production'}});
++check(prodGallery.images.length===9,'produção consulta mesma galeria R2 via binding');
++await call(media,'GET',`media/properties/${p.code}/images`,null,503,{env:{...env,MEDIA_ENV:undefined}});
+ check(db.prepare('PRAGMA foreign_key_check').all().length===0,'FK íntegra');
+ // Atualização de valor/status não apaga galeria.
+ const patch = await call(main,'PATCH',`properties/${p.code}`,{price:420000});
+@@ -120,14 +122,16 @@
+ check(db.prepare('SELECT count(*) AS n FROM property_images').get().n===0,'D1 sem metadados órfãos');
+ check(!!db.prepare('SELECT deleted_at FROM properties WHERE id=1').get().deleted_at,'exclusão lógica preservada');
+ check((await call(main,'GET','public/properties')).items.length===0,'imóvel excluído fora da vitrine');
+-// A leitura dos links antigos fica exclusiva do ambiente de produção.
++// URLs de fotos legadas não são usadas em nenhum ambiente.
+ const legacy = await call(main,'POST','properties',{title:'Casa de teste legada',purpose:'Comprar',neighborhood:'Centro'},201);
+ db.prepare('UPDATE properties SET photo_url=? WHERE id=?').run('https://x.example.org/a.jpg',2);
+ const previewPublic = await call(main,'GET','public/properties');
+ check(previewPublic.items[0].foto_url==='', 'preview não utiliza links legados');
+ check(previewPublic.items[0].images.length===0, 'sem galeria nova');
+ const prodPublic = await call(main,'GET','public/properties',null,200,{env:{...env,MEDIA_ENV:'production'}});
+-check(prodPublic.items[0].foto_url==='https://x.example.org/a.jpg','produção conserva URLs anteriores');
++check(prodPublic.items[0].foto_url==='', 'produção também oculta URLs antigas');
++check(prodPublic.items[0].images.length===0, 'produção sem R2 não inventa foto');
++await call(main,'PATCH',`properties/${legacy.code}`,{photo_url:'https://x.example.org/alterada.jpg'},400,{env:{...env,MEDIA_ENV:'production'}});
+ await call(main,'PATCH',`properties/${legacy.code}`,{photo_url:'https://x.example.org/alterada.jpg'},400);
+ const imported = await call(main,'POST','properties/import',{rows:[{title:'CSV com URL de foto',purpose:'Comprar',neighborhood:'Centro',photo_url:'https://x.example.org/a.jpg'}]});
+ check(imported.skipped.length===1, 'importação de URL também bloqueada no preview');
+@@ -190,4 +194,4 @@
+   for(const script of scripts) new vm.Script(script);
+   tests++;
+ }
+-console.log(`PASSOU: ${tests} verificações de mídia R2/galeria, CRUD, limite 10, auth, preview e compatibilidade.`);
++console.log(`PASSOU: ${tests} verificações de mídia R2/galeria, CRUD, limite 10, auth, preview/produção e compatibilidade.`);
+--- a/tests/vitrine-sem-imagem.test.mjs
++++ b/tests/vitrine-sem-imagem.test.mjs
+@@ -7,7 +7,7 @@
+ import { fileURLToPath } from 'node:url';
+ 
+ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+-const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
++const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8').replace(/\r\n/g, '\n');
+ const scriptStart = html.indexOf('        (function () {\n            "use strict";');
+ const scriptEnd = html.indexOf('        })();', scriptStart);
+ assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, 'script da vitrine localizado');
+--- a/wrangler.toml
++++ b/wrangler.toml
+@@ -14,7 +14,7 @@
+ database_id = "23514b9c-5c0e-464c-8c85-1342b4fae522"
+ migrations_dir = "migrations"
+ 
+-# R2: produção configurada, sem habilitar as novas rotas de escrita em produção.
++# R2: binding de produção; mesmas regras de negócio, armazenamento separado por ambiente.
+ [[r2_buckets]]
+ binding = "MEDIA_BUCKET"
+ bucket_name = "yolanda-imoveis-prod"
+@@ -22,7 +22,7 @@
+ [vars]
+ MEDIA_ENV = "production"
+ 
+-# O preview utiliza exclusivamente DB=yolanda-crm-dev + bucket R2 de testes.
++# Preview utiliza exclusivamente DB=yolanda-crm-dev + R2 yolanda-imoveis-dev.
+ [[env.preview.r2_buckets]]
+ binding = "MEDIA_BUCKET"
+ bucket_name = "yolanda-imoveis-dev"

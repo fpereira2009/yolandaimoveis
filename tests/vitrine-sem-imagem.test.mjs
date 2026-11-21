@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8').replace(/\r\n/g, '\n');
 const scriptStart = html.indexOf('        (function () {\n            "use strict";');
 const scriptEnd = html.indexOf('        })();', scriptStart);
 assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, 'script da vitrine localizado');

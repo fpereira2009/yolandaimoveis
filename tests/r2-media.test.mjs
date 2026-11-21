@@ -107,7 +107,9 @@ check(bucket.size === 9,'upload inválido não armazenado');
 const wrongOrigin = await call(media,'PATCH',`media/properties/${p.code}/images/${created[4].id}`,{cover:true},403,{headers:{Origin:'https://evil.example'}});
 check(!!wrongOrigin.error,'origem externa bloqueada');
 await call(media,'GET',`media/properties/${p.code}/images`,null,401,{env:{ ...env, DEV_BYPASS:'0', ACCESS_TEAM_DOMAIN:'example.cloudflareaccess.com', ACCESS_AUD:'test-aud' }});
-await call(media,'PUT',`media/properties/${p.code}/images`,tinyWebp,503,{binary:true,env:{...env,MEDIA_ENV:'production'}});
+const prodGallery = await call(media,'GET',`media/properties/${p.code}/images`,null,200,{env:{...env,MEDIA_ENV:'production'}});
+check(prodGallery.images.length===9,'produção consulta mesma galeria R2 via binding');
+await call(media,'GET',`media/properties/${p.code}/images`,null,503,{env:{...env,MEDIA_ENV:undefined}});
 check(db.prepare('PRAGMA foreign_key_check').all().length===0,'FK íntegra');
 // Atualização de valor/status não apaga galeria.
 const patch = await call(main,'PATCH',`properties/${p.code}`,{price:420000});
@@ -120,14 +122,16 @@ check(bucket.size===0,'R2 sem imagens órfãs após exclusão');
 check(db.prepare('SELECT count(*) AS n FROM property_images').get().n===0,'D1 sem metadados órfãos');
 check(!!db.prepare('SELECT deleted_at FROM properties WHERE id=1').get().deleted_at,'exclusão lógica preservada');
 check((await call(main,'GET','public/properties')).items.length===0,'imóvel excluído fora da vitrine');
-// A leitura dos links antigos fica exclusiva do ambiente de produção.
+// URLs de fotos legadas não são usadas em nenhum ambiente.
 const legacy = await call(main,'POST','properties',{title:'Casa de teste legada',purpose:'Comprar',neighborhood:'Centro'},201);
 db.prepare('UPDATE properties SET photo_url=? WHERE id=?').run('https://x.example.org/a.jpg',2);
 const previewPublic = await call(main,'GET','public/properties');
 check(previewPublic.items[0].foto_url==='', 'preview não utiliza links legados');
 check(previewPublic.items[0].images.length===0, 'sem galeria nova');
 const prodPublic = await call(main,'GET','public/properties',null,200,{env:{...env,MEDIA_ENV:'production'}});
-check(prodPublic.items[0].foto_url==='https://x.example.org/a.jpg','produção conserva URLs anteriores');
+check(prodPublic.items[0].foto_url==='', 'produção também oculta URLs antigas');
+check(prodPublic.items[0].images.length===0, 'produção sem R2 não inventa foto');
+await call(main,'PATCH',`properties/${legacy.code}`,{photo_url:'https://x.example.org/alterada.jpg'},400,{env:{...env,MEDIA_ENV:'production'}});
 await call(main,'PATCH',`properties/${legacy.code}`,{photo_url:'https://x.example.org/alterada.jpg'},400);
 const imported = await call(main,'POST','properties/import',{rows:[{title:'CSV com URL de foto',purpose:'Comprar',neighborhood:'Centro',photo_url:'https://x.example.org/a.jpg'}]});
 check(imported.skipped.length===1, 'importação de URL também bloqueada no preview');
@@ -190,4 +194,4 @@ for(const file of [crm,site]) {
   for(const script of scripts) new vm.Script(script);
   tests++;
 }
-console.log(`PASSOU: ${tests} verificações de mídia R2/galeria, CRUD, limite 10, auth, preview e compatibilidade.`);
+console.log(`PASSOU: ${tests} verificações de mídia R2/galeria, CRUD, limite 10, auth, preview/produção e compatibilidade.`);

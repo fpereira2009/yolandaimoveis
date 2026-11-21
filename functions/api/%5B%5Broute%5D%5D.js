@@ -148,7 +148,7 @@ const CLIENTS_SQL = `SELECT c.*,
 const propOut = (r, images = [], env) => withGallery({
   id: propCode(r.id), code: propCode(r.id), title: r.title, purpose: r.purpose, type: r.type, neighborhood: r.neighborhood,
   city: r.city, price: r.price, area_m2: r.area_m2, bedrooms: r.bedrooms, bathrooms: r.bathrooms, parking: r.parking,
-  photo_url: r.photo_url, ...(env?.MEDIA_ENV === 'preview' ? {} : { legacy_photo_url: r.photo_url }), badge: r.badge, status: r.status, description: r.description,
+  photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
 }, images, env);
 const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
   codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
@@ -467,21 +467,16 @@ async function addNote(env, id, b) {
   return loadLead(env, id);
 }
 
-// A v4.3.4 era condicionada a MEDIA_ENV === 'preview'. Em Pages Preview o
-// binding pode não ter sido sincronizado com o dashboard, e a regra era
-// silenciosamente ignorada. O ambiente production permanece explicitamente
-// isolado. Uma ausência de MEDIA_ENV é tratada como preview neste pacote
-// de homologação (NÃO publicar em produção sem confirmar a variável production).
-const disputeRulesEnabled = (env) => String(env.MEDIA_ENV || '').trim().toLowerCase() !== 'production';
+// Regra comercial unificada: nunca usar MEDIA_ENV para ativar/desativar
+// disputa entre leads. O ambiente só seleciona bindings de D1 e R2.
 
 async function closeLead(env, id, b) {
   const cur = await loadLeadRow(env, id);
   if (cur.stage === 'Fechado') throw new HttpError(409, 'Este lead já está fechado.');
   const result = oneOf(b.result, CLOSE_RESULTS, 'resultado');
   const note = str(b.note, 'observação do resultado', { min: 3, max: 800, required: true });
-  const rulesEnabled = disputeRulesEnabled(env);
   // Um imóvel definitivamente negociado não pode ser ganho de novo por outro lead.
-  if (rulesEnabled && result === 'Ganho' && cur.property_id &&
+  if (result === 'Ganho' && cur.property_id &&
       ['Vendido', 'Alugado', 'Inativo'].includes(cur.p_status)) {
     throw new HttpError(409, `O imóvel ${propCode(cur.property_id)} já está ${cur.p_status}. Revise a associação antes de fechar como Ganho.`);
   }
@@ -497,19 +492,14 @@ async function closeLead(env, id, b) {
       const novo = cur.p_purpose === 'Alugar' ? 'Alugado' : 'Vendido';
       // Audita e requalifica os outros leads ativos dentro do MESMO D1.batch.
       // O filtro usa property_id, nunca somente a descrição livre do imóvel.
-      if (rulesEnabled) {
-        stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
-        rivalsUpdateIndex = stmts.length;
-        stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
-      }
+      stmts.push(competingLeadEventStmt(env, cur.property_id, id, t));
+      rivalsUpdateIndex = stmts.length;
+      stmts.push(requalifyCompetingLeadsStmt(env, cur.property_id, id, t, todayBR()));
       stmts.push(closeWonStmt(env, cur.property_id, t));
       events.push(['nota', `Imóvel ${code} marcado como ${novo} automaticamente.`]);
     } else if ((result === 'Perdido' || cur.category === 'Captação') && cur.p_status === 'Reservado') {
-      // Perdido não altera os demais; só libera se nenhum interessado ativo
-      // continuar associado. Regras antigas ficam restritas à produção.
-      stmts.push(rulesEnabled
-        ? releaseAfterLossStmt(env, cur.property_id, t)
-        : releaseStmt(env, cur.property_id, t));
+      // Perdido não altera os demais; só libera se não houver interessado ativo.
+      stmts.push(releaseAfterLossStmt(env, cur.property_id, t));
       events.push(['nota', `Reserva do imóvel ${code} reavaliada após fechamento perdido.`]);
     }
   }
@@ -522,8 +512,8 @@ async function closeLead(env, id, b) {
   return {
     ...lead,
     disputeResolution: {
-      version: '4.3.4-revisao-1',
-      enabled: rulesEnabled,
+      version: '4.3.8-regras-unificadas',
+      enabled: true,
       linkedProperty: cur.property_id ? propCode(cur.property_id) : null,
       competitorsRequalified: rivalsUpdateIndex >= 0
         ? Number(batchResult[rivalsUpdateIndex]?.meta?.changes || 0) : 0,
@@ -610,22 +600,8 @@ async function patchClient(env, id, b) {
 }
 
 // ---------- Imóveis ----------
-async function resolveImage(url) {
-  try {
-    if (new URL(url).hostname === 'ibb.co') {
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(4000) });
-      const m = (await r.text()).match(/<meta property="og:image" content="([^"]+)"/i);
-      if (m && /^https:\/\//.test(m[1])) return m[1];
-    }
-  } catch (e) { /* mantém o link original */ }
-  return url;
-}
-async function photoField(v, resolve = true) {
-  const u = String(v ?? '').trim();
-  if (!u) return '';
-  if (!/^https:\/\/[^\s]+$/i.test(u) || u.length > 500) throw new HttpError(400, 'URL da foto inválida (use um link https de até 500 caracteres).');
-  return resolve ? resolveImage(u) : u;
-}
+// Novas fotos entram exclusivamente via upload R2. Links antigos permanecem
+// armazenados na coluna legada, mas não são aceitos ou exibidos pela API.
 const PROP_FIELDS = {
   title: (v) => str(v, 'título', { min: 3, max: 150, required: true }),
   purpose: (v) => oneOf(v, PURPOSES, 'finalidade'),
@@ -637,12 +613,12 @@ const PROP_FIELDS = {
   badge: (v) => str(v, 'destaque', { max: 40 }), status: (v) => oneOf(v, PSTATUS, 'status'),
   description: (v) => str(v, 'descrição', { max: 2000 }),
 };
-async function propValues(b, { resolvePhoto = true, defaults = false, r2Only = false } = {}) {
+async function propValues(b, { defaults = false } = {}) {
   const out = {};
   const src = defaults ? { type: 'Casa', city: 'Resende - RJ', status: 'Disponível', purpose: 'Comprar', ...b } : b;
   for (const [k, fn] of Object.entries(PROP_FIELDS)) if (src[k] !== undefined) out[k] = fn(src[k]);
-  if (r2Only && src.photo_url !== undefined && String(src.photo_url || '').trim()) throw new HttpError(400, 'Fotos por URL não são aceitas no preview. Utilize o upload R2.');
-  if (!r2Only && src.photo_url !== undefined) out.photo_url = await photoField(src.photo_url, resolvePhoto);
+  if (src.photo_url !== undefined && String(src.photo_url || '').trim())
+    throw new HttpError(400, 'Fotos por URL não são aceitas. Utilize o upload R2.');
   if (defaults && (!out.title || !out.neighborhood)) { PROP_FIELDS.title(src.title); PROP_FIELDS.neighborhood(src.neighborhood); }
   return out;
 }
@@ -653,7 +629,7 @@ async function insertProperty(env, vals) {
   return propOut(row, [], env);
 }
 async function patchProperty(env, id, b) {
-  const vals = await propValues(b, { r2Only: env?.MEDIA_ENV === 'preview' });
+  const vals = await propValues(b);
   // Impede a liberação MANUAL de uma reserva que outro lead ainda mantém.
   // Vendido/Alugado não são revertidos automaticamente; a reversão desses
   // estados finais permanece uma decisão manual do corretor.
@@ -677,7 +653,8 @@ async function patchProperty(env, id, b) {
 // da vitrine. Exclui em seguida os objetos R2 e os metadados D1; DELETE é idempotente
 // para permitir limpeza manual em caso de falha transitória do R2 (sem 2PC entre serviços).
 async function deletePropertyWithMedia(env, id) {
-  if (!mediaEnabled(env)) return softDelete(env, 'properties', id);
+  // Não apagar o registro sem limpar fotos: falhar fechado se o R2/D1 não estiver configurado.
+  if (!mediaEnabled(env)) throw new HttpError(503, 'Galeria R2 indisponível. Confira MEDIA_ENV, DB e MEDIA_BUCKET.');
   const row = await env.DB.prepare('SELECT id, deleted_at FROM properties WHERE id = ?').bind(id).first();
   if (!row) throw new HttpError(404, 'Imóvel não encontrado.');
   if (!row.deleted_at) {
@@ -698,7 +675,7 @@ async function importProperties(env, b) {
   const rows = Array.isArray(b.rows) ? b.rows.slice(0, 200) : [];
   const created = [], skipped = [];
   for (let i = 0; i < rows.length; i++) {
-    try { created.push(await insertProperty(env, await propValues(rows[i], { resolvePhoto: false, defaults: true, r2Only: env?.MEDIA_ENV === 'preview' }))); }
+    try { created.push(await insertProperty(env, await propValues(rows[i], { defaults: true }))); }
     catch (e) { skipped.push({ row: i + 1, error: e.message }); }
   }
   return { created: created.length, skipped };
@@ -778,7 +755,6 @@ async function exportCsv(env, base) {
 
 // ---------- Roteador ----------
 export async function onRequest({ request, env, params }) {
-  let authed = false;
   try {
     const method = request.method;
     const parts = [].concat(params.route || []);
@@ -796,16 +772,17 @@ export async function onRequest({ request, env, params }) {
     }
 
     await authenticate(request, env);
-    authed = true;
     const [res, id, sub] = parts;
-    // Diagnóstico autenticado: confira que a API publicada contém a revisão
-    // da regra de disputa e que MEDIA_ENV não herdou 'production' no Preview.
+    // Diagnóstico autenticado: mesma regra de disputa para ambos os ambientes;
+    // MEDIA_ENV controla apenas a disponibilidade da integração R2.
     if (res === 'diagnostics' && id === 'disputes' && !sub && method === 'GET') {
       return json({
-        apiVersion: '4.3.4-revisao-1',
+        apiVersion: '4.3.8-regras-unificadas',
         mediaEnv: env.MEDIA_ENV || null,
-        disputeRulesEnabled: disputeRulesEnabled(env),
+        disputeRulesEnabled: true,
+        mediaEnabled: mediaEnabled(env),
         dbBindingAvailable: Boolean(env.DB),
+        mediaBucketBindingAvailable: Boolean(env.MEDIA_BUCKET),
       });
     }
     if (res === 'export' && method === 'GET' && id) return await exportCsv(env, id.replace(/\.csv$/, ''));
@@ -833,7 +810,7 @@ export async function onRequest({ request, env, params }) {
           const galleries = await propertyImageMap(env);
           return json({ items: rows.map(r => propOut(r, galleries.get(r.id) || [], env)) });
         }
-        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true, r2Only: env?.MEDIA_ENV === 'preview' })), 201);
+        if (method === 'POST') return json(await insertProperty(env, await propValues(body, { defaults: true })), 201);
       } else if (id === 'import' && method === 'POST') return json(await importProperties(env, body));
       else if (!sub) {
         if (method === 'PATCH') return json(await patchProperty(env, parseId(id), body));
@@ -845,6 +822,7 @@ export async function onRequest({ request, env, params }) {
     if (e instanceof HttpError) return json({ error: e.message, ...(e.extra || {}) }, e.status);
     if (isUnique(e)) return json({ error: 'Registro duplicado.' }, 409);
     console.error(e);
-    return json({ error: authed ? 'Erro interno: ' + String((e && e.message) || e).slice(0, 300) : 'Erro interno.' }, 500);
+    // Não enviar detalhes de exceção, SQL ou nomes internos de infraestrutura.
+    return json({ error: 'Erro interno. Tente novamente ou contate o suporte.' }, 500);
   }
 }

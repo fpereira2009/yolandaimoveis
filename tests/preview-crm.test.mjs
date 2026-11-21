@@ -83,7 +83,7 @@ checks += 3;
 // Movimentação: campos em ordem correta, edição sem link/property e PATCH atômico por etapa.
 const createForm = html.slice(html.indexOf('id="new-lead-modal"'), html.indexOf('MODAL: FECHAMENTO DE LEAD'));
 assert.ok(createForm.indexOf('id="lead-prop-box"') < createForm.indexOf('id="lead-property-field-wrapper"'));
-assert.ok(html.indexOf('<!-- Imóvel associado + região: posicionados junto à movimentação do funil -->') < html.indexOf('<span>Fechar Lead (Ganho / Perdido)</span>'));
+assert.ok(html.indexOf('<!-- Imóvel associado + região: posicionados junto à movimentação do funil -->') < html.indexOf('<span>Encerrar Lead (Ganho ou Perda)</span>'));
 assert.equal((html.match(/id="detail-property"/g) || []).length, 1);
 checks += 3;
 
@@ -163,9 +163,9 @@ const positions = [
   'Mover Etapa no Funil (Toque para alterar):',
   'Chamar no WhatsApp',
   'Próximo follow-up:',
-  'Fechar Lead (Ganho / Perdido)',
   'Registrar Nova Interação / Follow-up:',
-  'Fechar Janela',
+  'Histórico de Atendimento:',
+  'Encerrar Lead (Ganho ou Perda)',
 ].map(label => {
   const n = detailHtml.indexOf(label);
   assert.ok(n >= 0, `Bloco ausente no modal: ${label}`);

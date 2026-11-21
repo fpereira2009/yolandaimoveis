@@ -1,4 +1,4 @@
-// Rotas dedicadas ao R2 (preview): API binária separada do CRUD de imóveis/leads.
+// Rotas dedicadas ao R2 (Preview e Production): API binária separada do CRUD.
 // GET /api/media/file/properties/:id/:uuid.webp          (público)
 // GET|PUT /api/media/properties/:code/images             (CRC / Access)
 // PATCH|DELETE /api/media/properties/:code/images/:id    (CRC / Access)
@@ -132,7 +132,7 @@ async function removeImage(env, propertyId, imageId) {
 }
 export async function onRequest({ request, env, params }) {
   try {
-    if (!mediaEnabled(env)) throw new ApiError(503, 'Galeria R2 disponível somente em preview configurado.');
+    if (!mediaEnabled(env)) throw new ApiError(503, 'Galeria R2 indisponível. Confira MEDIA_ENV, DB e MEDIA_BUCKET.');
     const parts = [].concat(params.path || []);
     const method = request.method;
     if (parts[0] === 'file' && (method === 'GET' || method === 'HEAD')) {
