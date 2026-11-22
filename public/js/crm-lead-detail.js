@@ -90,7 +90,7 @@
                     <label class="block text-xs font-heading font-bold text-moss">Mover Etapa no Funil (Toque para alterar):</label>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         ${STAGES.map(st => `
-                            <button onclick="moveLeadStage('${esc(lead.id)}', '${st}')" 
+                            <button onclick="moveLeadStage('${esc(lead.id)}', '${st}')"
                                     class="py-2.5 px-3 rounded-xl text-xs font-bold border text-left transition-all ${lead.stage === st ? 'bg-moss text-white border-moss' : 'bg-white text-charcoal/80 border-sand-border hover:border-moss'}">
                                 ${lead.stage === st ? '✓ ' : ''}${st}
                             </button>
@@ -137,7 +137,7 @@
                 <form onsubmit="addLeadNote(event, '${esc(lead.id)}')" class="space-y-2">
                     <label class="block text-xs font-heading font-bold text-moss">Registrar Nova Interação / Follow-up:</label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="new-note-text" required placeholder="Ex: Cliente retornou ligação, visita confirmada..." 
+                        <input type="text" id="new-note-text" required placeholder="Ex: Cliente retornou ligação, visita confirmada..."
                                class="flex-1 px-3.5 py-2.5 rounded-xl bg-sand/60 border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                         <button type="submit" class="px-4 py-2.5 rounded-xl bg-terracotta text-white font-heading font-bold text-xs shrink-0">
                             Salvar Nota
@@ -433,4 +433,3 @@
             if (!pending.edited && !field.value) field.value = pending.value;
             datalistPreviousSelections.delete(field);
         }
-
