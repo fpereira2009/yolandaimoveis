@@ -210,14 +210,22 @@
             <!-- Coluna Direita: Foto de Destaque  + Cartão Flutuante da Corretora -->
             <div class="lg:col-span-5">
                 <div class="bg-white p-4 sm:p-5 rounded-3xl border border-sand-border shadow-soft space-y-4">
-                    <div class="relative rounded-2xl overflow-hidden aspect-[16/10] bg-moss-soft">
-                        <img src="public\img\960px-A_cidade_de_Resende_RJ,_aos_pés_da_Serra_da_Mantiqueira.jpg"
-                             onerror="this.onerror=null;this.src='https://placehold.co/800x500/2C4A3E/F5F2EB?text=Yolanda+Transa%C3%A7%C3%B5es+Imobili%C3%A1rias';"
-                             alt="Crédito: Foto: Pedro Luz Fotografia / Wikimedia Commons (CC BY-SA 4.0)"
-                             class="w-full h-full object-cover">
-                        <div class="absolute top-3 left-3 px-3 py-1 rounded-full bg-moss/90 backdrop-blur-xs text-white text-xs font-bold">
-                            Resende - Para Morar ou Investir
+                    <div class="relative rounded-2xl overflow-hidden aspect-[16/10] bg-moss-soft group">
+                        <img src="/img/960px-A_cidade_de_Resende_RJ,_aos_pés_da_Serra_da_Mantiqueira.jpg"
+                            onerror="this.onerror=null;this.src='https://placehold.co/800x500/2C4A3E/F5F2EB?text=Yolanda+Transa%C3%A7%C3%B5es+Imobili%C3%A1rias';"
+                            alt="Vista panorâmica da cidade de Resende RJ aos pés da Serra da Mantiqueira"
+                            title="Crédito: Foto: Pedro Luz Fotografia / Wikimedia Commons (CC BY-SA 4.0)"
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+
+                        <!-- Selo superior -->
+                        <div class="absolute top-3 left-3 px-3 py-1 rounded-full bg-moss/90 backdrop-blur-xs text-white text-xs font-bold shadow-xs">
+                            Resende • Para Morar ou Investir
                         </div>
+
+                        <!-- Crédito discreto (exigência da licença CC BY-SA 4.0) -->
+                        <span class="absolute bottom-2 right-3 text-[10px] text-white/80 bg-black/30 px-2 py-0.5 rounded-sm backdrop-blur-xs">
+                            Foto: Pedro Luz / Wikimedia (CC BY-SA 4.0)
+                        </span>
                     </div>
 
                     <!-- Cartão Flutuante da Corretora com Foto 1:1 -->
