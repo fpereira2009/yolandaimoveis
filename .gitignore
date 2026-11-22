@@ -1,0 +1,14 @@
+# Arquivos auxiliares de comparação
+*.patch
+
+# Arquivos temporários do Cloudflare Wrangler
+.wrangler/
+
+# Dependências
+node_modules/
+
+# Credenciais e configurações locais
+.env
+.env.*
+.dev.vars
+.dev.vars.*
