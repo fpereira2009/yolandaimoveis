@@ -2,6 +2,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: base-uri 'self'; object-src 'none'; frame-ancestors 'none'
 /app/*
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow

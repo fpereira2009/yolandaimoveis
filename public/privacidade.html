@@ -467,7 +467,7 @@
       <div class="meta-bar">
         <span><strong>Controlador:</strong> Ieda Holanda Ferreira Sousa (CRECI-RJ 112406)</span>
         <span><strong>Nome Fantasia:</strong> Yolanda Transações Imobiliárias</span>       
-        <span><strong>Última atualização:</strong> 19 de novembro de 2026</span>
+        <span><strong>Última atualização e vigência:</strong> 21 de novembro de 2026 (versão 4.4.0)</span>
       </div>
       
       <nav class="toc" aria-label="Sumário da Política de Privacidade">
@@ -498,7 +498,7 @@
         <h2>2. Dados Pessoais Coletados</h2>
         <p>Coletamos apenas os dados necessários para a prestação dos serviços de intermediação e consultoria imobiliária. Eles chegam até nós de quatro formas: pelos formulários do site, pelo atendimento no WhatsApp, por cadastros feitos pela nossa equipe e, de forma automática, por registros técnicos de acesso.</p>
         <ul>
-          <li><strong>Formulário de interesse em imóvel (site):</strong> nome, telefone/WhatsApp com DDD e o imóvel de interesse (código e título), informados por você no detalhe do imóvel.</li>
+          <li><strong>Formulário de interesse em imóvel (site):</strong> nome, telefone/WhatsApp com DDD, mensagem opcional e identificação do imóvel (código e título). Quando você envia o formulário aberto no detalhe de um anúncio, o sistema associa o imóvel ao atendimento (lead) no CRC; novos interesses em imóveis diferentes podem gerar atendimentos separados vinculados ao mesmo cadastro de cliente.</li>
           <li><strong>Formulário &ldquo;Anunciar imóvel&rdquo; (proprietários):</strong> nome, telefone/WhatsApp, finalidade (venda, locação ou ambas), tipo e localização do imóvel e, se desejar, detalhes adicionais.</li>
           <li><strong>Outros dados de contato:</strong> endereço de e-mail, quando informado por você durante o atendimento.</li>
           <li><strong>Dados de Perfil e Atendimento (registrados no CRC):</strong> modalidade (compra ou aluguel), categoria do contato (interessado ou captação de proprietário), perfil (comprador, locatário, proprietário ou investidor), regiões de interesse, faixa de orçamento ou valor do imóvel, preferências, imóvel de interesse, etapa do atendimento, histórico de interações e anotações, datas de acompanhamento (follow-up), indicação de aniversariante do mês e origem do contato (site ou cadastro interno).</li>
@@ -532,7 +532,7 @@
           <li><strong>Cloudflare (infraestrutura):</strong> hospedagem do site e do sistema, execução da aplicação, banco de dados (D1) onde ficam os cadastros de clientes, contatos e imóveis, rede de distribuição de conteúdo, firewall e controle de acesso Zero Trust (Cloudflare Access) da área restrita.</li>
           <li><strong>WhatsApp (Meta Platforms):</strong> ao seguir para o WhatsApp após enviar um formulário ou clicar nos botões de contato, a conversa passa a ser tratada pelo WhatsApp, conforme os termos e a política de privacidade do próprio serviço, sobre os quais não temos controle.</li>
           <li><strong>Google:</strong> fornecimento de fontes tipográficas das páginas (Google Fonts) e, quando utilizado como método de login, autenticação Google Identity/OAuth para a equipe autorizada.</li>
-          <li><strong>Imagens e bibliotecas de terceiros:</strong> as fotografias dos imóveis podem ser exibidas a partir de serviços de hospedagem de imagens (como o ImgBB), e o site carrega estilos, ícones e imagens ilustrativas de redes de distribuição de conteúdo de terceiros, além de serviços intermediários usados para carregar algumas fotos. Ao exibir a página, o seu navegador se conecta a esses serviços, que recebem o endereço IP e dados técnicos do acesso, sem que nós lhes enviemos os dados dos formulários.</li>
+          <li><strong>Fotos e bibliotecas técnicas:</strong> as fotografias dos imóveis são armazenadas no Cloudflare R2 e disponibilizadas por rotas próprias; fotos de anúncios públicos podem ser mantidas temporariamente em cache pelo navegador para acelerar a navegação. Bibliotecas de estilos e ícones podem ser carregadas por provedores externos, que recebem dados técnicos básicos de acesso, sem receber o conteúdo dos formulários.</li>
           <li><strong>Autoridades Públicas:</strong> mediante requisição judicial, administrativa ou obrigação legal expressa.</li>
         </ul>
         <p>
@@ -543,7 +543,7 @@
       <section id="cookies">
         <h2>5. Cookies, Armazenamento Local e Autenticação</h2>
         <p>
-          Nosso site público <strong>não utiliza cookies de rastreamento, publicidade ou análise de comportamento</strong>. O navegador guarda localmente apenas uma cópia técnica do catálogo de imóveis, usada para exibir a última lista salva caso a conexão falhe. Essa cópia não contém dados pessoais e pode ser apagada a qualquer momento limpando os dados do site no navegador.
+          Nosso site público <strong>não utiliza cookies de rastreamento, publicidade ou análise de comportamento</strong>. O navegador guarda localmente apenas uma cópia técnica do catálogo de imóveis, usada para exibir a última lista salva caso a conexão falhe. Essa cópia não contém dados pessoais e pode ser apagada a qualquer momento limpando os dados do site no navegador. Ao abrir ou compartilhar um imóvel, o endereço pode conter o parâmetro <strong>?imovel=YTI-0001</strong>, que identifica apenas o anúncio e não identifica o visitante; quem recebe o link pode visualizar o anúncio enquanto ele estiver publicado. A imagem pública também pode permanecer no cache do navegador após alteração de status, até a expiração ou limpeza do cache.
         </p>
         <div class="callout">
           <strong>Autenticação na área restrita:</strong> no ambiente administrativo (<code>crc.yolandaimoveis.com.br</code>), o login pelo Cloudflare Access (conta Google ou código de uso único por e-mail) gera um cookie técnico de sessão (<code>CF_Authorization</code>), utilizado exclusivamente para verificar a identidade do colaborador autorizado e proteger o acesso à API interna. Quando o login é feito com conta Google, acessamos apenas o endereço de e-mail e o perfil básico de autenticação.

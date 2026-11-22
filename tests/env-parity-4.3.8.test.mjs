@@ -1,5 +1,6 @@
 // Homologação local: mesma lógica de negócios, dois D1 e dois R2 fisicamente separados.
 // node --experimental-sqlite tests/env-parity-4.3.8.test.mjs
+import { configureTestAuth, authHeaders } from './helpers/access-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -49,7 +50,7 @@ function newEnvironment(name) {
     async delete(key) { objects.delete(key); },
   };
   // Bypass existe apenas no fixture local; no remoto, exigir Cloudflare Access.
-  return {name, sqlite, objects, env:{MEDIA_ENV:name, DB, MEDIA_BUCKET, DEV_BYPASS:'1'}};
+  return {name, sqlite, objects, env:configureTestAuth({MEDIA_ENV:name, DB, MEDIA_BUCKET})};
 }
 const fixtures = [newEnvironment('preview'), newEnvironment('production')];
 const [preview, production] = fixtures;
@@ -59,7 +60,7 @@ ok(preview.env.MEDIA_BUCKET !== production.env.MEDIA_BUCKET, 'bindings R2 indepe
 async function request(fixture, method, route, body, expected = 200, binary = false, overrides = {}) {
   const isMedia = route.startsWith('/media/');
   const handler = isMedia ? media : api;
-  const headers = method === 'GET' ? {} : {'Content-Type':binary?'image/webp':'application/json'};
+  const headers = { ...authHeaders(), ...(method === 'GET' ? {} : {'Content-Type':binary?'image/webp':'application/json'}) };
   const req = new Request(`https://${fixture.name}.example.test/api${route}`, {
     method, headers, body: body === undefined ? undefined : binary ? body : JSON.stringify(body),
   });
@@ -83,7 +84,7 @@ async function createLead(fixture, property, stage, name) {
 function propertyRow(fixture, code) { return fixture.sqlite.prepare('SELECT * FROM properties WHERE id=?').get(Number(code.slice(4))); }
 function leadRow(fixture, code) { return fixture.sqlite.prepare('SELECT * FROM leads WHERE id=?').get(Number(code.slice(3))-100); }
 function count(fixture, table) { return fixture.sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get().n; }
-const tinyWebp = Uint8Array.from([82,73,70,70,20,0,0,0,87,69,66,80,86,80,56,32,0,0,0,0]);
+const tinyWebp = Uint8Array.from(Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAgA0JaQAA3AA/vuUAAA=', 'base64'));
 
 // Um anúncio de ID igual em cada banco é um registro distinto, assim como seus arquivos.
 const homes = [];

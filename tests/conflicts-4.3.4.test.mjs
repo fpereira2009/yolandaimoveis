@@ -1,5 +1,7 @@
 // Homologação local 4.3.4: fechamento Ganho/Perdido e concorrência de leads.
 // Executar: node --experimental-sqlite tests/conflicts-4.3.4.test.mjs
+import { configureTestAuth, authHeaders } from './helpers/access-fixture.mjs';
+import { crmScript, vitrineScript, crmComposite, vitrineComposite, crmHtml, vitrineHtml } from './helpers/source-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,7 +39,7 @@ const DB = {
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   },
 };
-const env = { DB, DEV_BYPASS: '1', MEDIA_ENV: 'preview' };
+const env = configureTestAuth({ DB, MEDIA_ENV: 'preview' });
 let checks = 0, sequence = 0;
 const leadId = code => Number(code.replace('LD-', '')) - 100;
 const propId = code => Number(code.replace('YTI-', ''));
@@ -46,7 +48,7 @@ const todayBR = () => new Intl.DateTimeFormat('en-CA', {
 }).format(new Date());
 async function call(method, url, body, status = 200) {
   const req = new Request(`https://preview.example.test/api${url}`, {
-    method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json' },
+    method, headers: { ...authHeaders(), ...(method === 'GET' ? {} : { 'Content-Type': 'application/json' }) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const response = await onRequest({ request: req, env, params: { route: url.slice(1).split('/') } });
@@ -73,7 +75,7 @@ const eq = (actual, expected, message) => { assert.equal(actual, expected, messa
 
 // Diagnóstico ajuda a confirmar qual Function responde no Preview publicado.
 const diagnostic = await call('GET', '/diagnostics/disputes');
-eq(diagnostic.apiVersion, '4.3.8-regras-unificadas');
+eq(diagnostic.apiVersion, '4.5.3');
 eq(diagnostic.mediaEnv, 'preview');
 eq(diagnostic.disputeRulesEnabled, true);
 eq(diagnostic.dbBindingAvailable, true);
@@ -186,7 +188,7 @@ const noBinding = await makeProperty('Sem MEDIA_ENV no Pages Preview');
 const noBindingWinner = await makeLead('Ganhador sem MEDIA_ENV', noBinding, 'Documentação/Crédito');
 const noBindingOther = await makeLead('Concorrente sem MEDIA_ENV', noBinding, 'Proposta Enviada');
 const noBindingResult = await call('POST', `/leads/${noBindingWinner.id}/close`, { result: 'Ganho', note: 'Assinado sem variável MEDIA_ENV.' });
-eq(noBindingResult.disputeResolution.version, '4.3.8-regras-unificadas');
+eq(noBindingResult.disputeResolution.version, '4.5.3');
 eq(noBindingResult.disputeResolution.enabled, true, 'Sem MEDIA_ENV ativa a lógica no pacote Preview');
 eq(noBindingResult.disputeResolution.competitorsRequalified, 1, 'Resposta da API informa quantos concorrentes foram corrigidos');
 eq(rawLead(noBindingOther.id).stage, 'Qualificação');
@@ -228,8 +230,8 @@ eq(rawLead(prodOther.id).followup_at, todayBR());
 
 // Verificações estáticas do front-end: contador ignora Perdido e depois do
 // fechamento um reload integral atualiza os concorrentes em todos os quadros.
-const html = fs.readFileSync(path.join(root, 'public/app/index.html'), 'utf8');
-const inlineScript = html.match(/<script>\s*([\s\S]*?)<\/script>/g)?.at(-1)?.replace(/^<script>/, '').replace(/<\/script>$/, '');
+const html = crmComposite;
+const inlineScript = crmScript;
 new vm.Script(inlineScript, { filename: 'public/app/index.html' }); checks++;
 ok(html.includes("l.closeResult !== 'Perdido' && l.category !== 'Captação'"), 'Badge não contabiliza Perdido');
 ok(html.includes("l.closeResult !== 'Perdido' && (l.stage === 'Proposta Enviada'"), 'KPI propostas não contabiliza Perdido');

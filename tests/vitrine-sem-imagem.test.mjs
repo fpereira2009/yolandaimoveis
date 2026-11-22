@@ -1,5 +1,6 @@
 // Testes locais do fallback visual da vitrine (sem navegador nem Cloudflare).
 // node tests/vitrine-sem-imagem.test.mjs
+import { crmScript, vitrineScript, crmComposite, vitrineComposite, crmHtml, vitrineHtml } from './helpers/source-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,11 +8,12 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8').replace(/\r\n/g, '\n');
-const scriptStart = html.indexOf('        (function () {\n            "use strict";');
-const scriptEnd = html.indexOf('        })();', scriptStart);
+const html = vitrineComposite.replace(/\r\n/g, '\n');
+const code = vitrineScript;
+const scriptStart = code.indexOf('        (function () {');
+const scriptEnd = code.indexOf('        })();', scriptStart);
 assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, 'script da vitrine localizado');
-const code = html.slice(scriptStart, scriptEnd + '        })();'.length);
+
 const r2Cover = '/api/media/file/property-1/cover.webp';
 
 function property(foto_url, images = []) {

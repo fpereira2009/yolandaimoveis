@@ -1,0 +1,20 @@
+YOLANDA CRM 4.5.1 — ARQUIVOS MODIFICADOS OU CRIADOS
+Base: projeto 4.4.0 com 9 melhorias.
+Somente alterações necessárias para restauração dos textos WhatsApp e versão 4.5.1.
+
+- CHANGELOG.md
+- LEIA-ME-RELEASE-4.5.1.md
+- functions/_shared/api/leads.js
+- functions/_shared/api/router.js
+- package-lock.json
+- package.json
+- public/app/index.html
+- public/index.html
+- public/js/crm-clients.js
+- public/js/crm-funnel.js
+- public/js/crm-input-masks.js
+- public/js/crm-lead-detail.js
+- public/js/vitrine-app.js
+- tests/conflicts-4.3.4.test.mjs
+- tests/preview-crm.test.mjs
+- tests/whatsapp-labels-4.5.1.test.mjs
