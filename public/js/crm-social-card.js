@@ -238,7 +238,7 @@
                 ctx.fillStyle = '#232825';
                 ctx.font = `800 ${fs(50)}px "Plus Jakarta Sans", sans-serif`;
                 ctx.fillText(formatBRL(p.price) + (isRental ? '/mês' : ''), cardX + 40, priceY);
-                
+
                 const specsY = cardY + 286;
                 const boxGap = 18;
                 const boxW = (cardW - 80 - boxGap * 3) / 4;
@@ -347,4 +347,3 @@
             await loadAll();
             showToast(`${created} imóveis importados` + (skipped.length ? `; ${skipped.length} ignorados (ex.: linha ${skipped[0].row + 1}: ${skipped[0].error})` : '.'));
         }
-

@@ -168,4 +168,3 @@
         function formatBRL(val) {
             return Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
         }
-

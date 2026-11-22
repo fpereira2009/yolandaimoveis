@@ -249,7 +249,7 @@
                 const count = filteredLeads.filter(l => l.stage === stage).length;
                 const active = stage === selectedStage;
                 return `
-                    <button onclick="selectStage('${stage}')" 
+                    <button onclick="selectStage('${stage}')"
                             class="px-4 py-2.5 rounded-2xl text-xs font-heading font-bold shrink-0 flex items-center gap-2 border transition-all ${active ? 'bg-moss text-white border-moss shadow-xs' : 'bg-white text-charcoal/80 border-sand-border hover:border-moss/30'}">
                         <span>${stage}</span>
                         <span class="px-2 py-0.5 rounded-full text-[11px] ${active ? 'bg-terracotta text-white' : 'bg-sand text-moss'}">${count}</span>
@@ -349,4 +349,3 @@
                 showToast(`${matchedLeads.length} leads encontrados para ${client.name}.`);
             }
         }
-

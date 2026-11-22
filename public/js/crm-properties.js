@@ -296,4 +296,3 @@
             try { await api('/properties/' + code, { method: 'DELETE' }); crmProps = crmProps.filter(p => p.code !== code); closeModal('property-modal'); renderProps(); showToast(code + ' excluído.'); }
             catch (e) { showToast(e.message); }
         }
-

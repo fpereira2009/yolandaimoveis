@@ -218,4 +218,3 @@
                 showToast(`Contato registrado para ${c.name}!`);
             } catch (e) { showToast(e.message); }
         }
-

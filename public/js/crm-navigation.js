@@ -112,4 +112,3 @@
                 showToast(`Comissão ponderada: ${formatBRL(comm.salesWeighted)} (vendas 5%) + ${formatBRL(comm.rentalWeighted)} (1º aluguel).`);
             }
         }
-
