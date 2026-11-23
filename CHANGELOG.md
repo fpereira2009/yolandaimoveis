@@ -7,6 +7,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); 
 
 Nenhuma alteração pendente registrada.
 
+## [4.5.3-hotfix-1] - 2026-11-22
+
+### Fixed
+- O campo **Tipo** no modal de **Novo Imóvel** e **Editar Imóvel** agora é um dropdown nativo (`select`), com as opções: Casa, Apartamento, Terreno, Comercial, Chácara/Sítio e Cobertura. O controle substitui o antigo `input` com `datalist`, preservando `id="prop-type"`, estilos, responsividade e o mesmo contrato de gravação.
+- Ao editar imóvel antigo com tipo personalizado, o sistema preserva esse valor como opção temporária do dropdown, sem sobrescrever o cadastro. Ao abrir Novo Imóvel, a opção legada é removida e o tipo retorna para Casa.
+- Atualizada somente a referência de cache do script `crm-properties.js` para `?v=4.5.3-hf1`.
+
+### Compatibility
+- Nenhuma alteração em banco D1, migrations, bindings R2, rotas da API, regras de leads, autenticação, fotos, valores monetários ou identidade visual.
+- Correção destinada à homologação na branch `dev`, sem deploy remoto neste pacote. O pacote permanece na linha de versão 4.5.3.
+
 ## [4.5.3] - 2026-11-21
 
 ### Fixed

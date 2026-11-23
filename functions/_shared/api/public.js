@@ -1,10 +1,11 @@
+import {published} from '../property-url.js';
 import {HttpError,json,nowIso,todayBR,str,normPhone,oneOf,parseId,propCode} from './common.js';
 import {propPublic} from './serialization.js';
 import {propertyImageMap} from '../property-media.js';
 import {ensureClient,openLeadFor,addEvent,insertLead} from './leads.js';
 // ---------- Público (site) ----------
 async function publicProperties(env) {
-  const rows = (await env.DB.prepare("SELECT * FROM properties WHERE deleted_at IS NULL AND status IN ('Disponível','Reservado') ORDER BY id DESC").all()).results;
+  const rows = (await env.DB.prepare("SELECT * FROM properties WHERE " + published + " ORDER BY id DESC").all()).results;
   const galleries = await propertyImageMap(env);
   return json({ items: rows.map(r => propPublic(r, galleries.get(r.id) || [], env)) }, 200, { 'Cache-Control': 'public, max-age=60' });
 }

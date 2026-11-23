@@ -51,11 +51,13 @@
             // Códigos públicos válidos no parâmetro ?imovel=YTI-0001.
             function getLinkedPropertyCode() {
                 const current = typeof location !== 'undefined' ? location : window.location;
-                const code = new URLSearchParams(current.search || '').get('imovel');
+                const params = new URLSearchParams(current.search || '');
+                const code = params.get('interesse') || params.get('imovel');
                 return /^YTI-\d{4,}$/.test(code || '') ? code : '';
             }
             function propertyDeepLink(prop) {
                 const current = typeof location !== 'undefined' ? location : window.location;
+                if (prop.url) return new URL(prop.url, current.origin).href;
                 const url = new URL(current.pathname || '/', current.origin);
                 url.searchParams.set('imovel', prop.codigo);
                 return url.href;
@@ -625,10 +627,10 @@
                             '</div>' +
 
                             '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
-                                '<button type="button" onclick="openPropertyModal(\'' + prop.codigo.replace(/'/g, "\\'") + '\')" ' +
+                                '<a href="' + esc(propertyDeepLink(prop)) + '" ' +
                                         'class="flex-1 py-3 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs transition-colors">' +
                                     'Ver Detalhes' +
-                                '</button>' +
+                                '</a>' +
                                 '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
                                    'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
                                    'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
@@ -938,6 +940,7 @@
                     } else {
                         const clean = new URL(location.href);
                         clean.searchParams.delete('imovel');
+                        clean.searchParams.delete('interesse');
                         history.replaceState(history.state, '', clean);
                     }
                 }
