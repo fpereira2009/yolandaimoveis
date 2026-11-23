@@ -26,7 +26,7 @@ check(/function openEditProperty\(code\)/.test(js), 'modal de edição preservad
 check(/setPropertyType\(p \? p\.type : 'Casa'\)/.test(js), 'preenchimento respeita tipo atual');
 
 // Exercita a função real de compatibilidade com tipos já cadastrados.
-const fnSrc = js.match(/        function setPropertyType\(value\) \{[\s\S]*?\n        \}\n(?=\n        function fillPropForm)/)?.[0];
+const fnSrc = js.match(/        function setPropertyType\(value\) \{[\s\S]*?\r?\n        \}\r?\n(?=\r?\n        function fillPropForm)/)?.[0];
 check(Boolean(fnSrc), 'helper de compatibilidade existente');
 const field = { value:'', options: options.map(([value,textContent])=>({value,textContent,dataset:{}})),
   querySelectorAll(selector) { return selector==='option[data-legacy-type]' ? this.options.filter(o=>o.dataset.legacyType) : []; },

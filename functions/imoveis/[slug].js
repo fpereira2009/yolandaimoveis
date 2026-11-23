@@ -1,30 +1,31 @@
-import { published, origin, propertyPath, escapeMarkup as esc } from '../_shared/property-url.js';
-import { propertyImageRows, mediaPath, parsePropertyCode } from '../_shared/property-media.js';
-import '../../public/js/property-description.js';
+import { makeHtml, slugId, slugFor, propertyPath, seoResponse } from '../_shared/property-seo.js';
 
-function html(body, status = 200) {
-  return new Response(body, {status, headers: {'Content-Type':'text/html; charset=utf-8', 'Cache-Control':'no-store'}});
-}
-
-export async function onRequestGet({params, env, request}) {
-  const code = params.slug.match(/(yti-\d{4,})$/i)?.[1].toUpperCase();
-  const id = parsePropertyCode(code);
-  const row = id && await env.DB.prepare('SELECT * FROM properties WHERE id = ? AND ' + published).bind(id).first();
-  if (!row) return html('<html lang="pt-BR"><meta charset="utf-8"><title>Imóvel indisponível</title><h1>Imóvel indisponível</h1><a href="/">Ver outros imóveis</a></html>', 404);
-  const path = propertyPath(row);
-  if (new URL(request.url).pathname !== path) return Response.redirect(new URL(path, request.url), 301);
-  const photos = await propertyImageRows(env, id);
-  const location = [row.neighborhood, row.city].filter(Boolean).join(', ');
-  const title = [row.title, location, 'Yolanda Imóveis'].filter(Boolean).join(' | ');
-  const facts = [row.type, row.purpose, row.status, row.bedrooms && row.bedrooms + ' quarto(s)', row.area_m2 && row.area_m2 + ' m²'].filter(Boolean).join(' · ');
-  const price = row.price > 0 ? new Intl.NumberFormat('pt-BR', {style:'currency',currency:'BRL'}).format(row.price) : 'Preço sob consulta';
-  const description = row.description || [row.title, location, facts, price].join(' · ');
-  return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)}</title><meta name="description" content="${esc(description.replace(/\s+/g,' ').slice(0,180))}">
-<link rel="canonical" href="${origin + path}"><link rel="stylesheet" href="/property.css"></head>
-<body><main><nav><a href="/">← Yolanda Transações Imobiliárias</a></nav><article>
-<h1>${esc(row.title)}</h1><p>${esc(location)}</p><p>${esc(facts)}</p><strong>${esc(price)}</strong>
-<div class="gallery">${photos.map((photo,i) => `<img src="${esc(mediaPath(photo.object_key,env))}" alt="${esc(row.title)} — foto ${i+1}" ${i ? 'loading="lazy"' : ''}>`).join('')}</div>
-<section>${globalThis.YolandaDescription.toHtml(description)}</section><p>Referência ${esc(code)}</p>
-<a class="contact" href="/?interesse=${code}">Tenho interesse neste imóvel</a></article></main></body></html>`);
+const notFound = () => seoResponse(404, `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Imóvel não encontrado | Yolanda</title><body style="font-family:Inter,Arial,sans-serif;background:#F5F2EB;color:#2C4A3E;text-align:center;padding:5rem 1rem"><h1>Imóvel não disponível</h1><p>Este anúncio não foi encontrado ou não está mais publicado.</p><a href="/#imoveis">Consultar outros imóveis</a></body></html>`);
+export async function onRequestGet({request, env, params}) {
+  // Fail-closed em Production: nenhuma consulta ao D1 de produção é feita.
+  if (env?.MEDIA_ENV !== 'preview' || !env?.DB || !env?.MEDIA_BUCKET) return notFound();
+  const slug = String(params?.slug || '');
+  if (slug.length > 250 || !/^[a-z0-9-]+$/.test(slug)) return notFound();
+  const id = slugId(slug);
+  if (!id) return notFound();
+  try {
+    const property = await env.DB.prepare(
+      "SELECT * FROM properties WHERE id = ? AND deleted_at IS NULL AND status IN ('Disponível','Reservado') LIMIT 1"
+    ).bind(id).first();
+    if (!property) return notFound();
+    const expected = property.slug || slugFor(property);
+    if (slug !== expected) {
+      const redirectTo = new URL(request.url);
+      redirectTo.pathname = propertyPath(expected);
+      redirectTo.search = '';
+      return seoResponse(301, '', {Location:redirectTo.toString()});
+    }
+    const imgs = (await env.DB.prepare(
+      'SELECT object_key, is_cover, position, id FROM property_images WHERE property_id = ? ORDER BY is_cover DESC, position ASC, id ASC LIMIT 10'
+    ).bind(id).all()).results || [];
+    return seoResponse(200, makeHtml(property, imgs, request.url));
+  } catch (err) {
+    console.error('[seo-ssr]', 'DATABASE_OR_RENDER_ERROR');
+    return seoResponse(503, '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Temporariamente indisponível</title><body>Não foi possível carregar este imóvel. Tente novamente.</body></html>');
+  }
 }
