@@ -204,6 +204,24 @@
             return result.item;
         }
 
+        // Preserva tipos personalizados já existentes no banco ao editar um imóvel.
+        // No cadastro, o dropdown mostra apenas as opções oficiais do sistema.
+        function setPropertyType(value) {
+            const field = document.getElementById('prop-type');
+            const type = String(value || 'Casa').trim() || 'Casa';
+            if (field.querySelectorAll) {
+                field.querySelectorAll('option[data-legacy-type]').forEach(option => option.remove());
+            }
+            if (field.options && !Array.from(field.options).some(option => option.value === type)) {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                option.dataset.legacyType = 'true';
+                field.appendChild(option);
+            }
+            field.value = type;
+        }
+
         function fillPropForm(p) {
             releasePendingPropertyPhotos();
             propExistingImages = Array.isArray(p?.images) ? p.images.map(i => ({...i})) : [];
@@ -214,7 +232,7 @@
             const set = (id, v) => document.getElementById(id).value = v;
             set('prop-edit-id', p ? p.code : '');
             set('prop-title', p ? p.title : ''); set('prop-purpose', p ? p.purpose : 'Comprar');
-            set('prop-type', p ? p.type : 'Casa'); set('prop-price', p ? window.YolandaMasks.formatMoney(p.price) : '');
+            setPropertyType(p ? p.type : 'Casa'); set('prop-price', p ? window.YolandaMasks.formatMoney(p.price) : '');
             set('prop-status', p ? p.status : 'Disponível'); set('prop-neighborhood', p ? p.neighborhood : '');
             set('prop-city', p ? p.city : 'Resende - RJ'); set('prop-area', p ? p.area_m2 : '');
             set('prop-bedrooms', p ? p.bedrooms : ''); set('prop-bathrooms', p ? p.bathrooms : '');
@@ -296,3 +314,4 @@
             try { await api('/properties/' + code, { method: 'DELETE' }); crmProps = crmProps.filter(p => p.code !== code); closeModal('property-modal'); renderProps(); showToast(code + ' excluído.'); }
             catch (e) { showToast(e.message); }
         }
+

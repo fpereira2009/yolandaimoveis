@@ -1,3 +1,5 @@
+import {published, propertyPath} from './_shared/property-url.js';
+import {parsePropertyCode} from './_shared/property-media.js';
 // Controla o acesso à área restrita do CRC e dos deployments de Preview.
 // O Cloudflare Access protege os Previews na borda; validamos seu JWT novamente.
 import { authenticate } from './_shared/access-auth.js';
@@ -49,6 +51,12 @@ export async function onRequest(ctx) {
   if (isCrc && url.pathname === '/') {
     const page = await ctx.env.ASSETS.fetch(new URL('/app/', url));
     return protectedResponse(page);
+  }
+  if (url.pathname === '/' && url.searchParams.has('imovel')) {
+    const id = parsePropertyCode(url.searchParams.get('imovel'));
+    const row = id && await ctx.env.DB.prepare('SELECT id, public_url_terms FROM properties WHERE id = ? AND ' + published).bind(id).first();
+    if (!row) return new Response('Imóvel indisponível', {status:404});
+    return Response.redirect(new URL(propertyPath(row), url), 301);
   }
   const response = await ctx.next();
   return (isCrc || isApp) ? protectedResponse(response) : response;

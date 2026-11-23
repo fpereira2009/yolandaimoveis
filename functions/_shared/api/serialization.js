@@ -1,3 +1,4 @@
+import {propertyPath} from '../property-url.js';
 import { followupView, eventDate, TZ, leadCode, clientCode, propCode, CODE_PREFIX, todayBR, HttpError } from './common.js';
 import {withGallery} from '../property-media.js';
 // ---------- Serialização (formato que as telas esperam) ----------
@@ -35,7 +36,7 @@ const propOut = (r, images = [], env) => withGallery({
   photo_url: r.photo_url, badge: r.badge, status: r.status, description: r.description,
 }, images, env);
 const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
-  codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
+  url: propertyPath(r), codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
   valor: r.price, area_m2: r.area_m2, quartos: r.bedrooms, banheiros: r.bathrooms, vagas: r.parking,
   foto_url: r.photo_url, destaque: r.badge, status: r.status,
   descricao: r.description || 'Imóvel selecionado por Iêda Holanda. Entre em contato para mais informações.',
