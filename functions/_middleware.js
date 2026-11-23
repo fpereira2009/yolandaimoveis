@@ -54,7 +54,7 @@ export async function onRequest(ctx) {
   }
   if (url.pathname === '/' && url.searchParams.has('imovel')) {
     const id = parsePropertyCode(url.searchParams.get('imovel'));
-    const row = id && await ctx.env.DB.prepare('SELECT id, public_url_terms FROM properties WHERE id = ? AND ' + published).bind(id).first();
+    const row = id && await ctx.env.DB.prepare('SELECT id, slug, public_url_terms FROM properties WHERE id = ? AND ' + published).bind(id).first();
     if (!row) return new Response('Imóvel indisponível', {status:404});
     return Response.redirect(new URL(propertyPath(row), url), 301);
   }

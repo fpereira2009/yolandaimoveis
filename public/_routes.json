@@ -1,1 +1,1 @@
-{ "version": 1, "include": ["/", "/app", "/app/*", "/api/*", "/imoveis/*", "/sitemap.xml"], "exclude": [] }
+{"version":1,"include":["/","/app","/app/*","/api/*","/imoveis/*","/sitemap.xml","/robots.txt"],"exclude":[]}
