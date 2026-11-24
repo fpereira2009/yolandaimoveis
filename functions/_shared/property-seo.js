@@ -82,7 +82,17 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
     '@context':'https://schema.org','@type':'RealEstateListing',name:property.title,
     url:canonical,description:details.slice(0,2000),dateModified:property.updated_at,
     image:photos.map(path=>url.origin+path),
-    address:{'@type':'PostalAddress',addressLocality:city,addressRegion:state,addressCountry:'BR'},
+
+mainEntity: {
+  '@type': 'Place',
+  name: property.title,
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: city,
+    addressRegion: state,
+    addressCountry: 'BR'
+  }
+},
     ...(property.price > 0 ? {offers:{'@type':'Offer',price:String(property.price),priceCurrency:'BRL',availability:'https://schema.org/InStock',url:canonical}} : {})
   };
   const crumbs = {'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[
