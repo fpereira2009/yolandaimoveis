@@ -209,9 +209,29 @@ check(good.includes('<ul><li>Jardim</li><li>Varanda</li></ul>'),'lista com marca
 check(good.includes('<ol><li>Visite</li><li>Negocie</li></ol>'),'lista numerada');
 check(render('<script>alert(1)</script>').includes('&lt;script&gt;'),'HTML ativo escapado');
 check(!render('<img src=x>').includes('<img'), 'tags img não são interpretadas');
-for(const file of [crm,site]) {
-  const scripts=[...file.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
-  for(const script of scripts) new vm.Script(script);
-  tests++;
+
+for (const file of [crm, site]) {
+  // Extrai os scripts inline do HTML.
+  // Ignora scripts externos e dados estruturados Schema.org.
+  const executableScripts = [
+    ...file.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)
+  ]
+    .filter(([, attributes]) => {
+      // Scripts externos possuem arquivo próprio.
+      if (/\bsrc\s*=/.test(attributes)) return false;
+
+      // JSON-LD não é JavaScript executável.
+      if (/\btype\s*=\s*["']?application\/ld\+json\b/i.test(attributes)) {
+        return false;
+      }
+
+      return true;
+    })
+    .map(([, , content]) => content);
+
+  // Valida somente a sintaxe dos scripts JavaScript.
+  for (const code of executableScripts) {
+    new vm.Script(code);
+  }
 }
 console.log(`PASSOU: ${tests} verificações de mídia R2/galeria, CRUD, limite 10, auth, preview/produção e compatibilidade.`);

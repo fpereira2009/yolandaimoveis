@@ -160,46 +160,53 @@
                 showToast('Foto removida.');
             } catch (error) { showToast(error.message); }
         }
+        // Engine 4.7: WebP + miniatura separada, sem aumentar imagens menores.
         async function optimizePropertyPhoto(file) {
-            let img;
-            let objectUrl;
+            let img, objectUrl;
             try {
-                if ('createImageBitmap' in window) img = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                if ('createImageBitmap' in window) img = await createImageBitmap(file, {imageOrientation:'from-image'});
                 else {
                     objectUrl = URL.createObjectURL(file);
                     img = await new Promise((resolve, reject) => {
-                        const element = new Image();
-                        element.onload = () => resolve(element);
-                        element.onerror = reject;
-                        element.src = objectUrl;
+                        const el = new Image(); el.onload=()=>resolve(el); el.onerror=reject; el.src=objectUrl;
                     });
                 }
-                const sw = img.width, sh = img.height;
-                if (!sw || !sh) throw new Error('Imagem inválida.');
-                const ratio = Math.min(1, 1600 / Math.max(sw, sh));
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.max(1, Math.round(sw * ratio));
-                canvas.height = Math.max(1, Math.round(sh * ratio));
-                const ctx = canvas.getContext('2d', {alpha:false});
-                if (!ctx) throw new Error('Não foi possível otimizar a imagem.');
-                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const toBlob = (type, quality) => new Promise(r => canvas.toBlob(r, type, quality));
-                let blob = await toBlob('image/webp', 0.82);
-                if (!blob || blob.type !== 'image/webp') blob = await toBlob('image/jpeg', 0.80);
-                if (blob && blob.size > 6 * 1024 * 1024) blob = await toBlob('image/jpeg', 0.68);
-                if (!blob || blob.size > 6 * 1024 * 1024) throw new Error('Imagem não pôde ser reduzida a menos de 6 MB.');
-                return blob;
+                const originalW = img.width, originalH = img.height;
+                if (!originalW || !originalH || originalW*originalH > 60_000_000) throw new Error('Imagem muito grande ou inválida.');
+                const make = async (maxSide, quality) => {
+                    const factor = Math.min(1, maxSide / Math.max(originalW, originalH));
+                    const canvas = document.createElement('canvas');
+                    canvas.width=Math.max(1,Math.round(originalW*factor));
+                    canvas.height=Math.max(1,Math.round(originalH*factor));
+                    const context = canvas.getContext('2d',{alpha:false});
+                    if (!context) throw new Error('Canvas indisponível.');
+                    context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);
+                    context.drawImage(img,0,0,canvas.width,canvas.height);
+                    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+                    if (!blob || blob.type !== 'image/webp') throw new Error('Navegador sem suporte a WebP.');
+                    return {blob,width:canvas.width,height:canvas.height};
+                };
+                const full=await make(1600,.82), thumb=await make(480,.80);
+                if (full.blob.size>6*1024*1024 || thumb.blob.size>2*1024*1024) throw new Error('Foto muito grande após otimização.');
+                return {full,thumb};
             } finally {
-                if (img && typeof img.close === 'function') img.close();
+                if (img && typeof img.close==='function') img.close();
                 if (objectUrl) URL.revokeObjectURL(objectUrl);
             }
         }
         async function sendPropertyImage(code, blob) {
-            const resp = await fetch('/api/media/properties/' + encodeURIComponent(code) + '/images', {
-                method:'PUT', credentials:'same-origin', headers:{'Content-Type':blob.type, 'Accept':'application/json'}, body:blob
+            const optimized = blob;
+            const form = new FormData();
+            form.append('main',optimized.full.blob,'full.webp');
+            form.append('thumb',optimized.thumb.blob,'thumb.webp');
+            form.append('width',String(optimized.full.width));
+            form.append('height',String(optimized.full.height));
+            form.append('thumbWidth',String(optimized.thumb.width));
+            form.append('thumbHeight',String(optimized.thumb.height));
+            const resp = await fetch('/api/media/properties/'+encodeURIComponent(code)+'/images',{
+                method:'PUT',credentials:'same-origin',headers:{'Accept':'application/json'},body:form
             });
-            const result = await resp.json().catch(() => ({}));
+            const result=await resp.json().catch(()=>({}));
             if (!resp.ok) throw new Error(result.error || `Falha no upload (HTTP ${resp.status}).`);
             return result.item;
         }
