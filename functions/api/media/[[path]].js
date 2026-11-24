@@ -8,6 +8,8 @@ import { verifyWriteOrigin, readJson } from '../../_shared/request-guards.js';
 import { HttpError } from '../../_shared/api/common.js';
 
 const MAX_BYTES = 6 * 1024 * 1024;
+const MAX_MULTIPART_BYTES = 7 * 1024 * 1024;
+const IMAGE_CACHE = 'public, max-age=31536000, immutable';
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
 });
@@ -34,9 +36,9 @@ function checkMime(mime, data) {
       b[b.length - 2] === 255 && b[b.length - 1] === 217) return 'jpg';
   throw new ApiError(415, 'Envie uma imagem JPEG ou WebP válida.');
 }
-async function boundedRead(request) {
+async function boundedRead(request, maxBytes = MAX_BYTES) {
   const size = Number(request.headers.get('Content-Length') || 0);
-  if (size > MAX_BYTES) throw new ApiError(413, 'Imagem maior que 6 MB.');
+  if (size > maxBytes) throw new ApiError(413, 'Upload de imagem excede o limite permitido.');
   if (!request.body) throw new ApiError(400, 'Arquivo não recebido.');
   const reader = request.body.getReader();
   const chunks = []; let total = 0;
@@ -44,7 +46,7 @@ async function boundedRead(request) {
     const { done, value } = await reader.read();
     if (done) break;
     total += value.byteLength;
-    if (total > MAX_BYTES) { await reader.cancel(); throw new ApiError(413, 'Imagem maior que 6 MB.'); }
+    if (total > maxBytes) { await reader.cancel(); throw new ApiError(413, 'Upload de imagem excede o limite permitido.'); }
     chunks.push(value);
   }
   if (!total) throw new ApiError(400, 'Arquivo vazio.');
@@ -52,50 +54,103 @@ async function boundedRead(request) {
   for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.byteLength; }
   return data;
 }
+// Validação de chave rígida; miniatura nunca é publicada sem a foto principal no D1.
+function parseImageKey(key) {
+  const match = /^properties\/(\d+)\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(-thumb)?\.(webp|jpg)$/.exec(key);
+  if (!match || (match[3] && match[4] !== 'webp')) throw new ApiError(404, 'Imagem não encontrada.');
+  return { thumb: !!match[3] };
+}
 async function publicObject(env, key, method, request) {
-  if (!/^properties\/\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(webp|jpg)$/.test(key)) throw new ApiError(404, 'Imagem não encontrada.');
-  // Somente fotografias de imóveis publicados continuam acessíveis pela rota pública.
-  const metadata = await env.DB.prepare(`SELECT p.deleted_at, p.status FROM property_images i
-    JOIN properties p ON p.id=i.property_id WHERE i.object_key=? LIMIT 1`).bind(key).first();
+  const {thumb} = parseImageKey(key);
+  // Consulta com prepared statement impede acesso a thumbnails soltas no R2.
+  let metadata = await env.DB.prepare(`SELECT p.deleted_at, p.status FROM property_images i
+    JOIN properties p ON p.id=i.property_id
+    WHERE ${thumb ? 'i.thumb_key' : 'i.object_key'} = ? LIMIT 1`).bind(key).first();
+  // Fotos antigas continuam acessíveis por alias durante a migração.
+  // Nunca cria acesso público adicional a imóveis inativos.
+  if (!metadata && !thumb) {
+    metadata = await env.DB.prepare(`SELECT p.deleted_at, p.status FROM image_url_aliases a
+      JOIN property_images i ON i.id=a.image_id
+      JOIN properties p ON p.id=i.property_id WHERE a.old_key=? LIMIT 1`).bind(key).first();
+  }
   if (!metadata) throw new ApiError(404, 'Imagem não encontrada.');
   const publicImage = !metadata.deleted_at && ['Disponível', 'Reservado'].includes(metadata.status);
   if (!publicImage) {
-    // O CRC pode visualizar imagens de imóveis vendidos, alugados ou inativos;
-    // a vitrine pública não. Retornar 404 se não houver sessão válida.
     try { await authenticate(request, env); }
     catch { throw new ApiError(404, 'Imagem não encontrada.'); }
   }
-  const object = await env.MEDIA_BUCKET.get(key);
+  const object = method === 'HEAD' ? await env.MEDIA_BUCKET.head(key) : await env.MEDIA_BUCKET.get(key);
   if (!object) throw new ApiError(404, 'Imagem não encontrada.');
   const headers = new Headers({
     'Content-Type': object.httpMetadata?.contentType || (key.endsWith('.webp') ? 'image/webp' : 'image/jpeg'),
-    'Cache-Control': publicImage ? 'public, max-age=31536000, immutable' : 'private, no-store',
+    'Cache-Control': publicImage ? IMAGE_CACHE : 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
     'ETag': object.httpEtag,
   });
-  return new Response(method === 'HEAD' ? null : object.body, { headers });
+  return new Response(method === 'HEAD' ? null : object.body, {headers});
+}
+async function parseUploadedImage(request) {
+  const mime = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
+  // Compatibilidade com o upload binário das versões anteriores.
+  if (mime !== 'multipart/form-data') {
+    const full = await boundedRead(request);
+    const ext = checkMime(mime, full);
+    return {full, thumb: null, mainMime: mime, ext, dims: null};
+  }
+  // Leitura limitada antes de decodificar FormData: evita body sem Content-Length ilimitado.
+  const payload = await boundedRead(request, MAX_MULTIPART_BYTES);
+  const form = await new Response(payload, {headers:{'Content-Type': request.headers.get('Content-Type')}}).formData();
+  const main = form.get('main'); const small = form.get('thumb');
+  if (!(main instanceof Blob) || !(small instanceof Blob)) throw new ApiError(400, 'Fotos principal e miniatura obrigatórias.');
+  if (main.type !== 'image/webp' || small.type !== 'image/webp') throw new ApiError(415, 'Apenas WebP otimizado é permitido nesse fluxo.');
+  if (main.size > MAX_BYTES || small.size > 2*1024*1024) throw new ApiError(413, 'Imagem otimizada muito grande.');
+  const full = new Uint8Array(await main.arrayBuffer());
+  const thumb = new Uint8Array(await small.arrayBuffer());
+  checkMime('image/webp', full); checkMime('image/webp', thumb);
+  const w = Number(form.get('width')), h = Number(form.get('height'));
+  const tw = Number(form.get('thumbWidth')), th = Number(form.get('thumbHeight'));
+  if (![w,h,tw,th].every(n=>Number.isSafeInteger(n) && n>0 && n<=1600) ||
+      Math.abs((w/h)-(tw/th)) > 0.025 || tw>w || th>h) throw new ApiError(400, 'Dimensões inválidas.');
+  // Dims são declarações do cliente; para validação criptográfica de pixels seria necessário decoder servidor.
+  return {full, thumb, mainMime:'image/webp', ext:'webp', dims:{w,h,tw,th}};
 }
 async function upload(env, propertyId, request) {
-  const mime = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
   const images = await propertyImageRows(env, propertyId);
   if (images.length >= 10) throw new ApiError(409, 'Limite de 10 fotos por imóvel.');
-  const data = await boundedRead(request);
-  const ext = checkMime(mime, data);
-  const key = `properties/${propertyId}/${crypto.randomUUID()}.${ext}`;
-  await env.MEDIA_BUCKET.put(key, data, { httpMetadata: { contentType: mime }, customMetadata: { propertyId: String(propertyId) } });
+  const {full, thumb, mainMime, ext, dims} = await parseUploadedImage(request);
+  const uuid = crypto.randomUUID();
+  const key = `properties/${propertyId}/${uuid}.${ext}`;
+  const thumbKey = thumb ? `properties/${propertyId}/${uuid}-thumb.webp` : null;
+  const options = {httpMetadata:{contentType:mainMime, cacheControl:IMAGE_CACHE},customMetadata:{propertyId:String(propertyId)}};
+  let wroteMain = false, wroteThumb = false;
   try {
-    // INSERT ... SELECT recusa inserir após exclusão lógica mesmo em corrida de requisições.
+    await env.MEDIA_BUCKET.put(key, full, options);
+    wroteMain = true;
+    if (thumbKey) {
+      await env.MEDIA_BUCKET.put(thumbKey, thumb, {
+        httpMetadata:{contentType:'image/webp', cacheControl:IMAGE_CACHE},
+        customMetadata:{propertyId:String(propertyId),variant:'thumbnail'}
+      });
+      wroteThumb = true;
+    }
     const result = await env.DB.prepare(
-      `INSERT INTO property_images (property_id, object_key, content_type, size_bytes, position, is_cover, created_at)
-       SELECT p.id,?,?,?,?,?,? FROM properties p WHERE p.id = ? AND p.deleted_at IS NULL RETURNING *`
-    ).bind(key, mime, data.byteLength, images.length ? Math.max(...images.map((i) => i.position)) + 1 : 0, images.length ? 0 : 1, new Date().toISOString(), propertyId).first();
+      `INSERT INTO property_images (property_id, object_key, content_type, size_bytes, position,
+         is_cover, created_at, thumb_key, width, height, thumb_width, thumb_height)
+       SELECT p.id,?,?,?,?,?,?,?,?,?,?,? FROM properties p
+       WHERE p.id = ? AND p.deleted_at IS NULL RETURNING *`
+    ).bind(key, mainMime, full.byteLength,
+      images.length ? Math.max(...images.map(i=>i.position))+1 : 0,
+      images.length ? 0 : 1, new Date().toISOString(),thumbKey,
+      dims?.w||null,dims?.h||null,dims?.tw||null,dims?.th||null,
+      propertyId).first();
     if (!result) throw new ApiError(409, 'Imóvel excluído durante o upload.');
-    return json({ item: serializeImage(result, env), images: (await propertyImageRows(env, propertyId)).map(r => serializeImage(r, env)) }, 201);
-  } catch (error) {
-    try { await env.MEDIA_BUCKET.delete(key); }
-    catch (cleanupError) { console.error('R2 compensação de upload falhou', key, cleanupError); }
+    return json({item:serializeImage(result,env), images:(await propertyImageRows(env,propertyId)).map(r=>serializeImage(r,env))},201);
+  } catch(error) {
+    // Compensação por falha R2 ou D1. IDs novos e imutáveis evitam sobrescrita acidental.
+    if (wroteThumb) try { await env.MEDIA_BUCKET.delete(thumbKey); } catch(e) { console.error('[media] THUMB_CLEANUP_FAILED'); }
+    if (wroteMain) try { await env.MEDIA_BUCKET.delete(key); } catch(e) { console.error('[media] MAIN_CLEANUP_FAILED'); }
     if (error instanceof ApiError) throw error;
-    if (/Limite de 10 fotos|UNIQUE/.test(String(error.message))) throw new ApiError(409, 'A galeria foi atualizada por outra operação. Atualize a tela e tente novamente.');
+    if (/Limite de 10 fotos|UNIQUE/.test(String(error.message))) throw new ApiError(409,'Galeria alterada por outra operação. Atualize a tela.');
     throw error;
   }
 }
@@ -111,6 +166,8 @@ async function setCover(env, propertyId, imageId) {
 async function removeImage(env, propertyId, imageId) {
   const image = await env.DB.prepare('SELECT * FROM property_images WHERE id = ? AND property_id = ?').bind(imageId, propertyId).first();
   if (!image) throw new ApiError(404, 'Imagem não encontrada.');
+  // Evita thumbnail órfã; se R2 falhar, D1 ainda conserva a referência para retry.
+  if (image.thumb_key) await env.MEDIA_BUCKET.delete(image.thumb_key);
   await env.MEDIA_BUCKET.delete(image.object_key);
   await env.DB.batch([
     env.DB.prepare('DELETE FROM property_images WHERE id = ? AND property_id = ?').bind(imageId, propertyId),
