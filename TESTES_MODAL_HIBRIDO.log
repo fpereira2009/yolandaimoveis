@@ -1,0 +1,33 @@
+
+> 01_producao@4.5.3 test
+> node --experimental-sqlite tests/preview-crm.test.mjs && node --experimental-sqlite tests/conflicts-4.3.4.test.mjs && node --experimental-sqlite tests/r2-media.test.mjs && node tests/vitrine-sem-imagem.test.mjs && node --experimental-sqlite tests/env-parity-4.3.8.test.mjs && node tests/security-4.4.0.test.mjs && node tests/access-jwks-diagnostic.test.mjs && node tests/features-release-4.4.0.test.mjs && node tests/whatsapp-labels-4.5.1.test.mjs && node tests/release-4.5.2.test.mjs && node tests/release-4.5.3.test.mjs && node tests/hotfix-4.5.3-tipo-dropdown.test.mjs && node tests/seo-4.6.0-integration.test.mjs
+
+(node:6095) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASSOU: 187 verificações. Migrations 0001_init.sql, 0002_imoveis_integracao.sql, 0003_categoria_captacao.sql, 0004_modalidade_venda.sql, 0005_crc_modalidade_venda.sql, 0006_leads_inteligencia_fechamento.sql, 0007_crm_ultimo_contato.sql, 0008_property_images_r2.sql, 0009_public_url.sql, 0010_seo_slug_4_6_0.sql; reservas, disputas, troca, exclusão, reabertura, legado, CRC e sintaxe da UI.
+(node:6106) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASSOU: 117 verificações 4.3.4 (Ganho, Perdido, vínculos, disputa, histórico, hoje, paridade de regras, UI).
+(node:6117) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R2: limpeza pendente para imóvel 3 Error: Falha R2 simulada
+    at R2.delete (file:///mnt/data/yolanda460_ui_test/tests/r2-media.test.mjs:164:47)
+    at deletePhysicalImages (file:///mnt/data/yolanda460_ui_test/functions/_shared/property-media.js:56:56)
+    at deletePropertyWithMedia (file:///mnt/data/yolanda460_ui_test/functions/_shared/api/properties.js:67:15)
+    at async onRequest (file:///mnt/data/yolanda460_ui_test/functions/_shared/api/router.js:69:46)
+    at async call (file:///mnt/data/yolanda460_ui_test/tests/r2-media.test.mjs:57:20)
+    at async file:///mnt/data/yolanda460_ui_test/tests/r2-media.test.mjs:165:1
+PASSOU: 166 verificações de mídia R2/galeria, CRUD, limite 10, auth, preview/produção e compatibilidade.
+PASSOU: vitrine 4.3.3 (sem URL legada, sem foto genérica, mensagem, capa R2, carrossel e erro de imagem).
+(node:6139) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASSOU: 84 verificações de paridade Preview/Production com D1 e R2 isolados.
+PASSOU: 31 verificações negativas de segurança 4.4.0.
+PASSOU: 4 cenários de falha JWKS, sem exposição de dados sensíveis.
+PASSOU: 30 verificações específicas de funcionalidades 4.4.0.
+PASSOU: 26 verificações específicas de restauração dos botões WhatsApp na 4.5.1.
+PASSOU: 61 verificações específicas da versão 4.5.2.
+PASSOU: 30 verificações específicas da versão 4.5.3.
+PASSOU: 30 verificações do hotfix 4.5.3 dropdown de Tipo.
+[seo-ssr] DATABASE_OR_RENDER_ERROR
+PASSOU: 42 verificações SEO/SSR 4.6.0 sobre base 4.5.5.

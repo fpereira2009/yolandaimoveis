@@ -547,6 +547,23 @@
                 const counter = document.getElementById("results-counter");
                 if (!grid) return;
 
+                // Mantem o modal original 4.5.5 para visitantes na vitrine, sem bloquear SEO.
+                // O href continua sendo a pagina SSR, aberta normalmente sem JavaScript ou em nova aba.
+                if (typeof grid.addEventListener === 'function' && grid.dataset?.yolandaModalHandlerInstalled !== '1') {
+                    if (grid.dataset) grid.dataset.yolandaModalHandlerInstalled = '1';
+                    grid.addEventListener('click', function (event) {
+                        if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                        const target = event.target;
+                        const link = target && typeof target.closest === 'function'
+                            ? target.closest('a[data-property-modal-code]') : null;
+                        if (!link) return;
+                        const code = link.getAttribute('data-property-modal-code');
+                        if (!properties.some(function (p) { return p.codigo === code; })) return;
+                        event.preventDefault();
+                        openPropertyModal(code);
+                    });
+                }
+
                 if (counter) {
                     counter.textContent = "Exibindo " + list.length + (list.length === 1 ? " imóvel" : " imóveis");
                 }
@@ -625,24 +642,26 @@
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
+                                '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
 
-                            '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
-                                '<a href="' + esc(propertyDeepLink(prop)) + '" ' +
-                                        'class="flex-1 py-3 px-3 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs transition-colors">' +
-                                    'Ver Detalhes' +
-                                '</a>' +
-                                '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
-                                   'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
-                                   'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
-                                    '<i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>' +
-                                    '<span>Tenho Interesse</span>' +
-                                '</button>' +
-                                '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
-                                   'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
-                                   'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border inline-flex items-center justify-center shrink-0 transition-colors">' +
-                                    '<i data-lucide="share-2" class="w-4 h-4"></i>' +
-                                '</a>' +
-                            '</div>' +
+                                    '<a data-property-modal-code="' + esc(prop.codigo) + '" href="' + esc(propertyDeepLink(prop)) + '" ' +
+                                        'class="flex-1 min-w-0 h-11 px-1 sm:px-3 rounded-xl bg-sand hover:bg-moss-soft text-moss font-heading font-bold text-[11px] sm:text-xs inline-flex items-center justify-center text-center transition-colors">' +
+                                        'Ver Detalhes' +
+                                    '</a>' +
+
+                                    '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
+                                        'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
+                                        'class="flex-1 min-w-0 h-11 px-1 sm:px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-[11px] sm:text-xs inline-flex items-center justify-center gap-1 transition-colors">' +
+                                        '<i data-lucide="message-circle" class="w-3.5 h-3.5 shrink-0" aria-hidden="true"></i>' +
+                                        '<span>Tenho Interesse</span>' +
+                                    '</button>' +
+                                    '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                                        'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
+                                        'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border inline-flex items-center justify-center shrink-0 transition-colors">' +
+                                        '<i data-lucide="share-2" class="w-4 h-4"></i>' +
+                                    '</a>' +
+
+                                '</div>' +
                         '</article>'
                     );
                 }).join("");
@@ -933,7 +952,7 @@
                 if (modal) modal.classList.add("hidden");
                 document.body.style.overflow = "";
                 resetPropertyZoom();
-                if (!fromHistory && typeof history !== 'undefined' && getLinkedPropertyCode()) {
+                if (!fromHistory && typeof history !== 'undefined' && (propertyHistoryEntry || getLinkedPropertyCode())) {
                     if (propertyHistoryEntry) {
                         propertyHistoryEntry = false;
                         history.back();
