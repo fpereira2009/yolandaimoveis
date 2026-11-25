@@ -1,0 +1,4 @@
+/* Etapa de build: não substituir runtime CDN sem homologação visual. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

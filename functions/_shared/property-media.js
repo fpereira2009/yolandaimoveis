@@ -18,6 +18,10 @@ export function serializeImage(row, env) {
     id: row.id, url: mediaPath(row.object_key, env),
     cover: !!row.is_cover, position: row.position,
     mimeType: row.content_type, sizeBytes: row.size_bytes,
+    // Campos nulos em fotos legadas: mantêm a URL original sem quebrar o catálogo.
+    thumbUrl: row.thumb_key ? mediaPath(row.thumb_key, env) : null,
+    width: row.width || null, height: row.height || null,
+    thumbWidth: row.thumb_width || null, thumbHeight: row.thumb_height || null,
   };
 }
 export async function propertyImageRows(env, propertyId) {
@@ -53,5 +57,8 @@ export function withGallery(property, list = [], env) {
 // R2 e D1 não suportam transação distribuída: documentamos e testamos o retry idempotente.
 export async function deletePhysicalImages(env, rows) {
   if (!mediaEnabled(env)) return;
-  for (const row of rows) await env.MEDIA_BUCKET.delete(row.object_key);
+  for (const row of rows) {
+    if (row.thumb_key) await env.MEDIA_BUCKET.delete(row.thumb_key);
+    await env.MEDIA_BUCKET.delete(row.object_key);
+  }
 }

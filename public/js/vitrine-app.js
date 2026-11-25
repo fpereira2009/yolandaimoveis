@@ -3,7 +3,7 @@
             "use strict";
 
             const BROKER_PHONE = "5524999040775";
-            const BROKER_AVATAR = "/img/fotocorretora.jpeg";
+            const BROKER_AVATAR = "/img/fotocorretora-480.webp";
 
             // Sem foto cadastrada ou com falha de carregamento: texto, nunca imagem ilustrativa.
             const PROPERTY_IMAGE_UNAVAILABLE = "Imagem não disponível";
@@ -281,6 +281,19 @@
                 return clean;
             }
 
+            function responsiveCoverAttributes(prop) {
+                const images=Array.isArray(prop.images)?prop.images:[];
+                const cover=images.find(i=>i && i.cover && i.url) || images.find(i=>i && i.url);
+                if (!cover) return '';
+                const w=Number(cover.width), h=Number(cover.height);
+                const tw=Number(cover.thumbWidth), th=Number(cover.thumbHeight);
+                const valid=(a,b)=>Number.isInteger(a)&&Number.isInteger(b)&&a>0&&b>0&&a<=1600&&b<=1600;
+                const sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw';
+                const dims=valid(w,h)?' width="'+w+'" height="'+h+'"':'';
+                const responsive=(cover.thumbUrl && valid(tw,th) && valid(w,h) && tw<w)
+                    ? ' srcset="'+esc(cover.thumbUrl)+' '+tw+'w, '+esc(cover.url)+' '+w+'w" sizes="'+sizes+'"' : '';
+                return dims+responsive;
+            }
             function getPropertyCoverUrl(prop) {
                 // 4.3.3: fotos de anúncios vêm EXCLUSIVAMENTE da galeria R2.
                 // Nunca recorrer ao campo legado foto_url nem a imagens genéricas,
@@ -597,6 +610,7 @@
                                     (resolvedImg ?
                                         '<img src="' + esc(resolvedImg) + '" ' +
                                              'data-raw-img="' + esc(normalizedRawKey) + '" ' +
+                                             responsiveCoverAttributes(prop) + ' ' +
                                              'onerror="handlePropertyImgError(this)" loading="lazy" decoding="async" ' +
                                              'alt="' + esc(prop.titulo) + '" draggable="false" ' +
                                              'class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">'
@@ -642,26 +656,24 @@
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
-                                '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
 
-                                    '<a data-property-modal-code="' + esc(prop.codigo) + '" href="' + esc(propertyDeepLink(prop)) + '" ' +
-                                        'class="flex-1 min-w-0 h-11 px-1 sm:px-3 rounded-xl bg-sand hover:bg-moss-soft text-moss font-heading font-bold text-[11px] sm:text-xs inline-flex items-center justify-center text-center transition-colors">' +
-                                        'Ver Detalhes' +
-                                    '</a>' +
-
-                                    '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
-                                        'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
-                                        'class="flex-1 min-w-0 h-11 px-1 sm:px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-[11px] sm:text-xs inline-flex items-center justify-center gap-1 transition-colors">' +
-                                        '<i data-lucide="message-circle" class="w-3.5 h-3.5 shrink-0" aria-hidden="true"></i>' +
-                                        '<span>Tenho Interesse</span>' +
-                                    '</button>' +
-                                    '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
-                                        'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
-                                        'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border inline-flex items-center justify-center shrink-0 transition-colors">' +
-                                        '<i data-lucide="share-2" class="w-4 h-4"></i>' +
-                                    '</a>' +
-
-                                '</div>' +
+                            '<div class="px-5 pb-5 pt-1 flex items-center gap-2">' +
+                                '<a data-property-modal-code="' + esc(prop.codigo) + '" href="' + esc(propertyDeepLink(prop)) + '" ' +
+                                    'class="inline-flex items-center justify-center py-3 px-4 rounded-xl bg-sand hover:bg-moss hover:text-white text-moss font-heading font-bold text-xs text-center whitespace-nowrap transition-colors">' +
+                                    'Ver Detalhes' +
+                                '</a>' +
+                                '<button type="button" onclick="openCardInterestWhatsApp(event, \'' + esc(prop.codigo) + '\')" ' +
+                                   'title="Tenho interesse pelo WhatsApp" aria-label="Tenho interesse pelo WhatsApp" ' +
+                                   'class="flex-1 py-3 px-3 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors">' +
+                                    '<i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>' +
+                                    '<span>Tenho Interesse</span>' +
+                                '</button>' +
+                                '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                                   'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
+                                   'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border inline-flex items-center justify-center shrink-0 transition-colors">' +
+                                    '<i data-lucide="share-2" class="w-4 h-4"></i>' +
+                                '</a>' +
+                            '</div>' +
                         '</article>'
                     );
                 }).join("");
