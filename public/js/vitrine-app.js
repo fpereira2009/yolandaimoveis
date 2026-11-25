@@ -540,7 +540,13 @@
             }
 
             function getWhatsAppPropertyLink(prop, name) {
-                const msg = "Olá Iêda Holanda! Tenho interesse no imóvel *" + prop.codigo + " - " + prop.titulo + "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias. Veja o anúncio: " + propertyDeepLink(prop) + (name ? " Meu nome é " + name + "." : "");
+                const msg =
+                    "Olá Iêda Holanda! " +
+                    (name ? "Meu nome é *" + name + "*. " : "") +
+                    "Tenho interesse no imóvel *" +
+                    prop.codigo + " - " + prop.titulo +
+                    "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias. Veja o anúncio: " +
+                    propertyDeepLink(prop);
                 return "https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg);
             }
 
