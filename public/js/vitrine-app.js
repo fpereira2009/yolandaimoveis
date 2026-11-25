@@ -3,7 +3,7 @@
             "use strict";
 
             const BROKER_PHONE = "5524999040775";
-            const BROKER_AVATAR = "/img/fotocorretora.jpeg";
+            const BROKER_AVATAR = "/img/fotocorretora-480.webp";
 
             // Sem foto cadastrada ou com falha de carregamento: texto, nunca imagem ilustrativa.
             const PROPERTY_IMAGE_UNAVAILABLE = "Imagem não disponível";

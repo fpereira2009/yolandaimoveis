@@ -1,0 +1,12 @@
+﻿{
+  "name": "yolanda-preview-migrations",
+  "compatibility_date": "2026-11-24",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yolanda-crm-dev",
+      "database_id": "23514b9c-5c0e-464c-8c85-1342b4fae522",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
