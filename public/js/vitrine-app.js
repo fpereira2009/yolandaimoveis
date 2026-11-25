@@ -487,6 +487,16 @@
                 const res = await sendContactAsync({ kind: "interesse", name: name, phone: phone, property_code: codigo, website: (document.getElementById("interest-website") || {}).value || "" });
                 setBusy(btn, false);
                 if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
+                // captura dados para google analytics (eventos de conversão)
+                window.dataLayer = window.dataLayer || [];
+
+                window.dataLayer.push({
+                    event: 'lead_whatsapp',
+                    property_code: prop.codigo,
+                    property_name: prop.titulo,
+                    property_city: prop.cidade,
+                    property_value: prop.valor
+                });
                 goToWhatsApp(getWhatsAppPropertyLink(prop, name), w);
                 showToast(res.ok ? "Contato registrado! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o contato agora).");
             }
@@ -838,6 +848,19 @@
                 const content = document.getElementById("property-modal-content");
                 if (!prop || !modal || !content) return;
 
+                // Google Tag Manager - Property View
+                window.dataLayer = window.dataLayer || [];
+
+                window.dataLayer.push({
+                    event: 'property_view',
+                    property_code: prop.codigo,
+                    property_name: prop.titulo,
+                    property_type: prop.tipo,
+                    property_city: prop.cidade,
+                    property_neighborhood: prop.bairro,
+                    property_price: prop.valor,
+                    property_purpose: prop.finalidade
+                });
                 const isRental = prop.finalidade === "Alugar";
                 const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
                 const resolvedImg = getPropertyCoverUrl(prop);
