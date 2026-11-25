@@ -57,7 +57,7 @@ async function boundedRead(request, maxBytes = MAX_BYTES) {
 // Validação de chave rígida; miniatura nunca é publicada sem a foto principal no D1.
 function parseImageKey(key) {
   const match = /^properties\/(\d+)\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(-thumb)?\.(webp|jpg)$/.exec(key);
-  if (!match || (match[3] && match[4] !== 'webp')) throw new ApiError(404, 'Imagem não encontrada.');
+  if (!match) throw new ApiError(404, 'Imagem não encontrada.');
   return { thumb: !!match[3] };
 }
 async function publicObject(env, key, method, request) {
@@ -102,17 +102,19 @@ async function parseUploadedImage(request) {
   const form = await new Response(payload, {headers:{'Content-Type': request.headers.get('Content-Type')}}).formData();
   const main = form.get('main'); const small = form.get('thumb');
   if (!(main instanceof Blob) || !(small instanceof Blob)) throw new ApiError(400, 'Fotos principal e miniatura obrigatórias.');
-  if (main.type !== 'image/webp' || small.type !== 'image/webp') throw new ApiError(415, 'Apenas WebP otimizado é permitido nesse fluxo.');
+  const accepted = new Set(['image/jpeg', 'image/webp']);
+  if (!accepted.has(main.type) || !accepted.has(small.type) || main.type !== small.type)
+    throw new ApiError(415, 'Envie principal e miniatura no mesmo formato JPEG ou WebP.');
   if (main.size > MAX_BYTES || small.size > 2*1024*1024) throw new ApiError(413, 'Imagem otimizada muito grande.');
   const full = new Uint8Array(await main.arrayBuffer());
   const thumb = new Uint8Array(await small.arrayBuffer());
-  checkMime('image/webp', full); checkMime('image/webp', thumb);
+  const ext = checkMime(main.type, full); checkMime(small.type, thumb);
   const w = Number(form.get('width')), h = Number(form.get('height'));
   const tw = Number(form.get('thumbWidth')), th = Number(form.get('thumbHeight'));
   if (![w,h,tw,th].every(n=>Number.isSafeInteger(n) && n>0 && n<=1600) ||
       Math.abs((w/h)-(tw/th)) > 0.025 || tw>w || th>h) throw new ApiError(400, 'Dimensões inválidas.');
   // Dims são declarações do cliente; para validação criptográfica de pixels seria necessário decoder servidor.
-  return {full, thumb, mainMime:'image/webp', ext:'webp', dims:{w,h,tw,th}};
+  return {full, thumb, mainMime:main.type, ext, dims:{w,h,tw,th}};
 }
 async function upload(env, propertyId, request) {
   const images = await propertyImageRows(env, propertyId);
@@ -120,7 +122,7 @@ async function upload(env, propertyId, request) {
   const {full, thumb, mainMime, ext, dims} = await parseUploadedImage(request);
   const uuid = crypto.randomUUID();
   const key = `properties/${propertyId}/${uuid}.${ext}`;
-  const thumbKey = thumb ? `properties/${propertyId}/${uuid}-thumb.webp` : null;
+  const thumbKey = thumb ? `properties/${propertyId}/${uuid}-thumb.${ext}` : null;
   const options = {httpMetadata:{contentType:mainMime, cacheControl:IMAGE_CACHE},customMetadata:{propertyId:String(propertyId)}};
   let wroteMain = false, wroteThumb = false;
   try {
@@ -128,7 +130,7 @@ async function upload(env, propertyId, request) {
     wroteMain = true;
     if (thumbKey) {
       await env.MEDIA_BUCKET.put(thumbKey, thumb, {
-        httpMetadata:{contentType:'image/webp', cacheControl:IMAGE_CACHE},
+        httpMetadata:{contentType:mainMime, cacheControl:IMAGE_CACHE},
         customMetadata:{propertyId:String(propertyId),variant:'thumbnail'}
       });
       wroteThumb = true;
