@@ -1,6 +1,8 @@
-/** Etapa opcional, SOMENTE após validação visual do CSS compilado. */
+/** Tailwind 3.4.17 para a homepage Yolanda. Aplique somente com regressão visual. */
 module.exports = {
   content: ['./public/**/*.{html,js}', './functions/**/*.js'],
+  // Classes dinâmicas importantes; outras classes literais são descobertas em public/ e functions/.
+  safelist: ['hidden', 'block', 'flex', 'grid', 'opacity-0', 'opacity-100'],
   theme: {
     extend: {
       colors: {
