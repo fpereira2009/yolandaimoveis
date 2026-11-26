@@ -9,6 +9,10 @@
 - Metadados da home e schema de imóveis; suíte Node consolidada.
 ### Fixed
 - Singular/plural, atributos zero e breadcrumb; vagas de garagem permanecem explícitas inclusive quando zero.
+- Descrições sem conteúdo visível usam o fallback compartilhado entre vitrine e ficha. Descrições personalizadas e o valor administrativo são preservados.
+- Card e modal distinguem zero vagas de um valor ausente, exibido como “Consultar”.
+- O `BreadcrumbList` usa a origem canônica da ficha em Preview e produção. O diagnóstico autenticado acompanha a versão `4.8.0`.
+- Documentadas as verificações, a recuperação e a pendência de atomicidade remota da migration `0012` em Preview.
 
 Histórico recuperado do commit e70e189; releases intermediárias possuem documentos próprios.
 

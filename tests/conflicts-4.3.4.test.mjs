@@ -75,7 +75,8 @@ const eq = (actual, expected, message) => { assert.equal(actual, expected, messa
 
 // Diagnóstico ajuda a confirmar qual Function responde no Preview publicado.
 const diagnostic = await call('GET', '/diagnostics/disputes');
-eq(diagnostic.apiVersion, '4.5.3');
+const packageVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+eq(diagnostic.apiVersion, packageVersion);
 eq(diagnostic.mediaEnv, 'preview');
 eq(diagnostic.disputeRulesEnabled, true);
 eq(diagnostic.dbBindingAvailable, true);

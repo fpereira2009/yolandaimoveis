@@ -565,6 +565,10 @@
                 return "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
             }
 
+            function parkingDisplay(value) {
+                return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 'Consultar';
+            }
+
  function renderProperties(list) {
                 const grid = document.getElementById("properties-grid");
                 const counter = document.getElementById("results-counter");
@@ -660,8 +664,8 @@
                                             '<span class="block text-[10px] text-charcoal/65">Banh.</span>' +
                                         '</div>' +
                                         '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
-                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.vagas || 0) + '</span>' +
-                                            '<span class="block text-[10px] text-charcoal/65">Vagas</span>' +
+                                            '<span class="block font-heading font-bold text-moss text-xs">' + parkingDisplay(prop.vagas) + '</span>' +
+                                            '<span class="block text-[10px] text-charcoal/65">' + (prop.vagas === 1 ? 'Vaga' : 'Vagas') + '</span>' +
                                         '</div>' +
                                     '</div>' +
                                 '</div>' +
@@ -939,8 +943,8 @@
                                 '<span class="block text-[11px] text-charcoal/65">Banheiros</span>' +
                             '</div>' +
                             '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
-                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.vagas || 0) + '</span>' +
-                                '<span class="block text-[11px] text-charcoal/65">Vagas</span>' +
+                                '<span class="block font-heading font-extrabold text-moss text-sm">' + parkingDisplay(prop.vagas) + '</span>' +
+                                '<span class="block text-[11px] text-charcoal/65">' + (prop.vagas === 1 ? 'Vaga' : 'Vagas') + '</span>' +
                             '</div>' +
                         '</div>' +
 

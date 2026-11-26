@@ -56,6 +56,15 @@ function renderScenario(item) {
   return {window:context.window, nodes};
 }
 
+for (const [parking, display, label] of [
+  [0, '0', 'Vagas'], [1, '1', 'Vaga'], [2, '2', 'Vagas'],
+  [null, 'Consultar', 'Vagas'], [undefined, 'Consultar', 'Vagas'],
+]) {
+  const {nodes} = renderScenario({...property(null), vagas:parking});
+  assert.ok(nodes['properties-grid'].innerHTML.includes(`>${display}</span><span class="block text-[10px] text-charcoal/65">${label}</span>`));
+  assert.ok(nodes['property-modal-content'].innerHTML.includes(`>${display}</span><span class="block text-[11px] text-charcoal/65">${label}</span>`));
+}
+
 const stalePhoto = property('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop', []);
 stalePhoto.resolved_foto_url = stalePhoto.foto_url;
 const oldCache = renderScenario(stalePhoto);

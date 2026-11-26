@@ -84,8 +84,17 @@ export function propertySeoText(property) {
 }
 export function publicDescription(property) {
   const original = String(property.description ?? '');
-  const visible = original.replace(/<\/?(?:p|div|br|span|strong|b|em|i|u|ul|ol|li|h[1-6])\b[^>]*>/gi, '')
-    .replace(/&(?:nbsp|#160|#x0*a0);/gi, ' ').replace(/[\s\u200b\ufeff]/g, '');
+  // Use a stripped copy only to detect content. Rendering still sanitizes the original.
+  const invisible = /[\p{White_Space}\p{Default_Ignorable_Code_Point}]/gu;
+  const visible = original.replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?[a-z][a-z0-9:-]*(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'"<>])*>/gi, '')
+    .replace(/&(?:nbsp|NonBreakingSpace|Tab|NewLine|ensp|emsp|emsp13|emsp14|numsp|puncsp|thinsp|ThinSpace|hairsp|VeryThinSpace|MediumSpace|ThickSpace|ZeroWidthSpace|NegativeVeryThinSpace|NegativeThinSpace|NegativeMediumSpace|NegativeThickSpace|NoBreak|zwnj|zwj|lrm|rlm);/g, '')
+    .replace(/&#(x[\da-f]+|\d+);?/gi, (entity, value) => {
+      const hex = value[0].toLowerCase() === 'x';
+      const codePoint = Number.parseInt(hex ? value.slice(1) : value, hex ? 16 : 10);
+      return codePoint <= 0x10ffff && String.fromCodePoint(codePoint).replace(invisible, '') === '' ? '' : entity;
+    })
+    .replace(invisible, '');
   return visible ? original : propertySeoText(property).description;
 }
 export function makeHtml(property, images, requestUrl, isProduction = false) {
@@ -117,7 +126,7 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
       ...(isRent?{priceSpecification:{'@type':'UnitPriceSpecification',price:Number(property.price),priceCurrency:'BRL',unitText:'MONTH',unitCode:'MON'}}:{})}} : {})
   };
   const crumbs = {'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[
-    {'@type':'ListItem',position:1,name:'Início',item:url.origin+'/'},
+    {'@type':'ListItem',position:1,name:'Início',item:new URL('/', canonical).href},
     {'@type':'ListItem',position:2,name:property.title,item:canonical}
   ]};
   const locationText=escapeHtml(`${property.neighborhood} • ${city} - ${state}`);

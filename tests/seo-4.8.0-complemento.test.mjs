@@ -6,11 +6,38 @@ import {propPublic,propOut} from '../functions/_shared/api/serialization.js';
 import {onRequestGet} from '../functions/imoveis/[slug].js';
 const p={id:1,type:'Kitnet',title:'Teste',purpose:'Alugar',neighborhood:'Manejo',city:'Resende - RJ',bedrooms:0,bathrooms:1,parking:0,area_m2:80,price:1500,status:'Disponível'};
 const auto=propertySeoText(p).description;
-for(const description of [null,undefined,'','  ','<p><br></p>','<div>&nbsp;</div>']) {
+for(const description of [null,undefined,'',' \t\n','<p><br></p>','<div>&nbsp;</div>',
+ '<!-- comentário\nHTML -->','<section><br></section>','<p>&#0160;</p>',
+ '<article title="a > b"><span>&#x02003;&ThinSpace;&Tab;</span></article>',
+ '\u0085\u2007\u200b\u202f\u2060\ufeff','<div>&#9;&NewLine;&ZeroWidthSpace;</div>']) {
  const row={...p,description}; assert.equal(publicDescription(row),auto); assert.equal(propPublic(row).descricao,auto); assert.equal(propOut(row).description,description); assert.ok(makeHtml(row,[],'https://dev.example/').includes(auto));
 }
 assert.equal(publicDescription({...p,description:'**Original**'}),'**Original**');
 assert.equal(propPublic({...p,description:'**Original**'}).descricao,'**Original**');
+const custom = '  <p>Original <strong>da corretora</strong></p><img src=x onerror="alert(1)">  ';
+assert.equal(propPublic({...p,description:custom}).descricao,custom);
+assert.equal(propOut({...p,description:custom}).description,custom);
+const customHtml = makeHtml({...p,description:custom},[],'https://dev.example/');
+assert.ok(customHtml.includes('<p>Original <strong>da corretora</strong></p>'));
+assert.ok(customHtml.includes('&lt;img src=x onerror='));
+assert.ok(!customHtml.includes('<img src=x onerror='));
+for (const [requestOrigin, production, expectedOrigin] of [
+ ['https://yolandaimoveis.com.br',true,'https://yolandaimoveis.com.br'],
+ ['https://alternate.example',true,'https://yolandaimoveis.com.br'],
+ ['https://dev.example',false,'https://dev.example'],
+]) {
+ const html = makeHtml(p,[],`${requestOrigin}/imoveis/${slugFor(p)}`,production);
+ const canonical = `${expectedOrigin}/imoveis/${slugFor(p)}`;
+ assert.ok(html.includes(`<link rel="canonical" href="${canonical}">`));
+ assert.ok(html.includes(`<meta name="robots" content="${production ? 'index,follow' : 'noindex,nofollow'}">`));
+ const schemas = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map(match => JSON.parse(match[1]));
+ const breadcrumb = schemas.find(schema => schema['@type'] === 'BreadcrumbList');
+ assert.deepEqual(breadcrumb.itemListElement.map(item => item.item),[`${expectedOrigin}/`,canonical]);
+}
+for (const [parking,display] of [[0,'0'],[1,'1'],[2,'2'],[null,'Consultar'],[undefined,'Consultar']]) {
+ const html = makeHtml({...p,parking},[],'https://dev.example/');
+ assert.ok(html.includes(`>${display}</span><span class="block text-xs text-charcoal/65">Vagas</span>`));
+}
 assert.match(auto,/0 vagas/);assert.match(auto,/por mês/);
 const db=new DatabaseSync(':memory:');
 const dir=new URL('../migrations/',import.meta.url);
