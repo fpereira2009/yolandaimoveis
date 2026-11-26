@@ -66,46 +66,54 @@ export function seoResponse(status, body, additional={}) {
 export function makeHtml(property, images, requestUrl, isProduction = false) {
   const code = codeFor(property.id), {city,state} = cityAndState(property.city);
   const url = new URL(requestUrl);
-  const canonical = url.origin + propertyPath(property.slug);
+  const canonical = (isProduction ? 'https://yolandaimoveis.com.br' : url.origin) + propertyPath(property.slug || slugFor(property));
   const isRent = property.purpose === 'Alugar';
   const offerVerb = isRent ? 'para alugar' : 'à venda';
   const useArea = ['terreno', 'comercial'].includes(slugPart(property.type));
-  const headlineFeature = useArea ? (property.area_m2 > 0 ? `${property.area_m2} m²` : 'área não informada') : `${property.bedrooms} ${property.bedrooms === 1 ? 'quarto' : 'quartos'}`;
-  const title = `${property.type} ${headlineFeature} ${offerVerb} no ${property.neighborhood}, ${city} ${state} | Yolanda`;
+  const quantity = (n, singular, plural) => Number(n) > 0 ? `${Number(n)} ${Number(n) === 1 ? singular : plural}` : '';
+  const area = Number(property.area_m2) > 0 ? `${Number(property.area_m2)} m²` : '';
+  const rooms = useArea ? '' : quantity(property.bedrooms, 'quarto', 'quartos');
+  const headlineFeature = useArea ? area : rooms;
+  const title = `${[property.type, headlineFeature, offerVerb].filter(Boolean).join(' ')} em ${property.neighborhood}, ${city} ${state} | Yolanda`;
   const price = property.price > 0 ? currencyBR(property.price) : 'Preço sob consulta';
-  const description = `${property.type} ${headlineFeature} ${offerVerb} em ${property.neighborhood}, ${city} - ${state}. ${property.area_m2 > 0 ? property.area_m2 + ' m² de área' : 'Área sob consulta'}, ${useArea ? '' : property.bedrooms + ' quartos, '}${property.bathrooms} banheiros, ${property.parking} vagas. ${property.price > 0 ? price : 'Preço sob consulta'}. Consulte a Iêda Holanda, CRECI-RJ 112406.`.replace(/\s+/g,' ').slice(0,260);
+  const parking = property.parking;
+  const parkingText = (typeof parking === 'number' || (typeof parking === 'string' && parking.trim() !== '')) && Number.isSafeInteger(Number(parking)) && Number(parking) >= 0
+    ? `${Number(parking)} ${Number(parking) === 1 ? 'vaga' : 'vagas'}` : '';
+  const attributes = [area && area + ' de área', quantity(property.bathrooms, 'banheiro', 'banheiros'), parkingText].filter(Boolean);
+  const description = `${[property.type, headlineFeature, offerVerb].filter(Boolean).join(' ')} em ${property.neighborhood}, ${city} - ${state}. ${attributes.length ? attributes.join(', ') + '. ' : ''}${price}${isRent && property.price > 0 ? ' por mês' : ''}. Consulte a Iêda Holanda, CRECI-RJ 112406.`.replace(/\s+/g,' ').trim();
   const photos = images.map(r=>publicImage(r,property.id)).filter(Boolean);
   const safeTitle=escapeHtml(property.title), photo=photos[0];
   const mediaTags = photo ? `<meta property="og:image" content="${escapeHtml(url.origin+photo)}"><meta name="twitter:card" content="summary_large_image"><link rel="preload" as="image" href="${escapeHtml(photo)}" fetchpriority="high">` : '';
   const details = String(property.description||'').trim() || 'Entre em contato com Iêda Holanda para mais informações sobre este imóvel.';
   const jsonSchema = {
     '@context':'https://schema.org','@type':'RealEstateListing',name:property.title,
-    url:canonical,description:details.slice(0,2000),dateModified:property.updated_at,
+    url:canonical,description,dateModified:property.updated_at,
     image:photos.map(path=>url.origin+path),
 
-mainEntity: {
-  '@type': 'Place',
-  name: property.title,
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: city,
-    addressRegion: state,
-    addressCountry: 'BR'
-  }
-},
-    ...(property.price > 0 ? {offers:{'@type':'Offer',price:String(property.price),priceCurrency:'BRL',availability:'https://schema.org/InStock',url:canonical}} : {})
+    mainEntity: {
+      '@type': ({Casa:'House',Apartamento:'Apartment',Cobertura:'Apartment'})[property.type] || 'Place',
+      name: title,
+      address: {'@type':'PostalAddress',addressLocality:city,addressRegion:state,addressCountry:'BR'},
+      containedInPlace: {'@type':'Place',name:property.neighborhood},
+      ...(Number(property.area_m2)>0 ? {floorSize:{'@type':'QuantitativeValue',value:Number(property.area_m2),unitCode:'MTK'}} : {}),
+      ...(!useArea && Number(property.bedrooms)>0 ? {numberOfBedrooms:Number(property.bedrooms)} : {}),
+      ...(Number(property.bathrooms)>0 ? {numberOfBathroomsTotal:Number(property.bathrooms)} : {})
+    },
+    ...(property.price > 0 ? {offers:{'@type':'Offer',price:String(property.price),priceCurrency:'BRL',
+      businessFunction:'http://purl.org/goodrelations/v1#'+(isRent?'LeaseOut':'Sell'),url:canonical,
+      ...(property.status==='Disponível'?{availability:'https://schema.org/InStock'}:{}),
+      ...(isRent?{priceSpecification:{'@type':'UnitPriceSpecification',price:Number(property.price),priceCurrency:'BRL',unitText:'MONTH',unitCode:'MON'}}:{})}} : {})
   };
   const crumbs = {'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[
     {'@type':'ListItem',position:1,name:'Início',item:url.origin+'/'},
-    {'@type':'ListItem',position:2,name:'Imóveis',item:url.origin+'/#imoveis'},
-    {'@type':'ListItem',position:3,name:property.title,item:canonical}
+    {'@type':'ListItem',position:2,name:property.title,item:canonical}
   ]};
   const locationText=escapeHtml(`${property.neighborhood} • ${city} - ${state}`);
   const photoSlides = photos.length ? photos.map((path,i)=>`<div class="seo-slide ${i?'hidden':''}" data-slide="${i}"><img src="${escapeHtml(path)}" alt="Foto ${i+1} do imóvel ${safeTitle}" ${i?'loading="lazy"':'loading="eager" fetchpriority="high"'} decoding="async" draggable="false" class="w-full h-full object-cover"></div>`).join('') :
     '<div class="flex items-center justify-center aspect-[16/10] text-moss font-heading font-bold bg-moss-soft">Imagem não disponível</div>';
   const phoneText=`Olá Iêda Holanda! Tenho interesse no imóvel ${code} - ${property.title} (${property.neighborhood}, ${city}) anunciado no site da Yolanda Transações Imobiliárias. ${canonical}`;
   const wa=`https://wa.me/${BROKER_PHONE}?text=${encodeURIComponent(phoneText)}`;
-  const features=[['Área',property.area_m2 > 0 ? `${property.area_m2} m²` : 'Consultar'],...(!useArea ? [['Quartos',property.bedrooms]] : []),['Banheiros',property.bathrooms],['Vagas',property.parking]];
+  const features=[['Área',property.area_m2 > 0 ? `${property.area_m2} m²` : 'Consultar'],...(!useArea ? [['Quartos',property.bedrooms]] : []),['Banheiros',property.bathrooms],['Vagas',parkingText ? Number(parking) : 'Consultar']];
   const featuresHtml=features.map(([label,value])=>`<div class="rounded-xl bg-sand px-3 py-3 text-center"><span class="font-heading font-extrabold text-moss">${escapeHtml(value)}</span><span class="block text-xs text-charcoal/65">${escapeHtml(label)}</span></div>`).join('');
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><!-- Google Tag Manager -->

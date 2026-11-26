@@ -59,5 +59,5 @@ export async function onRequest(ctx) {
     return Response.redirect(new URL(propertyPath(row), url), 301);
   }
   const response = await ctx.next();
-  return (isCrc || isApp) ? protectedResponse(response) : response;
+  return (isCrc || isApp || ctx.env?.MEDIA_ENV === 'preview') ? protectedResponse(response) : response;
 }

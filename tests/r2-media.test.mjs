@@ -190,7 +190,7 @@ tests++;
 // Cada HTML permanece com handlers e os controles novos.
 const crm=crmComposite;
 const site=vitrineComposite;
-for(const token of ['id="prop-files"','id="prop-gallery-editor"','selectPropertyPhotos(event)','optimizePropertyPhoto(file)','sendPropertyImage(code, blob)','setPropertyCover(type, id)','removePropertyImage(id)','onsubmit="handleSaveProperty(event)"']) check(crm.includes(token),`CRM mantém ${token}`);
+for(const token of ['id="prop-files"','id="prop-gallery-editor"','selectPropertyPhotos(event)','optimizePropertyPhoto(file)','sendPropertyImage(code, optimized)','setPropertyCover(type, id)','removePropertyImage(id)','onsubmit="handleSaveProperty(event)"']) check(crm.includes(token),`CRM mantém ${token}`);
 for(const token of ['window.movePropertyGallery = movePropertyGallery','id="property-gallery-swipe"','function movePropertyGallery(step)','property-gallery-counter','touchstart','touchend','movePropertyGallery(-1)','movePropertyGallery(1)']) check(site.includes(token),`vitrine mantém ${token}`);
 check(!crm.includes('id="prop-photo"'), 'entrada URL removida do CRM');
 check(!crm.includes('previewPropPhoto()'), 'pré-visualização legada removida');
