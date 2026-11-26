@@ -333,7 +333,7 @@
                         <label for="filter-location" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Localidade / Bairro
                         </label>
-                        <select id="filter-location" onchange="applyFilters()"
+                        <select id="filter-location" onchange="applyFilters('property_filter')"
                                 class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
                             <option value="Todos">Todas as localidades</option>
                         </select>
@@ -344,7 +344,7 @@
                         <label for="filter-type" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Tipo de Imóvel
                         </label>
-                        <select id="filter-type" onchange="applyFilters()"
+                        <select id="filter-type" onchange="applyFilters('property_filter')"
                                 class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
                             <option value="Todos">Todos os tipos</option>
                             <option value="Apartamento">Apartamento</option>
@@ -361,7 +361,7 @@
                         <label for="filter-bedrooms" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Dormitórios
                         </label>
-                        <select id="filter-bedrooms" onchange="applyFilters()"
+                        <select id="filter-bedrooms" onchange="applyFilters('property_filter')"
                                 class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
                             <option value="0">Qualquer</option>
                             <option value="1">1+ quarto</option>
@@ -379,7 +379,7 @@
                         <div class="relative flex gap-2">
                             <div class="relative flex-1">
                                 <i data-lucide="search" class="w-4 h-4 text-moss/50 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                                <input type="text" id="filter-search" oninput="applyFilters()"
+                                <input type="text" id="filter-search" oninput="applyFilters('property_search')"
                                        placeholder="Ex: YTI-001, condomínio, piscina..."
                                        class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                             </div>
@@ -630,7 +630,7 @@
     <!-- ==================== JAVASCRIPT ==================== -->
     <script src="/js/property-description.js?v=4.3.1" defer></script>
     <script src="/js/crm-input-masks.js?v=4.5.3" defer></script>
-    <script src="/js/analytics.js?v=4.7.8" defer></script>
-    <script src="/js/vitrine-app.js?v=4.7.8" defer></script>
+    <script src="/js/analytics.js?v=4.7.9" defer></script>
+    <script src="/js/vitrine-app.js?v=4.7.9" defer></script>
 </body>
 </html>

@@ -692,7 +692,6 @@
             }
 
             function setFinalidadeFilter(fin) {
-                window.YTIAnalytics?.track('property_filter', null, 'filters');
                 activeFinalidade = fin;
                 document.querySelectorAll(".fin-pill").forEach(function (btn) {
                     const isSelected = btn.getAttribute("data-fin") === fin;
@@ -700,10 +699,12 @@
                         ? "fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-bold bg-moss text-white transition-all"
                         : "fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition-all";
                 });
-                applyFilters();
+                applyFilters('property_filter');
             }
 
-            function applyFilters() {
+            let discoveryTimer;
+            let lastDiscovery = '';
+            function applyFilters(eventName) {
                 const locVal = document.getElementById("filter-location") ? document.getElementById("filter-location").value : "Todos";
                 const typeVal = document.getElementById("filter-type") ? document.getElementById("filter-type").value : "Todos";
                 const bedsVal = Number(document.getElementById("filter-bedrooms") ? document.getElementById("filter-bedrooms").value : 0);
@@ -727,6 +728,22 @@
                 });
 
                 renderProperties(filtered);
+                if (eventName === 'property_filter' || eventName === 'property_search') {
+                    clearTimeout(discoveryTimer);
+                    const snapshot = {
+                        purpose: activeFinalidade, type: typeVal,
+                        location: locVal === 'Todos' || properties.some(p => String(p.bairro || '').trim() === locVal) ? locVal : null,
+                        bedrooms: bedsVal, searchUsed: Boolean(searchVal), count: filtered.length
+                    };
+                    const signature = JSON.stringify([eventName, snapshot, searchVal]);
+                    const emit = () => {
+                        if (signature === lastDiscovery) return;
+                        lastDiscovery = signature;
+                        window.YTIAnalytics?.track(eventName, null, 'filters', snapshot);
+                    };
+                    if (eventName === 'property_search') discoveryTimer = setTimeout(emit, 700);
+                    else emit();
+                }
             }
 
             function resetFilters() {
@@ -1060,10 +1077,6 @@
             document.addEventListener('click', function(e) {
                 const link = e.target?.closest?.('[data-share-code]');
                 if (link) window.YTIAnalytics?.track('property_share', properties.find(p => p.codigo === link.dataset.shareCode), link.closest('#property-modal') ? 'modal' : 'card');
-            });
-            document.addEventListener('change', function(e) {
-                if (['filter-location','filter-type','filter-bedrooms'].includes(e.target.id)) window.YTIAnalytics?.track('property_filter', null, 'filters');
-                if (e.target.id === 'filter-search' && e.target.value.trim()) window.YTIAnalytics?.track('property_search', null, 'filters');
             });
             window.openCardInterestWhatsApp = openCardInterestWhatsApp;
             window.setFinalidadeFilter = setFinalidadeFilter;
