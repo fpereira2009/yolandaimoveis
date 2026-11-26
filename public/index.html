@@ -137,7 +137,7 @@
                     <span class="sm:hidden">Corretora</span>
                 </a>
 
-                <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Vim%20pelo%20site%20da%20Yolanda%20Transa%C3%A7%C3%B5es%20Imobili%C3%A1rias%20e%20gostaria%20de%20um%20atendimento."
+                <a data-contact-origin="header" href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Vim%20pelo%20site%20da%20Yolanda%20Transa%C3%A7%C3%B5es%20Imobili%C3%A1rias%20e%20gostaria%20de%20um%20atendimento."
                    target="_blank" rel="noopener noreferrer" title="Conversar no WhatsApp" aria-label="Conversar no WhatsApp"
                    class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-xs sm:text-sm shadow-xs transition-all">
                     <i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>
@@ -186,7 +186,7 @@
                         <span>Explorar Portfólio</span>
                     </a>
 
-                    <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20agendar%20uma%20conversa%20sobre%20im%C3%B3veis%20em%20Resende%20e%20Regi%C3%A3o."
+                    <a data-contact-origin="hero" href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20agendar%20uma%20conversa%20sobre%20im%C3%B3veis%20em%20Resende%20e%20Regi%C3%A3o."
                        target="_blank" rel="noopener noreferrer"
                        class="px-6 py-4 rounded-2xl bg-white hover:bg-terracotta-soft text-moss border border-sand-border font-heading font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all">
                         <i data-lucide="message-circle" class="w-5 h-5 text-whatsapp"></i>
@@ -249,7 +249,7 @@
                             <p class="text-xs text-charcoal/75 leading-snug">
                                 Especialista em imóveis residenciais, condomínios e investimentos em Resende e Região.
                             </p>
-                            <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20falar%20com%20voc%C3%AA%20sobre%20um%20im%C3%B3vel."
+                            <a data-contact-origin="services" href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20falar%20com%20voc%C3%AA%20sobre%20um%20im%C3%B3vel."
                                target="_blank" rel="noopener noreferrer" title="Falar diretamente no WhatsApp" aria-label="Falar diretamente no WhatsApp"
                                class="inline-flex items-center gap-1.5 text-xs font-heading font-bold text-terracotta hover:text-terracotta-hover pt-0.5">
                                 <span>Falar diretamente no WhatsApp</span>
@@ -333,7 +333,7 @@
                         <label for="filter-location" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Localidade / Bairro
                         </label>
-                        <select id="filter-location" onchange="applyFilters()"
+                        <select id="filter-location" onchange="applyFilters('property_filter')"
                                 class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
                             <option value="Todos">Todas as localidades</option>
                         </select>
@@ -344,7 +344,7 @@
                         <label for="filter-type" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Tipo de Imóvel
                         </label>
-                        <select id="filter-type" onchange="applyFilters()"
+                        <select id="filter-type" onchange="applyFilters('property_filter')"
                                 class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
                             <option value="Todos">Todos os tipos</option>
                             <option value="Apartamento">Apartamento</option>
@@ -361,7 +361,7 @@
                         <label for="filter-bedrooms" class="block text-[11px] font-bold uppercase tracking-wider text-moss/70 mb-1">
                             Dormitórios
                         </label>
-                        <select id="filter-bedrooms" onchange="applyFilters()"
+                        <select id="filter-bedrooms" onchange="applyFilters('property_filter')"
                                 class="w-full px-3.5 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm text-charcoal focus:outline-none focus:border-moss">
                             <option value="0">Qualquer</option>
                             <option value="1">1+ quarto</option>
@@ -379,7 +379,7 @@
                         <div class="relative flex gap-2">
                             <div class="relative flex-1">
                                 <i data-lucide="search" class="w-4 h-4 text-moss/50 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                                <input type="text" id="filter-search" oninput="applyFilters()"
+                                <input type="text" id="filter-search" oninput="applyFilters('property_search')"
                                        placeholder="Ex: YTI-001, condomínio, piscina..."
                                        class="w-full pl-10 pr-3 py-2.5 rounded-xl bg-sand/70 border border-sand-border text-xs sm:text-sm focus:outline-none focus:border-moss">
                             </div>
@@ -471,7 +471,7 @@
                     </div>
 
                     <div class="pt-2">
-                        <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Vi%20seu%20perfil%20no%20site%20da%20Yolanda%20Transa%C3%A7%C3%B5es%20Imobili%C3%A1rias%20e%20gostaria%20de%20conversar."
+                        <a data-contact-origin="broker" href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Vi%20seu%20perfil%20no%20site%20da%20Yolanda%20Transa%C3%A7%C3%B5es%20Imobili%C3%A1rias%20e%20gostaria%20de%20conversar."
                            target="_blank" rel="noopener noreferrer"
                            class="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-terracotta hover:bg-terracotta-hover text-white font-heading font-bold text-sm sm:text-base shadow-md transition-all">
                             <i data-lucide="message-circle" class="w-5 h-5"></i>
@@ -585,7 +585,7 @@
 
             <div class="space-y-2.5 text-xs">
                 <p class="font-heading font-bold text-white text-sm mb-2">Contato Direto</p>
-                <a href="https://wa.me/5524999040775" target="_blank" rel="noopener noreferrer"
+                <a data-contact-origin="footer" href="https://wa.me/5524999040775" target="_blank" rel="noopener noreferrer"
                    class="inline-flex items-center gap-2 text-white font-bold hover:text-terracotta transition-colors">
                     <i data-lucide="phone" class="w-4 h-4 text-whatsapp"></i>
                     <span>(24) 99904-0775</span>
@@ -605,7 +605,7 @@
     </footer>
 
     <!-- BOTÃO FLUTUANTE WHATSAPP -->
-    <a href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20im%C3%B3veis."
+    <a data-contact-origin="floating_button" href="https://wa.me/5524999040775?text=Ol%C3%A1%20I%C3%AAda%20Holanda!%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20im%C3%B3veis."
        target="_blank" rel="noopener noreferrer" aria-label="Conversar com Iêda Holanda no WhatsApp" title="Conversar com Iêda Holanda no WhatsApp"
        class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2.5 px-4 py-3.5 rounded-full bg-whatsapp hover:brightness-105 text-white font-heading font-bold text-xs sm:text-sm shadow-float transition-transform hover:scale-105">
         <i data-lucide="message-circle" class="w-5 h-5" aria-hidden="true"></i>
@@ -630,6 +630,7 @@
     <!-- ==================== JAVASCRIPT ==================== -->
     <script src="/js/property-description.js?v=4.3.1" defer></script>
     <script src="/js/crm-input-masks.js?v=4.5.3" defer></script>
-    <script src="/js/vitrine-app.js?v=4.6.0" defer></script>
+    <script src="/js/analytics.js?v=4.7.9" defer></script>
+    <script src="/js/vitrine-app.js?v=4.7.9" defer></script>
 </body>
 </html>

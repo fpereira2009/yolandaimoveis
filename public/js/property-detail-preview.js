@@ -1,6 +1,7 @@
 // Galeria e envio de interesse; a página já chega renderizada pelo servidor (SSR).
 (() => {
   'use strict';
+  window.YTIAnalytics?.track('property_view', window.YTIProperty, 'seo_sidebar');
   const area=document.getElementById('seo-gallery');
   const slides=[...area?.querySelectorAll('[data-slide]') || []];
   const counter=document.getElementById('seo-counter');
@@ -33,6 +34,7 @@
   document.addEventListener('contextmenu',e=>{if(e.target?.closest('img'))e.preventDefault();},true);
   area?.addEventListener('dragstart',e=>{if(e.target?.closest('img'))e.preventDefault();});
   document.getElementById('seo-share')?.addEventListener('click',async()=>{
+    window.YTIAnalytics?.track('property_share', window.YTIProperty, 'seo_sidebar');
     if(navigator.share) { try {await navigator.share({title:document.title,url:PROPERTY_URL});return;} catch(e){if(e.name==='AbortError')return;} }
     if(navigator.clipboard?.writeText) {try {await navigator.clipboard.writeText(PROPERTY_URL); alert('Link copiado!');return;}catch{}}
     window.prompt('Copie o link do imóvel:',PROPERTY_URL);
@@ -50,8 +52,9 @@
       const data=new FormData(form);
       const response=await fetch('/api/public/contact',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'interesse',name:data.get('name'),phone:data.get('phone'),property_code:PROPERTY_CODE,website:data.get('website')||''})});
       if(!response.ok) throw new Error('Não foi possível registrar o atendimento.');
+      if(response.status === 201) window.YTIAnalytics?.track('lead_whatsapp', window.YTIProperty, 'seo_form');
       msg.textContent='Atendimento recebido. Abrindo o WhatsApp...';
-    } catch(e) { msg.textContent='Não foi possível registrar agora. Você ainda pode falar diretamente pelo WhatsApp.'; }
-    finally {button.disabled=false; if(tab)tab.location.href=WA_LINK;else window.location.href=WA_LINK;}
+    } catch(e) { window.YTIAnalytics?.track('lead_error', window.YTIProperty, 'seo_form'); msg.textContent='Não foi possível registrar agora. Você ainda pode falar diretamente pelo WhatsApp.'; }
+    finally {window.YTIAnalytics?.track('whatsapp_click', window.YTIProperty, 'seo_form'); button.disabled=false; if(tab)tab.location.href=WA_LINK;else window.location.href=WA_LINK;}
   });
 })();

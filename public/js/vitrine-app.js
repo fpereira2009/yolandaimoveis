@@ -449,7 +449,7 @@
                     const r = await fetch("/api/public/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ctrl.signal });
                     clearTimeout(timer);
                     let d = null; try { d = await r.json(); } catch (e) {}
-                    if (r.ok) return { ok: true };
+                    if (r.ok) return { ok: true, recorded: r.status === 201 };
                     return { ok: false, status: r.status, error: (d && d.error) || "Não foi possível registrar o seu contato." };
                 } catch (e) {
                     return { ok: false, status: 0, error: "Sem conexão para registrar o seu contato." };
@@ -486,17 +486,10 @@
                 setBusy(btn, true);
                 const res = await sendContactAsync({ kind: "interesse", name: name, phone: phone, property_code: codigo, website: (document.getElementById("interest-website") || {}).value || "" });
                 setBusy(btn, false);
-                if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
-                // captura dados para google analytics (eventos de conversão)
-                window.dataLayer = window.dataLayer || [];
-
-                window.dataLayer.push({
-                    event: 'lead_whatsapp',
-                    property_code: prop.codigo,
-                    property_name: prop.titulo,
-                    property_city: prop.cidade,
-                    property_value: prop.valor
-                });
+                if (!res.ok && res.status === 400) { window.YTIAnalytics?.track('lead_error', prop, 'interest_form'); if (w) w.close(); showToast(res.error); return; }
+                if (res.recorded) window.YTIAnalytics?.track('lead_whatsapp', prop, 'interest_form');
+                else if (!res.ok) window.YTIAnalytics?.track('lead_error', prop, 'interest_form');
+                window.YTIAnalytics?.track('whatsapp_click', prop, 'interest_form');
                 goToWhatsApp(getWhatsAppPropertyLink(prop, name), w);
                 showToast(res.ok ? "Contato registrado! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o contato agora).");
             }
@@ -540,7 +533,13 @@
             }
 
             function getWhatsAppPropertyLink(prop, name) {
-                const msg = "Olá Iêda Holanda! Tenho interesse no imóvel *" + prop.codigo + " - " + prop.titulo + "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias. Veja o anúncio: " + propertyDeepLink(prop) + (name ? " Meu nome é " + name + "." : "");
+                const msg =
+                    "Olá Iêda Holanda! " +
+                    (name ? "Meu nome é *" + name + "*. " : "") +
+                    "Tenho interesse no imóvel *" +
+                    prop.codigo + " - " + prop.titulo +
+                    "* (" + prop.bairro + ", " + prop.cidade + ") anunciado no site da Yolanda Transações Imobiliárias. Veja o anúncio: " +
+                    propertyDeepLink(prop);
                 return "https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg);
             }
 
@@ -549,6 +548,7 @@
                 const prop = properties.find(p => p.codigo === codigo);
                 if (!prop) return;
                 // Ação síncrona ao clique: nenhum modal ou requisição bloqueia a conversão.
+                window.YTIAnalytics?.track('whatsapp_click', prop, 'card');
                 window.open(getWhatsAppPropertyLink(prop), '_blank', 'noopener,noreferrer');
             }
 
@@ -678,7 +678,7 @@
                                     '<i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>' +
                                     '<span>Tenho Interesse</span>' +
                                 '</button>' +
-                                '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                                '<a data-share-code="' + esc(prop.codigo) + '" href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
                                    'title="Encaminhar anúncio pelo WhatsApp" aria-label="Encaminhar anúncio pelo WhatsApp" ' +
                                    'class="p-3 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border inline-flex items-center justify-center shrink-0 transition-colors">' +
                                     '<i data-lucide="share-2" class="w-4 h-4"></i>' +
@@ -699,10 +699,12 @@
                         ? "fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-bold bg-moss text-white transition-all"
                         : "fin-pill px-4 py-2 rounded-xl text-xs sm:text-sm font-heading font-semibold bg-sand text-moss hover:bg-moss-soft transition-all";
                 });
-                applyFilters();
+                applyFilters('property_filter');
             }
 
-            function applyFilters() {
+            let discoveryTimer;
+            let lastDiscovery = '';
+            function applyFilters(eventName) {
                 const locVal = document.getElementById("filter-location") ? document.getElementById("filter-location").value : "Todos";
                 const typeVal = document.getElementById("filter-type") ? document.getElementById("filter-type").value : "Todos";
                 const bedsVal = Number(document.getElementById("filter-bedrooms") ? document.getElementById("filter-bedrooms").value : 0);
@@ -726,6 +728,22 @@
                 });
 
                 renderProperties(filtered);
+                if (eventName === 'property_filter' || eventName === 'property_search') {
+                    clearTimeout(discoveryTimer);
+                    const snapshot = {
+                        purpose: activeFinalidade, type: typeVal,
+                        location: locVal === 'Todos' || properties.some(p => String(p.bairro || '').trim() === locVal) ? locVal : null,
+                        bedrooms: bedsVal, searchUsed: Boolean(searchVal), count: filtered.length
+                    };
+                    const signature = JSON.stringify([eventName, snapshot, searchVal]);
+                    const emit = () => {
+                        if (signature === lastDiscovery) return;
+                        lastDiscovery = signature;
+                        window.YTIAnalytics?.track(eventName, null, 'filters', snapshot);
+                    };
+                    if (eventName === 'property_search') discoveryTimer = setTimeout(emit, 700);
+                    else emit();
+                }
             }
 
             function resetFilters() {
@@ -848,19 +866,7 @@
                 const content = document.getElementById("property-modal-content");
                 if (!prop || !modal || !content) return;
 
-                // Google Tag Manager - Property View
-                window.dataLayer = window.dataLayer || [];
-
-                window.dataLayer.push({
-                    event: 'property_view',
-                    property_code: prop.codigo,
-                    property_name: prop.titulo,
-                    property_type: prop.tipo,
-                    property_city: prop.cidade,
-                    property_neighborhood: prop.bairro,
-                    property_price: prop.valor,
-                    property_purpose: prop.finalidade
-                });
+                window.YTIAnalytics?.track('property_view', prop, 'modal');
                 const isRental = prop.finalidade === "Alugar";
                 const badgeClass = isRental ? "bg-terracotta text-white" : "bg-moss text-white";
                 const resolvedImg = getPropertyCoverUrl(prop);
@@ -911,7 +917,7 @@
                                 '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
                                 '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
                             '</div>' +
-                            '<a href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                            '<a data-share-code="' + esc(prop.codigo) + '" href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
                                'title="Encaminhar este anúncio para um contato no WhatsApp" aria-label="Encaminhar anúncio no WhatsApp" ' +
                                'class="self-start shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
                                 '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
@@ -1022,7 +1028,10 @@
                 setBusy(btn, true);
                 const res = await sendContactAsync({ kind: "proprietario", name: name, phone: phone, purpose: purpose, what: typeLoc, message: notes, website: (document.getElementById("owner-website") || {}).value || "" });
                 setBusy(btn, false);
-                if (!res.ok && res.status === 400) { if (w) w.close(); showToast(res.error); return; }
+                if (!res.ok && res.status === 400) { window.YTIAnalytics?.track('lead_error', null, 'owner_form'); if (w) w.close(); showToast(res.error); return; }
+                if (res.recorded) window.YTIAnalytics?.track('owner_lead', null, 'owner_form');
+                else if (!res.ok) window.YTIAnalytics?.track('lead_error', null, 'owner_form');
+                window.YTIAnalytics?.track('whatsapp_click', null, 'owner_form');
                 goToWhatsApp("https://wa.me/" + BROKER_PHONE + "?text=" + encodeURIComponent(msg), w);
                 form.reset();
                 showToast(res.ok ? "Cadastro recebido! Abrindo o WhatsApp da Iêda Holanda..." : "Abrindo o WhatsApp (não foi possível registrar o cadastro agora).");
@@ -1065,6 +1074,10 @@
             window.handlePropertyImgError = handlePropertyImgError;
             window.loadCatalog = loadCatalog;
             window.submitInterest = submitInterest;
+            document.addEventListener('click', function(e) {
+                const link = e.target?.closest?.('[data-share-code]');
+                if (link) window.YTIAnalytics?.track('property_share', properties.find(p => p.codigo === link.dataset.shareCode), link.closest('#property-modal') ? 'modal' : 'card');
+            });
             window.openCardInterestWhatsApp = openCardInterestWhatsApp;
             window.setFinalidadeFilter = setFinalidadeFilter;
             window.applyFilters = applyFilters;
