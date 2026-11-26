@@ -3,6 +3,8 @@
 ## [4.8.0]
 ### Added
 - Página 404 e testes SEO.
+- Descrição pública automática quando não houver texto personalizado.
+- Migration 0012: novos slugs sem 0-quartos; URLs existentes preservadas e redirecionamento 301 após edição.
 ### Changed
 - Metadados da home e schema de imóveis; suíte Node consolidada.
 ### Fixed

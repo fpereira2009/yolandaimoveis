@@ -28,9 +28,9 @@ export function slugFor(property) {
   // Banco D1: area_m2 é INTEGER >= 0. Não inventamos metragem quando está ausente.
   const size = useArea
     ? (Number.isSafeInteger(rawArea) && rawArea > 0 ? `${rawArea}m2` : 'area-nao-informada')
-    : `${Number(property.bedrooms || 0)}-${Number(property.bedrooms || 0) === 1 ? 'quarto' : 'quartos'}`;
+    : (Number(property.bedrooms) > 0 ? `${Number(property.bedrooms)}-${Number(property.bedrooms) === 1 ? 'quarto' : 'quartos'}` : '');
   return [type, size, slugPart(property.neighborhood), slugPart(city), state.toLowerCase(),
-    codeFor(property.id).toLowerCase()].join('-');
+    codeFor(property.id).toLowerCase()].filter(Boolean).join('-');
 }
 export function slugId(slug) {
   const match = /-yti-(\d{4,})$/.exec(String(slug || ''));
@@ -63,10 +63,9 @@ export function seoResponse(status, body, additional={}) {
     'Referrer-Policy':'strict-origin-when-cross-origin', 'X-Frame-Options':'DENY', ...additional
   }});
 }
-export function makeHtml(property, images, requestUrl, isProduction = false) {
-  const code = codeFor(property.id), {city,state} = cityAndState(property.city);
-  const url = new URL(requestUrl);
-  const canonical = (isProduction ? 'https://yolandaimoveis.com.br' : url.origin) + propertyPath(property.slug || slugFor(property));
+// Fonte única para metadados e descrição pública de fallback.
+export function propertySeoText(property) {
+  const {city,state} = cityAndState(property.city);
   const isRent = property.purpose === 'Alugar';
   const offerVerb = isRent ? 'para alugar' : 'à venda';
   const useArea = ['terreno', 'comercial'].includes(slugPart(property.type));
@@ -81,10 +80,23 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
     ? `${Number(parking)} ${Number(parking) === 1 ? 'vaga' : 'vagas'}` : '';
   const attributes = [area && area + ' de área', quantity(property.bathrooms, 'banheiro', 'banheiros'), parkingText].filter(Boolean);
   const description = `${[property.type, headlineFeature, offerVerb].filter(Boolean).join(' ')} em ${property.neighborhood}, ${city} - ${state}. ${attributes.length ? attributes.join(', ') + '. ' : ''}${price}${isRent && property.price > 0 ? ' por mês' : ''}. Consulte a Iêda Holanda, CRECI-RJ 112406.`.replace(/\s+/g,' ').trim();
+  return {isRent,useArea,title,price,parking,parkingText,description};
+}
+export function publicDescription(property) {
+  const original = String(property.description ?? '');
+  const visible = original.replace(/<\/?(?:p|div|br|span|strong|b|em|i|u|ul|ol|li|h[1-6])\b[^>]*>/gi, '')
+    .replace(/&(?:nbsp|#160|#x0*a0);/gi, ' ').replace(/[\s\u200b\ufeff]/g, '');
+  return visible ? original : propertySeoText(property).description;
+}
+export function makeHtml(property, images, requestUrl, isProduction = false) {
+  const code = codeFor(property.id), {city,state} = cityAndState(property.city);
+  const url = new URL(requestUrl);
+  const canonical = (isProduction ? 'https://yolandaimoveis.com.br' : url.origin) + propertyPath(property.slug || slugFor(property));
+  const {isRent,useArea,title,price,parking,parkingText,description} = propertySeoText(property);
   const photos = images.map(r=>publicImage(r,property.id)).filter(Boolean);
   const safeTitle=escapeHtml(property.title), photo=photos[0];
   const mediaTags = photo ? `<meta property="og:image" content="${escapeHtml(url.origin+photo)}"><meta name="twitter:card" content="summary_large_image"><link rel="preload" as="image" href="${escapeHtml(photo)}" fetchpriority="high">` : '';
-  const details = String(property.description||'').trim() || 'Entre em contato com Iêda Holanda para mais informações sobre este imóvel.';
+  const details = publicDescription(property);
   const jsonSchema = {
     '@context':'https://schema.org','@type':'RealEstateListing',name:property.title,
     url:canonical,description,dateModified:property.updated_at,

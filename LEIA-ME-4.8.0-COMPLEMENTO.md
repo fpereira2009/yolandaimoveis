@@ -1,0 +1,3 @@
+# Complemento 4.8.0 — DEV
+Aplicar sobre a 4.8.0 revisada já instalada. Substituir os arquivos mantendo diretórios. Executar npm test (Node 22+). Aplicar exclusivamente no D1 preview: `npx wrangler d1 migrations apply yolanda-crm-dev --env preview --remote`. Conferir com `npx wrangler d1 migrations list yolanda-crm-dev --env preview --remote`. Commit/push apenas em dev. Não alterar produção.
+A migration mantém slugs existentes; inserções e edições dos campos que compõem o slug passam a omitir zero quartos. A rota existente redireciona URLs antigas pelo ID. Comercial e Terreno mantêm metragem no slug. Nenhum cadastro é corrigido automaticamente. A API pública usa a descrição SEO apenas quando o texto original não possui conteúdo; o CRM continua recebendo o valor original.
