@@ -1,25 +1,82 @@
-# Correção de upload - pacote para branch dev
+# Yolanda Imóveis
 
-Este pacote **não contém versões antigas dos arquivos do projeto**. O script aplica modificações pontuais aos arquivos existentes na branch dev atualizada e aborta antes de qualquer escrita caso o código-base esperado tenha mudado.
+Site institucional + CRM de imóveis da **Yolanda Transações Imobiliárias**.
 
-## Aplicação no VS Code (PowerShell)
+Versão atual: **4.8.0**  
+Branch de desenvolvimento: `dev`
 
-1. `git switch dev`
-2. `git pull --ff-only origin dev`
-3. Copie `aplicar_hotfix.py` para a raiz do repositório.
-4. `py aplicar_hotfix.py --check`
-5. `py aplicar_hotfix.py`
-6. `node --check public/js/crm-properties.js`
-7. `node --check 'functions/api/media/[[path]].js'`
-8. `npm test`
-9. `git diff --check`
-10. Revise `git diff`, teste upload de JPEG, PNG, WebP, HEIC no Safari iPhone, defina capa, remova foto e confira R2/D1 Preview.
-11. Após aprovação: `git add public/js/crm-properties.js public/app/index.html 'functions/api/media/[[path]].js'` e commit/push pelo fluxo habitual da branch dev.
+---
 
-## Importante
+## O que é este projeto
 
-- Não modifica nenhum banco nem requer migration.
-- A seleção HEIC está habilitada, mas sua decodificação depende do navegador. Quando não houver suporte, aparece mensagem clara. Um conversor HEIC universal exige biblioteca ou serviço de conversão adicional.
-- O preview de arquivos HEIC também depende do navegador.
-- O script é para aplicação **uma vez**; a segunda execução será bloqueada pelo validador.
-- Verifique possíveis mudanças concorrentes no repositório antes de aplicar.
+Sistema completo de:
+
+- **Vitrine pública** de imóveis (listagem, ficha com SEO, contato, WhatsApp)
+- **CRM interno** (leads, clientes CRC, imóveis, funil, follow-up, galeria de fotos)
+- Autenticação via **Cloudflare Access**
+- Banco **Cloudflare D1** (SQLite)
+- Mídia (fotos) no **Cloudflare R2**
+- Deploy em **Cloudflare Pages + Pages Functions**
+
+---
+
+## Stack
+
+| Camada              | Tecnologia                          |
+|---------------------|-------------------------------------|
+| Front-end           | HTML, CSS, JavaScript Vanilla, Tailwind CSS |
+| Backend             | Cloudflare Pages Functions          |
+| Banco de dados      | Cloudflare D1 (SQLite)              |
+| Armazenamento       | Cloudflare R2                       |
+| Autenticação        | Cloudflare Access (JWT)             |
+| Deploy              | Cloudflare Pages                    |
+| Testes              | Node.js (`node --test`) + Python    |
+
+---
+
+
+## Estrutura principal
+├── public/                 # Front-end estático (vitrine + app CRM)
+│   ├── app/                # Interface do CRM
+│   ├── js/                 # Scripts da vitrine e do CRM
+│   └── css/
+├── functions/              # Pages Functions
+│   ├── _shared/            # Código compartilhado (auth, API, SEO, mídia…)
+│   ├── api/                # Rotas da API
+│   └── imoveis/            # Rotas de ficha de imóvel (SEO)
+├── migrations/             # Migrations do D1 (em ordem)
+├── tests/                  # Testes automatizados
+├── performance/            # Diagnósticos e build de CSS
+├── AGENTS.md               # Regras para agentes de IA e desenvolvedores
+└── CHANGELOG.md            # Histórico de versões
+
+---
+
+## Ambientes
+
+| Ambiente   | Branch  | D1                    | R2                      | Observação                          |
+|------------|---------|-----------------------|-------------------------|-------------------------------------|
+| Desenvolvimento | `dev`   | `yolanda-crm-dev`     | `yolanda-imoveis-dev`   | Uso diário de desenvolvimento       |
+| Homologação     | `teste` | `yolanda-crm-dev`*    | `yolanda-imoveis-dev`*  | *pode compartilhar recursos de Preview |
+| Produção        | `main`  | `yolanda-crm`         | `yolanda-imoveis-prod`  | Nunca alterar sem autorização       |
+
+> **Importante:** nunca faça push direto em `main` ou `teste` sem aprovação. Todo desenvolvimento acontece em `dev`.
+
+---
+
+## Como rodar localmente
+
+### Pré-requisitos
+
+- Node.js 22+
+- Wrangler (`npm i -g wrangler` ou via `npx`)
+- Conta Cloudflare com acesso ao projeto
+- Variáveis de ambiente configuradas (Access, D1, R2)
+
+### Instalação
+
+```bash
+git clone https://github.com/fpereira2009/yolandaimoveis.git
+cd yolandaimoveis
+git switch dev
+npm install
