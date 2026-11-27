@@ -10,7 +10,10 @@
 ### Fixed
 - Singular/plural, atributos zero e breadcrumb; vagas de garagem permanecem explícitas inclusive quando zero.
 - Descrições sem conteúdo visível usam o fallback compartilhado entre vitrine e ficha. Descrições personalizadas e o valor administrativo são preservados.
-- Card e modal distinguem zero vagas de um valor ausente, exibido como “Consultar”.
+- COR-08: cards, modal, ficha SSR e SEO padronizam Área, Quarto(s), Banheiro(s) e Vaga(s), com formatação brasileira. Características desconhecidas ficam ocultas, substituindo “Consultar”. Área, quartos e banheiros com valor zero ficam ocultos e zero vagas continua explícito.
+- COR-08 (RN-07): a descrição automática usa “Consulte Iêda Holanda” sem artigo nem vírgula, preservando as descrições personalizadas.
+- COR-08: a vitrine normaliza respostas legadas e reaproveita o catálogo local compatível em falhas de rede. Contagens em texto são validadas antes da conversão para impedir arredondamento de frações.
+- COR-08: respostas e snapshots incompatíveis são rejeitados. O cache só é atualizado após a renderização e falhas recuperam o catálogo válido sem renovar o timestamp. Strings com um único separador, 1–3 algarismos iniciais sem zero à esquerda e exatamente três algarismos finais são rejeitadas como ambíguas. Números JSON válidos e zero vagas continuam aceitos.
 - O `BreadcrumbList` usa a origem canônica da ficha em Preview e produção. O diagnóstico autenticado acompanha a versão `4.8.0`.
 - O modal renderiza formatação HTML legada com tags permitidas sem atributos e continua aceitando Markdown.
 - A entidade de espaço não separável sem ponto e vírgula é reconhecida pelo fallback de descrições vazias.

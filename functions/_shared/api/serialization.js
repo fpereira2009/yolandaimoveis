@@ -1,4 +1,4 @@
-import {publicDescription} from '../property-seo.js';
+import {propertyFeatures, publicDescription} from '../property-seo.js';
 import {propertyPath} from '../property-url.js';
 import { followupView, eventDate, TZ, leadCode, clientCode, propCode, CODE_PREFIX, todayBR, HttpError } from './common.js';
 import {withGallery} from '../property-media.js';
@@ -39,6 +39,7 @@ const propOut = (r, images = [], env) => withGallery({
 const propPublic = (r, images = [], env) => withGallery({   // mesmo formato que o site já usava ao ler a planilha
   url: propertyPath(r), codigo: propCode(r.id), titulo: r.title, finalidade: r.purpose, tipo: r.type, bairro: r.neighborhood, cidade: r.city,
   valor: r.price, area_m2: r.area_m2, quartos: r.bedrooms, banheiros: r.bathrooms, vagas: r.parking,
+  caracteristicas: propertyFeatures(r),
   foto_url: r.photo_url, destaque: r.badge, status: r.status,
   descricao: publicDescription(r),
 }, images, env);

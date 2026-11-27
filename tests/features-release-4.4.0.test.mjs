@@ -38,7 +38,7 @@ const history={pushState(state,unused,url){eventsHistory.push(['push',String(url
 const contacts=[];
 const context={console,URL,URLSearchParams,location,history,Date,Image:undefined,
   window:{location,history,open(url){contacts.push(url)},addEventListener(name,cb){events[name]=cb},
-    localStorage:{getItem(key){return key==='yti_catalog_v2'?JSON.stringify({items:[property]}):null;},setItem(){}}},
+    localStorage:{getItem(key){return key==='yti_catalog_v3'?JSON.stringify({items:[property]}):null;},setItem(){}}},
   document:{readyState:'loading',addEventListener(name,cb){events[name]=cb},body:{style:{}},head:{appendChild(){}},
     querySelectorAll(){return []},getElementById:el},
   setTimeout:()=>1,clearTimeout(){},YolandaDescription:{toHtml:()=>'<p>Teste</p>'}};

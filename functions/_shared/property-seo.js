@@ -63,24 +63,56 @@ export function seoResponse(status, body, additional={}) {
     'Referrer-Policy':'strict-origin-when-cross-origin', 'X-Frame-Options':'DENY', ...additional
   }});
 }
+const featureNumber = new Intl.NumberFormat('pt-BR', { maximumSignificantDigits: 21 });
+
+function numericFeature(value, integer = false) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  // Um separador com três dígitos após um grupo inicial de 1–3 pode indicar milhares.
+  if (/^[1-9]\d{0,2}[.,]\d{3}$/.test(text)) return null;
+  const pattern = integer ? /^(?:\d+(?:[.,]0+)?|[.,]0+)$/ : /^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/;
+  if (!pattern.test(text)) return null;
+  const number = Number(text.replace(',', '.'));
+  return Number.isFinite(number) ? number : null;
+}
+
+export function propertyFeatures(property) {
+  const features = [];
+  const area = numericFeature(property.area_m2);
+  if (area > 0) {
+    features.push({ key: 'area_m2', value: area, label: 'Área', display: featureNumber.format(area) + ' m²' });
+  }
+  for (const [key, singular, plural, minimum] of [
+    ['bedrooms', 'Quarto', 'Quartos', 1],
+    ['bathrooms', 'Banheiro', 'Banheiros', 1],
+    ['parking', 'Vaga', 'Vagas', 0],
+  ]) {
+    const value = numericFeature(property[key], true);
+    if (Number.isSafeInteger(value) && value >= minimum) {
+      features.push({ key, value, label: value === 1 ? singular : plural, display: featureNumber.format(value) });
+    }
+  }
+  return features;
+}
+
 // Fonte única para metadados e descrição pública de fallback.
 export function propertySeoText(property) {
   const {city,state} = cityAndState(property.city);
   const isRent = property.purpose === 'Alugar';
   const offerVerb = isRent ? 'para alugar' : 'à venda';
   const useArea = ['terreno', 'comercial'].includes(slugPart(property.type));
-  const quantity = (n, singular, plural) => Number(n) > 0 ? `${Number(n)} ${Number(n) === 1 ? singular : plural}` : '';
-  const area = Number(property.area_m2) > 0 ? `${Number(property.area_m2)} m²` : '';
-  const rooms = useArea ? '' : quantity(property.bedrooms, 'quarto', 'quartos');
-  const headlineFeature = useArea ? area : rooms;
+  const features = propertyFeatures(property);
+  const headlineKey = useArea ? 'area_m2' : 'bedrooms';
+  const text = ({ key, display, label }) => key === 'area_m2' ? display : display + ' ' + label.toLowerCase();
+  const headline = features.find(feature => feature.key === headlineKey);
+  const headlineFeature = headline ? text(headline) : '';
   const title = `${[property.type, headlineFeature, offerVerb].filter(Boolean).join(' ')} em ${property.neighborhood}, ${city} ${state} | Yolanda`;
   const price = property.price > 0 ? currencyBR(property.price) : 'Preço sob consulta';
-  const parking = property.parking;
-  const parkingText = (typeof parking === 'number' || (typeof parking === 'string' && parking.trim() !== '')) && Number.isSafeInteger(Number(parking)) && Number(parking) >= 0
-    ? `${Number(parking)} ${Number(parking) === 1 ? 'vaga' : 'vagas'}` : '';
-  const attributes = [area && area + ' de área', quantity(property.bathrooms, 'banheiro', 'banheiros'), parkingText].filter(Boolean);
-  const description = `${[property.type, headlineFeature, offerVerb].filter(Boolean).join(' ')} em ${property.neighborhood}, ${city} - ${state}. ${attributes.length ? attributes.join(', ') + '. ' : ''}${price}${isRent && property.price > 0 ? ' por mês' : ''}. Consulte a Iêda Holanda, CRECI-RJ 112406.`.replace(/\s+/g,' ').trim();
-  return {isRent,useArea,title,price,parking,parkingText,description};
+  const attributes = features.filter(feature => feature !== headline)
+    .map(feature => text(feature) + (feature.key === 'area_m2' ? ' de área' : ''));
+  const description = `${[property.type, headlineFeature, offerVerb].filter(Boolean).join(' ')} em ${property.neighborhood}, ${city} - ${state}. ${attributes.length ? attributes.join(', ') + '. ' : ''}${price}${isRent && property.price > 0 ? ' por mês' : ''}. Consulte Iêda Holanda CRECI-RJ 112406.`.replace(/\s+/g,' ').trim();
+  return {isRent,title,price,features,description};
 }
 export function publicDescription(property) {
   const original = String(property.description ?? '');
@@ -102,7 +134,8 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
   const code = codeFor(property.id), {city,state} = cityAndState(property.city);
   const url = new URL(requestUrl);
   const canonical = (isProduction ? 'https://yolandaimoveis.com.br' : url.origin) + propertyPath(property.slug || slugFor(property));
-  const {isRent,useArea,title,price,parking,parkingText,description} = propertySeoText(property);
+  const {isRent,title,price,features,description} = propertySeoText(property);
+  const { area_m2: area, bedrooms, bathrooms, parking } = Object.fromEntries(features.map(({ key, value }) => [key, value]));
   const photos = images.map(r=>publicImage(r,property.id)).filter(Boolean);
   const safeTitle=escapeHtml(property.title), photo=photos[0];
   const mediaTags = photo ? `<meta property="og:image" content="${escapeHtml(url.origin+photo)}"><meta name="twitter:card" content="summary_large_image"><link rel="preload" as="image" href="${escapeHtml(photo)}" fetchpriority="high">` : '';
@@ -117,9 +150,10 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
       name: title,
       address: {'@type':'PostalAddress',addressLocality:city,addressRegion:state,addressCountry:'BR'},
       containedInPlace: {'@type':'Place',name:property.neighborhood},
-      ...(Number(property.area_m2)>0 ? {floorSize:{'@type':'QuantitativeValue',value:Number(property.area_m2),unitCode:'MTK'}} : {}),
-      ...(!useArea && Number(property.bedrooms)>0 ? {numberOfBedrooms:Number(property.bedrooms)} : {}),
-      ...(Number(property.bathrooms)>0 ? {numberOfBathroomsTotal:Number(property.bathrooms)} : {})
+      ...(area !== undefined ? {floorSize:{'@type':'QuantitativeValue',value:area,unitCode:'MTK'}} : {}),
+      ...(bedrooms !== undefined ? {numberOfBedrooms:bedrooms} : {}),
+      ...(bathrooms !== undefined ? {numberOfBathroomsTotal:bathrooms} : {}),
+      ...(parking !== undefined ? {additionalProperty:{'@type':'PropertyValue',name:'Vagas',value:parking}} : {})
     },
     ...(property.price > 0 ? {offers:{'@type':'Offer',price:String(property.price),priceCurrency:'BRL',
       businessFunction:'http://purl.org/goodrelations/v1#'+(isRent?'LeaseOut':'Sell'),url:canonical,
@@ -135,8 +169,8 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
     '<div class="flex items-center justify-center aspect-[16/10] text-moss font-heading font-bold bg-moss-soft">Imagem não disponível</div>';
   const phoneText=`Olá Iêda Holanda! Tenho interesse no imóvel ${code} - ${property.title} (${property.neighborhood}, ${city}) anunciado no site da Yolanda Transações Imobiliárias. ${canonical}`;
   const wa=`https://wa.me/${BROKER_PHONE}?text=${encodeURIComponent(phoneText)}`;
-  const features=[['Área',property.area_m2 > 0 ? `${property.area_m2} m²` : 'Consultar'],...(!useArea ? [['Quartos',property.bedrooms]] : []),['Banheiros',property.bathrooms],['Vagas',parkingText ? Number(parking) : 'Consultar']];
-  const featuresHtml=features.map(([label,value])=>`<div class="rounded-xl bg-sand px-3 py-3 text-center"><span class="font-heading font-extrabold text-moss">${escapeHtml(value)}</span><span class="block text-xs text-charcoal/65">${escapeHtml(label)}</span></div>`).join('');
+  const featuresHtml = features.length ? `<div data-property-features class="grid ${features.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-' + features.length} gap-2 border-y border-sand-border py-5">${features.map(({ label, display }) =>
+    `<div class="rounded-xl bg-sand px-3 py-3 text-center"><span class="font-heading font-extrabold text-moss">${escapeHtml(display)}</span><span class="block text-xs text-charcoal/65">${escapeHtml(label)}</span></div>`).join('')}</div>` : '';
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><!-- Google Tag Manager -->
     <script>
@@ -170,7 +204,7 @@ export function makeHtml(property, images, requestUrl, isProduction = false) {
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 pb-16"><nav aria-label="Breadcrumb" class="text-sm text-moss/75 mb-5"><a class="underline" href="/">Início</a> / <a class="underline" href="/#imoveis">Imóveis</a> / <span aria-current="page">${escapeHtml(code)}</span></nav>
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start"><article class="lg:col-span-8 bg-white rounded-3xl border border-sand-border shadow-card overflow-hidden"><div class="relative bg-moss-soft" id="seo-gallery" data-count="${photos.length}" aria-label="Galeria de imagens do imóvel">${photoSlides}
 ${photos.length>1?`<button type="button" id="seo-prev" aria-label="Foto anterior" class="absolute top-1/2 left-3 -translate-y-1/2 rounded-full bg-white/95 text-moss font-bold px-3 py-2 shadow-md">‹</button><button type="button" id="seo-next" aria-label="Próxima foto" class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-white/95 text-moss font-bold px-3 py-2 shadow-md">›</button><span id="seo-counter" class="absolute bottom-3 right-3 bg-charcoal/80 text-white text-xs rounded-lg px-3 py-1">1 / ${photos.length}</span>`:''}</div>
-<div class="p-5 sm:p-8"><div class="flex flex-wrap gap-2 mb-3"><span class="rounded-full bg-moss text-white px-3 py-1 text-xs font-bold">${escapeHtml(property.purpose)}</span><span class="rounded-full bg-sand text-moss px-3 py-1 text-xs font-bold">${escapeHtml(code)}</span></div><p class="text-terracotta font-semibold text-sm mb-2">${locationText}</p><h1 class="text-moss font-heading font-extrabold text-2xl sm:text-3xl leading-tight">${safeTitle}</h1><p class="font-heading font-extrabold text-charcoal text-3xl my-5">${escapeHtml(price)}</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-2 border-y border-sand-border py-5">${featuresHtml}</div><h2 class="font-heading font-bold text-moss text-xl mt-7 mb-3">Descrição do imóvel</h2><div class="property-description text-charcoal/80 text-sm sm:text-base leading-relaxed">${safeDescription(details)}</div></div></article>
+<div class="p-5 sm:p-8"><div class="flex flex-wrap gap-2 mb-3"><span class="rounded-full bg-moss text-white px-3 py-1 text-xs font-bold">${escapeHtml(property.purpose)}</span><span class="rounded-full bg-sand text-moss px-3 py-1 text-xs font-bold">${escapeHtml(code)}</span></div><p class="text-terracotta font-semibold text-sm mb-2">${locationText}</p><h1 class="text-moss font-heading font-extrabold text-2xl sm:text-3xl leading-tight">${safeTitle}</h1><p class="font-heading font-extrabold text-charcoal text-3xl my-5">${escapeHtml(price)}</p>${featuresHtml}<h2 class="font-heading font-bold text-moss text-xl mt-7 mb-3">Descrição do imóvel</h2><div class="property-description text-charcoal/80 text-sm sm:text-base leading-relaxed">${safeDescription(details)}</div></div></article>
 <aside class="lg:col-span-4 space-y-4"><section class="bg-white rounded-3xl border border-sand-border shadow-card p-6"><h2 class="font-heading text-moss text-lg font-extrabold">Atendimento personalizado</h2><p class="text-sm text-charcoal/70 mt-2">Iêda Holanda | Corretora de Imóveis<br>CRECI-RJ 112406</p><a data-contact-origin="seo_sidebar" href="${escapeHtml(wa)}" target="_blank" rel="noopener noreferrer" class="block text-center mt-5 rounded-xl bg-terracotta hover:bg-terracotta-hover text-white px-5 py-3.5 font-heading font-bold">Tenho Interesse · WhatsApp</a><button id="seo-share" type="button" class="w-full mt-3 rounded-xl bg-sand text-moss px-5 py-3 text-sm font-semibold">Compartilhar este imóvel</button></section>
 <section class="bg-white rounded-3xl border border-sand-border shadow-card p-6"><h2 class="font-heading text-moss text-lg font-extrabold mb-3">Solicitar atendimento</h2><form id="seo-interest"><input type="text" name="website" tabindex="-1" aria-hidden="true" class="hidden" autocomplete="off"><label class="block text-sm font-bold mb-1" for="seo-name">Seu nome</label><input id="seo-name" name="name" required minlength="2" maxlength="120" class="w-full mb-3 px-4 py-3 rounded-xl bg-sand/70 border border-sand-border" autocomplete="name"><label class="block text-sm font-bold mb-1" for="seo-phone">WhatsApp com DDD</label><input id="seo-phone" name="phone" type="tel" inputmode="tel" required autocomplete="tel" placeholder="(24) 99999-9999" class="w-full mb-4 px-4 py-3 rounded-xl bg-sand/70 border border-sand-border"><button type="submit" class="w-full rounded-xl bg-moss text-white px-5 py-3 font-heading font-bold">Enviar e chamar no WhatsApp</button><p id="seo-form-message" role="status" aria-live="polite" class="text-xs mt-3 text-moss"></p></form></section></aside></div></main>
 <footer class="bg-moss-dark text-sand/85 px-4 sm:px-6 lg:px-8 py-8 text-center text-xs"><p>Yolanda Transações Imobiliárias — Iêda Holanda • CRECI-RJ 112406</p><a href="/privacidade" class="underline mr-4">Política de Privacidade</a><a href="/termos" class="underline">Termos de Serviço</a></footer>

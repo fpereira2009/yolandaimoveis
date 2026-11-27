@@ -36,10 +36,6 @@ for (const [requestOrigin, production, expectedOrigin] of [
  const breadcrumb = schemas.find(schema => schema['@type'] === 'BreadcrumbList');
  assert.deepEqual(breadcrumb.itemListElement.map(item => item.item),[`${expectedOrigin}/`,canonical]);
 }
-for (const [parking,display] of [[0,'0'],[1,'1'],[2,'2'],[null,'Consultar'],[undefined,'Consultar']]) {
- const html = makeHtml({...p,parking},[],'https://dev.example/');
- assert.ok(html.includes(`>${display}</span><span class="block text-xs text-charcoal/65">Vagas</span>`));
-}
 assert.match(auto,/0 vagas/);assert.match(auto,/por mês/);
 const db=new DatabaseSync(':memory:');
 const dir=new URL('../migrations/',import.meta.url);
