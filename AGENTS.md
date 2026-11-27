@@ -6,18 +6,18 @@ Atue como desenvolvedor Full-Stack Sênior especializado em Cloudflare Pages, Pa
 
 ## 2. Proteção dos ambientes
 
-- Desenvolva exclusivamente na branch `dev`. Antes de editar, execute `git branch --show-current` e `git --no-optional-locks status --short --branch`. Se a branch atual não for `dev`, interrompa a implementação e solicite orientação.
-- Preserve alterações locais do usuário. Nunca altere automaticamente as branches `teste` e `main`.
-- Nunca execute commit, push, pull, merge, rebase, reset, checkout ou operações destrutivas sem autorização explícita.
-- Use dados sintéticos e emulação local nos testes. Nunca acesse ou modifique recursos remotos, realize deploy ou opere em produção sem autorização específica.
-- Considere que DEV e TESTE podem compartilhar recursos de Preview até confirmação da arquitetura efetiva.
+- Siga EXP → DEV → TESTE → PRD. A branch `exp/local` é dedicada à experimentação e ao desenvolvimento autônomo, permanece exclusivamente local, sem upstream e sem deploy. `dev` recebe integração e validação técnica, `teste` recebe homologação funcional e `main` corresponde à produção.
+- Antes de editar, execute `git branch --show-current`, `git --no-optional-locks status --short --branch` e verifique HEAD e worktree. A autonomia de implementação vale exclusivamente em `exp/local`; qualquer atuação em outra branch exige autorização aplicável.
+- Preserve alterações locais do usuário. Use o worktree `03_experimentacao` para separação operacional. Worktrees têm índices e árvores próprios e compartilham referências e objetos do Git.
+- Em EXP, use somente dados sintéticos e emulação explicitamente local. Se for preciso iniciar serviços, confira as opções da versão instalada do Wrangler, os bindings efetivos e use persistência própria para SQLite/D1 e R2, sem credenciais reais nem cópia da configuração ou do estado de DEV.
+- DEV e TESTE compartilham atualmente recursos de Preview. Verifique a arquitetura efetiva antes de assumir qualquer independência entre bindings. Acesso ou modificação de recursos remotos, deploy e operações de produção exigem autorização específica.
 
 | Configuração | D1 (`DB`) | R2 (`MEDIA_BUCKET`) | `MEDIA_ENV` |
 |---|---|---|---|
 | Preview (`env.preview`) | `yolanda-crm-dev` | `yolanda-imoveis-dev` | `preview` |
 | Produção (bloco padrão) | `yolanda-crm` | `yolanda-imoveis-prod` | `production` |
 
-Consulte `wrangler.toml` e, quando disponível, `wrangler.local.toml`, que é ignorado pelo Git. `wrangler.preview-migrations.jsonc` aponta para o D1 de Preview. Confirme o modo local antes de executar testes. O isolamento dos dados depende dos bindings efetivos.
+Consulte `wrangler.toml` e, quando disponível, `wrangler.local.toml`, que é ignorado pelo Git. `wrangler.preview-migrations.jsonc` aponta para o D1 de Preview. Nomes de Preview não comprovam emulação local. Se os testes locais existentes forem suficientes, dispense a inicialização de serviços.
 
 ## 3. Integridade visual
 
@@ -27,17 +27,20 @@ Consulte `wrangler.toml` e, quando disponível, `wrangler.local.toml`, que é ig
 
 ## 4. Procedimento de desenvolvimento
 
-Antes de implementar:
+Em EXP, após aprovação do escopo, siga este ciclo:
 
-1. Verifique o Git e a branch atual.
-2. Inspecione os arquivos relacionados à solicitação.
-3. Confira `wrangler.toml` e os bindings envolvidos.
-4. Analise o schema e a sequência em `migrations/`.
-5. Identifique dependências e impactos. Consulte `public/_routes.json`, `functions/_middleware.js` e `functions/_shared/api/router.js` quando houver mudança de rotas ou API.
-6. Apresente o plano de implementação.
-7. Solicite aprovação se houver ampliação do escopo.
+1. Inspecione o Git, os arquivos relevantes, `wrangler.toml`, bindings, schema e sequência em `migrations/` conforme o impacto.
+2. Planeje a implementação e identifique dependências. Consulte `public/_routes.json`, `functions/_middleware.js` e `functions/_shared/api/router.js` para mudanças de rotas ou API.
+3. Implemente, criando ou editando somente os arquivos necessários. Reutilize lógica existente e preserve a compatibilidade com funcionalidades homologadas.
+4. Execute os testes.
+5. Audite o resultado e as regressões dos fluxos afetados.
+6. Corrija autonomamente falhas técnicas dentro do escopo, inclusive por refatoração quando necessária.
+7. Revalide e repita a implementação, os testes e a auditoria enquanto houver correções fundamentadas e seguras.
+8. Revise o diff, atualize documentação e changelog quando aplicável e revise o staging por caminhos explícitos.
+9. Faça o commit local em `exp/local`.
+10. Entregue o relatório consolidado.
 
-Durante a implementação, altere somente os arquivos necessários. Reutilize funções e módulos existentes, evite duplicar regras de negócio e preserve a compatibilidade com funcionalidades homologadas. Não corrija problemas fora do escopo sem autorização. Justifique qualquer nova dependência e obtenha aprovação antes de adicioná-la.
+Esse ciclo dispensa aprovações intermediárias de negócio dentro do escopo aprovado. Ampliação do escopo, mudança de regras de negócio, schema, arquitetura, dependências, segurança ou permissões e operações remotas exigem autorização aplicável. Justifique novas dependências antes de solicitar sua inclusão.
 
 ## 5. Banco D1 e migrations
 
@@ -84,53 +87,42 @@ Os scripts `tools/test_*.py` cobrem ferramentas auxiliares de mídia e sincroniz
 
 ## 10. Controle de versão
 
-- Use Semantic Versioning e altere a versão somente com aprovação.
+- Use Semantic Versioning e altere a versão somente com aprovação. A versão piloto é 4.8.0. Alpha, Beta e Release Candidate são convenções possíveis para versões futuras. A promoção pode manter a mesma versão e deve priorizar o mesmo conteúdo validado.
 - Mantenha `package.json`, `CHANGELOG.md` e o diagnóstico em `functions/_shared/api/router.js` sincronizados nas releases.
 - Documente arquivos criados e modificados e registre as mudanças em `CHANGELOG.md` dentro do escopo autorizado.
-- Identifique releases por SHA validado. Nunca promova versões entre ambientes sem autorização.
+- A autorização de escopo em EXP inclui staging por caminhos explícitos e commits locais em `exp/local`, após revisar integralmente o diff staged. Commits fora de EXP e operações como checkout, reset, rebase e operações destrutivas exigem autorização explícita.
+- Identifique releases e promoções por SHA validado.
 
 ## 11. Formato de entrega
 
-1. Resumo executivo.
-2. Arquivos criados e modificados.
-3. Explicação técnica das alterações.
-4. Impactos em banco, API e front-end.
-5. Testes executados e resultados.
-6. Riscos e limitações.
-7. Comandos necessários para homologação.
-8. Changelog.
-9. Pendências para aprovação.
+Entregue um relatório consolidado ao final de cada atividade com:
+
+1. Objetivo e resumo executivo.
+2. Alterações e arquivos criados ou modificados, com os SHAs dos commits.
+3. Impactos técnicos e funcionais em banco, API e front-end.
+4. Testes executados, resultados e verificações pendentes.
+5. Riscos residuais, limitações e comandos necessários para homologação.
+6. Changelog, parecer GO/NO-GO e próxima aprovação necessária.
 
 ## 12. Fluxo de promoção entre ambientes
 
-- Respeitar o fluxo DEV → TESTE → PRD.
-- DEV: implementação, testes automatizados e validação técnica.
-- TESTE: homologação funcional, testes de regressão e aprovação do usuário.
-- PRD: publicação exclusivamente de versões aprovadas.
-- Cada promoção exige autorização explícita do usuário.
-- Verificar divergências entre branches antes de qualquer promoção.
-- Identificar o SHA exato da versão homologada.
-- Verificar migrations pendentes e compatibilidade do schema.
-- Documentar procedimentos de recuperação e rollback.
-- Nunca presumir que DEV e TESTE possuem bancos independentes.
-- Considerar que um push pode disparar automaticamente um deploy no Cloudflare Pages.
+- Exija autorização consolidada e explícita para cada transição EXP → DEV, DEV → TESTE e TESTE → PRD. Preserve `dev`, `teste` e `main` até a aprovação aplicável.
+- Informe SHA de origem, branch de destino, divergências, arquivos e funcionalidades afetados, testes, evidências de homologação aplicáveis, compatibilidade do schema, migrations necessárias, riscos residuais, recuperação e rollback e operações Git e Cloudflare previstas.
+- Em DEV, integre e valide tecnicamente o conteúdo aprovado. Em TESTE, realize homologação funcional e regressão com aprovação do usuário. Em PRD, publique somente a versão homologada e aprovada.
+- Merge, cherry-pick, push, pull, deploy e migrations remotas exigem autorização aplicável. Considere que um push pode disparar automaticamente um deploy no Cloudflare Pages. Confira os bindings antes de qualquer operação autorizada.
 
 ## 13. Critérios de interrupção
 
-Interromper a implementação e comunicar o usuário quando identificar:
+Interrompa e comunique o usuário diante de:
 
-- Risco de perda ou corrupção de dados.
-- Vulnerabilidade de segurança relevante.
-- Divergência inesperada entre schema e código.
-- Conflito com alterações locais do usuário.
-- Necessidade de modificar funcionalidades fora do escopo.
-- Falhas em testes automatizados que impeçam uma entrega segura.
-- Necessidade de acessar recursos remotos.
-- Indícios de que uma operação possa atingir produção.
-- Ambiguidade nas regras de negócio.
-- Necessidade de alterar dependências ou arquitetura sem aprovação.
+- Branch, HEAD ou worktree inesperado, conflito com alterações locais ou divergência inesperada durante transferência.
+- Risco de perda ou corrupção de dados, divergência inesperada entre schema e código ou impossibilidade de confirmar isolamento local.
+- Vulnerabilidade relevante que não possa ser corrigida com segurança dentro do escopo aprovado.
+- Necessidade de ampliar o escopo, decidir regra de negócio ambígua ou alterar schema, dependências, arquitetura, segurança ou permissões.
+- Necessidade de acesso remoto ou indícios de que uma operação possa atingir produção.
+- Falha impeditiva que não possa ser resolvida com segurança dentro do escopo.
 
-Não tentar contornar restrições de segurança ou permissões.
+Corrija e revalide falhas recuperáveis dentro do escopo. Evite ciclos indefinidos e mudanças especulativas. Nunca contorne restrições de segurança ou permissões.
 
 ## 14. Proteção de arquivos e informações
 
@@ -140,5 +132,5 @@ Não tentar contornar restrições de segurança ou permissões.
 - Não versionar node_modules, caches ou estado local do Wrangler.
 - Não versionar backups de bancos ou exportações contendo dados pessoais.
 - Utilizar dados sintéticos nos testes.
-- Verificar o Git diff e os arquivos em staging antes de propor qualquer commit.
+- Verificar o Git diff e os arquivos em staging antes de qualquer commit.
 - Nunca modificar permissões do sandbox ou configurações globais do Codex para contornar restrições.
