@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = vitrineComposite.replace(/\r\n/g, '\n');
 const code = vitrineScript;
+const descriptionScript = fs.readFileSync(path.join(root, 'public/js/property-description.js'), 'utf8');
 const scriptStart = code.indexOf('        (function () {');
 const scriptEnd = code.indexOf('        })();', scriptStart);
 assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, 'script da vitrine localizado');
@@ -48,8 +49,9 @@ function renderScenario(item) {
       getElementById:id=>nodes[id] || null,
       querySelectorAll:()=>[],
     },
-    YolandaDescription:{toHtml:()=>'<p>Teste</p>'},
   };
+  vm.runInNewContext(descriptionScript, context, {filename:'public/js/property-description.js'});
+  context.YolandaDescription = context.window.YolandaDescription;
   vm.runInNewContext(code, context, {filename:'public/index.html'});
   context.window.applyFilters();
   context.window.openPropertyModal('YTI-0001');
@@ -64,6 +66,28 @@ for (const [parking, display, label] of [
   assert.ok(nodes['properties-grid'].innerHTML.includes(`>${display}</span><span class="block text-[10px] text-charcoal/65">${label}</span>`));
   assert.ok(nodes['property-modal-content'].innerHTML.includes(`>${display}</span><span class="block text-[11px] text-charcoal/65">${label}</span>`));
 }
+
+const modalDescription = descricao => {
+  const {nodes} = renderScenario({...property(null), descricao});
+  return nodes['property-modal-content'].innerHTML.match(
+    /class="property-description [^"]+">([\s\S]*?)<\/div>/
+  )[1];
+};
+assert.equal(
+  modalDescription('<p class="legado">Sala &amp; cozinha <strong>integradas</strong><br><em>Clara</em></p><ul><li><u>Varanda</u></li></ul>'),
+  '<p>Sala &amp; cozinha <strong>integradas</strong><br><em>Clara</em></p><ul><li><u>Varanda</u></li></ul>'
+);
+assert.equal(modalDescription('## Casa\n\nSala **ampla**\n\n- Varanda'),
+  '<h4>Casa</h4><p>Sala <strong>ampla</strong></p><ul><li>Varanda</li></ul>');
+const hostileDescription = modalDescription(
+  '<p onmouseover="trip()" title="a > b"><strong onfocus=trip()>Sala</strong>' +
+  '<a href="javascript:trip()">link</a><img src=x onerror=trip()>' +
+  '<svg onload=trip()></svg><script>trip()</script>&lt;img src=x onerror=trip()&gt;</p>'
+);
+assert.match(hostileDescription, /^<p><strong>Sala<\/strong>/);
+assert.doesNotMatch(hostileDescription, /<(?:script|img|svg|a)\b|<[^>]+\bon\w+=/i);
+assert.match(hostileDescription, /&lt;img src=x onerror=trip\(\)&gt;/);
+assert.match(modalDescription('<img src=x onerror=trip()>'), /^<p>&lt;img/);
 
 const stalePhoto = property('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop', []);
 stalePhoto.resolved_foto_url = stalePhoto.foto_url;

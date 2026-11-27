@@ -197,7 +197,7 @@ check(!crm.includes('previewPropPhoto()'), 'pré-visualização legada removida'
 check(!crm.includes("photo_url: g('prop-photo')"), 'payload CRM usa somente R2');
 check(!crm.includes("col(r, ['foto_url', 'foto', 'imagem'])"), 'importação CSV sem URL');
 for(const token of ['id="prop-description-editor"','pastePropertyDescription(event)','formatPropertyDescription(command)','syncPropertyDescription()']) check(crm.includes(token),`Editor: ${token}`);
-for(const token of ['function togglePropertyZoom(clientX, clientY)', 'function attachPropertyImageGestures(area)', 'resetPropertyZoom()', 'YolandaDescription.toHtml(prop.descricao)', 'touchmove']) check(site.includes(token),`Site 4.3.1: ${token}`);
+for(const token of ['function togglePropertyZoom(clientX, clientY)', 'function attachPropertyImageGestures(area)', 'resetPropertyZoom()', 'YolandaDescription.toHtml(prop.descricao, {legacyHtml:true})', 'touchmove']) check(site.includes(token),`Site 4.3.1: ${token}`);
 const moduleText = fs.readFileSync(path.join(root,'public/js/property-description.js'),'utf8');
 const context = {globalThis:{}};
 vm.runInNewContext(moduleText, context);

@@ -88,7 +88,8 @@ export function publicDescription(property) {
   const invisible = /[\p{White_Space}\p{Default_Ignorable_Code_Point}]/gu;
   const visible = original.replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<\/?[a-z][a-z0-9:-]*(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'"<>])*>/gi, '')
-    .replace(/&(?:nbsp|NonBreakingSpace|Tab|NewLine|ensp|emsp|emsp13|emsp14|numsp|puncsp|thinsp|ThinSpace|hairsp|VeryThinSpace|MediumSpace|ThickSpace|ZeroWidthSpace|NegativeVeryThinSpace|NegativeThinSpace|NegativeMediumSpace|NegativeThickSpace|NoBreak|zwnj|zwj|lrm|rlm);/g, '')
+    .replace(/&nbsp(?:;|(?![a-zA-Z0-9=]))/g, '')
+    .replace(/&(?:NonBreakingSpace|Tab|NewLine|ensp|emsp|emsp13|emsp14|numsp|puncsp|thinsp|ThinSpace|hairsp|VeryThinSpace|MediumSpace|ThickSpace|ZeroWidthSpace|NegativeVeryThinSpace|NegativeThinSpace|NegativeMediumSpace|NegativeThickSpace|NoBreak|zwnj|zwj|lrm|rlm);/g, '')
     .replace(/&#(x[\da-f]+|\d+);?/gi, (entity, value) => {
       const hex = value[0].toLowerCase() === 'x';
       const codePoint = Number.parseInt(hex ? value.slice(1) : value, hex ? 16 : 10);

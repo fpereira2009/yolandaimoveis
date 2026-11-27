@@ -12,7 +12,10 @@
 - Descrições sem conteúdo visível usam o fallback compartilhado entre vitrine e ficha. Descrições personalizadas e o valor administrativo são preservados.
 - Card e modal distinguem zero vagas de um valor ausente, exibido como “Consultar”.
 - O `BreadcrumbList` usa a origem canônica da ficha em Preview e produção. O diagnóstico autenticado acompanha a versão `4.8.0`.
-- Documentadas as verificações, a recuperação e a pendência de atomicidade remota da migration `0012` em Preview.
+- O modal renderiza formatação HTML legada com tags permitidas sem atributos e continua aceitando Markdown.
+- A entidade de espaço não separável sem ponto e vírgula é reconhecida pelo fallback de descrições vazias.
+- A migration 0012 foi aplicada em 26/11/2026 no D1 yolanda-crm-dev, compartilhado entre DEV e TESTE. Os seis slugs, os triggers e o índice único foram validados, a verificação de integridade referencial ficou sem violações e os nove testes de consulta em TESTE passaram. A atomicidade em caso de falha remota não foi testada. A produção permanece intocada.
+- O gerador de sincronização de Preview aceita snapshots compatíveis com os schemas 0009 e 0012, exclui aliases de mídia, preserva slugs de origem e separa a contagem de imagens da de objetos R2. A cópia inclui miniaturas e compara SHA-256 entre origem e destino.
 
 Histórico recuperado do commit e70e189; releases intermediárias possuem documentos próprios.
 

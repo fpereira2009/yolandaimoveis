@@ -950,7 +950,7 @@
 
                         '<div class="space-y-1.5">' +
                             '<h4 class="font-heading font-bold text-moss text-sm">Descrição do Imóvel</h4>' +
-                            '<div class="property-description text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + YolandaDescription.toHtml(prop.descricao) + '</div>' +
+                            '<div class="property-description text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + YolandaDescription.toHtml(prop.descricao, {legacyHtml:true}) + '</div>' +
                         '</div>' +
 
                         '<form id="interest-form" onsubmit="submitInterest(event, \'' + prop.codigo + '\')" class="space-y-2">' +

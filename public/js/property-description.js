@@ -1,4 +1,4 @@
-/* 4.3.1: Markdown seguro para descrições; nenhuma tag HTML é armazenada no D1. */
+/* Descrições em Markdown com suporte de leitura a HTML legado na vitrine. */
 (function(root) {
 'use strict';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -7,7 +7,33 @@ function inline(line) {
     .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>')
     .replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
 }
-function toHtml(markdown) {
+const richTags = new Set(['p','div','strong','b','em','i','u','ul','ol','li','br']);
+function legacyDescription(value) {
+  const tokens = /<!--[\s\S]*?-->|<(\/?)([a-z][a-z0-9:-]*)(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'"<>])*>/gi;
+  // Text entities are decoded only in a text node. Tags are emitted separately from a fixed list.
+  const text = value => esc(value).replace(/&amp;(?=(?:#[0-9]+;?|#[xX][\da-fA-F]+;?|[a-zA-Z][a-zA-Z0-9]*;|nbsp(?![a-zA-Z0-9=])))/g, '&');
+  let foundFormatting = false;
+  let html = '', end = 0;
+  for (const match of value.matchAll(tokens)) {
+    html += text(value.slice(end, match.index));
+    end = match.index + match[0].length;
+    if (!match[2]) continue;
+    const tag = match[2].toLowerCase();
+    const heading = /^h[1-6]$/.test(tag);
+    if (richTags.has(tag) || heading) {
+      foundFormatting = true;
+      if (tag !== 'br' || !match[1]) html += '<' + match[1] + (heading ? 'h4' : tag) + '>';
+    } else {
+      html += esc(match[0]);
+    }
+  }
+  return foundFormatting ? html + text(value.slice(end)) : null;
+}
+function toHtml(markdown, {legacyHtml = false} = {}) {
+  if (legacyHtml) {
+    const html = legacyDescription(String(markdown ?? ''));
+    if (html !== null) return html;
+  }
   let paragraphs=[], block=[], list=null;
   const flush=()=>{if(block.length){paragraphs.push('<p>'+block.map(inline).join('<br>')+'</p>');block=[];}};
   const close=()=>{if(list){paragraphs.push('</'+list+'>');list=null;}};

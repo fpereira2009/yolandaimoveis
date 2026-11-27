@@ -6,13 +6,15 @@ import {propPublic,propOut} from '../functions/_shared/api/serialization.js';
 import {onRequestGet} from '../functions/imoveis/[slug].js';
 const p={id:1,type:'Kitnet',title:'Teste',purpose:'Alugar',neighborhood:'Manejo',city:'Resende - RJ',bedrooms:0,bathrooms:1,parking:0,area_m2:80,price:1500,status:'Disponível'};
 const auto=propertySeoText(p).description;
-for(const description of [null,undefined,'',' \t\n','<p><br></p>','<div>&nbsp;</div>',
+for(const description of [null,undefined,'',' \t\n','<p><br></p>','<div>&nbsp;</div>', '&nbsp', '<p>&nbsp&nbsp</p>', '<div>&nbsp<br>&nbsp</div>',
  '<!-- comentário\nHTML -->','<section><br></section>','<p>&#0160;</p>',
  '<article title="a > b"><span>&#x02003;&ThinSpace;&Tab;</span></article>',
  '\u0085\u2007\u200b\u202f\u2060\ufeff','<div>&#9;&NewLine;&ZeroWidthSpace;</div>']) {
  const row={...p,description}; assert.equal(publicDescription(row),auto); assert.equal(propPublic(row).descricao,auto); assert.equal(propOut(row).description,description); assert.ok(makeHtml(row,[],'https://dev.example/').includes(auto));
 }
-assert.equal(publicDescription({...p,description:'**Original**'}),'**Original**');
+for (const description of ['**Original**', 'Sala &nbsp ampla', '&nbspcasa', '&nbsp=']) {
+  assert.equal(publicDescription({...p,description}),description);
+}
 assert.equal(propPublic({...p,description:'**Original**'}).descricao,'**Original**');
 const custom = '  <p>Original <strong>da corretora</strong></p><img src=x onerror="alert(1)">  ';
 assert.equal(propPublic({...p,description:custom}).descricao,custom);
