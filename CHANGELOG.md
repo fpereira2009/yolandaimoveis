@@ -7,6 +7,7 @@
 - Migration 0012: novos slugs sem 0-quartos; URLs existentes preservadas e redirecionamento 301 após edição.
 ### Changed
 - Metadados da home e schema de imóveis; suíte Node consolidada.
+- COR-09: iconografia SVG para as características dos imóveis em cards, modal e ficha SSR, com rótulos acessíveis e preservação das regras da COR-08.
 ### Fixed
 - Singular/plural, atributos zero e breadcrumb; vagas de garagem permanecem explícitas inclusive quando zero.
 - Descrições sem conteúdo visível usam o fallback compartilhado entre vitrine e ficha. Descrições personalizadas e o valor administrativo são preservados.

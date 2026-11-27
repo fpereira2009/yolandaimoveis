@@ -691,12 +691,19 @@
                 const grid = modal ? 'gap-2.5' : 'gap-2 pt-2 border-t border-sand-border';
                 const tile = modal ? 'bg-sand p-3 rounded-2xl border border-sand-border' : 'bg-sand/70 py-2 px-1 rounded-xl';
                 const valueStyle = modal ? 'font-extrabold text-sm' : 'font-bold text-xs';
-                const labelStyle = modal ? 'text-[11px]' : 'text-[10px]';
+                const size = modal ? 22 : 18;
                 return '<div data-property-features class="grid ' + columns + ' ' + grid + ' text-center">' +
-                    features.map(({display, label}) => '<div class="' + tile + '">' +
-                        '<span class="block font-heading text-moss ' + valueStyle + '">' + esc(display) + '</span>' +
-                        '<span class="block text-charcoal/65 ' + labelStyle + '">' + esc(label) + '</span></div>').join('') +
-                    '</div>';
+                    features.map(({key, display, label}) => {
+                        const value = esc(display);
+                        const accessible = key === 'area_m2'
+                            ? 'Área: ' + esc(display.replace(/ m²$/, '')) + ' metros quadrados'
+                            : value + ' ' + esc(label);
+                        return '<div class="' + tile + '"><span class="property-feature-label">' + accessible + '</span>' +
+                            '<div title="' + accessible + '" aria-hidden="true">' +
+                            '<svg class="property-feature-icon" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+                            '<use href="/img/property-features.svg#' + esc(key) + '"/></svg>' +
+                            '<span class="property-feature-value font-heading text-moss ' + valueStyle + '">' + value.replace(/[.,]/g, '$&<wbr>').replace(/ m²$/, ' <span class="property-feature-unit">m²</span>') + '</span></div></div>';
+                    }).join('') + '</div>';
             }
 
  function renderProperties(list) {

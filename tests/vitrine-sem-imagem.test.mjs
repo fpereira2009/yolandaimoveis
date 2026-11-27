@@ -17,6 +17,13 @@ const scriptStart = code.indexOf('        (function () {');
 const scriptEnd = code.indexOf('        })();', scriptStart);
 assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, 'script da vitrine localizado');
 
+const featureSprite = fs.readFileSync(path.join(root, 'public/img/property-features.svg'), 'utf8');
+const featureSymbols = [...featureSprite.matchAll(/<symbol id="([^"]+)" viewBox="0 0 24 24">\s*(<path d="[^"]+"\/>)/g)];
+assert.deepEqual(featureSymbols.map(([, key]) => key), ['area_m2', 'bedrooms', 'bathrooms', 'parking']);
+assert.match(featureSymbols[0][2], /M3 3v18h18L3 3Z M7 12v5h5l-5-5Z/);
+assert.doesNotMatch(featureSprite, /<(?:script|foreignObject|image)\b|\bon\w+=|\bhref=/i);
+assert.match(vitrineHtml, /href="\/css\/property-features\.css\?v=4\.8\.0"/);
+
 const r2Cover = '/api/media/file/property-1/cover.webp';
 
 function property(foto_url, images = []) {
@@ -76,14 +83,42 @@ function renderScenario(item, {
 }
 
 function visibleFeatures(html) {
-  const group = html.match(/<div data-property-features class="([^"]+)">((?:<div[^>]*><span[^>]*>[^<]*<\/span><span[^>]*>[^<]*<\/span><\/div>)+)<\/div>/);
-  if (!group) {
-    assert.doesNotMatch(html, /data-property-features/, 'Agrupamento vazio ou inválido');
+  const opening = html.match(/<div data-property-features class="([^"]+)">/);
+  if (!opening) {
+    assert.doesNotMatch(html, /data-property-features/, 'Agrupamento inválido');
     return [];
   }
-  const tiles = [...group[2].matchAll(/<span[^>]*>([^<]*)<\/span><span[^>]*>([^<]*)<\/span>/g)]
-    .map(match => [match[1], match[2]]);
-  assert.ok(group[1].includes('grid-cols-' + tiles.length));
+  const featureStart = opening.index + opening[0].length;
+  const tilePattern = /<div class="[^"]+"><span class="property-feature-label">([^<]+)<\/span><div title="([^"]+)" aria-hidden="true"><svg\b([^>]+)><use href="\/img\/property-features\.svg#([a-z0-9_]+)"\/><\/svg><span class="property-feature-value [^"]+">((?:[^<]|<wbr>)+?)(?:<span class="property-feature-unit">(m²)<\/span>)?<\/span><\/div><\/div>/gy;
+  tilePattern.lastIndex = featureStart;
+  const tiles = [];
+  let tileEnd = featureStart;
+  for (let tile; (tile = tilePattern.exec(html)); ) {
+    tileEnd = tilePattern.lastIndex;
+    const [, accessible, tooltip, svg, icon, display, unit] = tile;
+    const raw = display.replaceAll('<wbr>', '');
+    assert.equal(display, raw.replace(/[.,]/g, '$&<wbr>'));
+    assert.equal(tooltip, accessible);
+    assert.match(svg, /aria-hidden="true"/);
+    assert.match(svg, /focusable="false"/);
+    assert.match(svg, /stroke="currentColor"/);
+    const value = raw + (unit ?? '');
+    if (unit) {
+      assert.equal(icon, 'area_m2');
+      assert.equal(accessible, 'Área: ' + raw.trimEnd() + ' metros quadrados');
+      tiles.push([value, 'Área']);
+    } else {
+      assert.ok(accessible.startsWith(value + ' '));
+      const label = accessible.slice(value.length + 1);
+      const icons = {Quarto:'bedrooms', Quartos:'bedrooms', Banheiro:'bathrooms',
+        Banheiros:'bathrooms', Vaga:'parking', Vagas:'parking'};
+      assert.equal(icon, icons[label]);
+      tiles.push([value, label]);
+    }
+  }
+  assert.ok(tiles.length, 'Agrupamento vazio');
+  assert.equal(html.slice(tileEnd, tileEnd + 6), '</div>');
+  assert.ok(opening[1].includes('grid-cols-' + tiles.length));
   return tiles;
 }
 
