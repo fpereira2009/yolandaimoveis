@@ -22,7 +22,14 @@ const featureSymbols = [...featureSprite.matchAll(/<symbol id="([^"]+)" viewBox=
 assert.deepEqual(featureSymbols.map(([, key]) => key), ['area_m2', 'bedrooms', 'bathrooms', 'parking']);
 assert.match(featureSymbols[0][2], /M3 3v18h18L3 3Z M7 12v5h5l-5-5Z/);
 assert.doesNotMatch(featureSprite, /<(?:script|foreignObject|image)\b|\bon\w+=|\bhref=/i);
-assert.match(vitrineHtml, /href="\/css\/property-features\.css\?v=4\.8\.0"/);
+assert.match(vitrineHtml, /href="\/css\/property-features\.css\?v=4\.8\.0&amp;rev=2"/);
+
+const featureCss = fs.readFileSync(path.join(root, 'public/css/property-features.css'), 'utf8');
+assert.match(featureCss, /repeat\(var\(--feature-columns\), minmax\(0, 1fr\)\)/);
+for (const count of [1, 2, 3, 4]) {
+  assert.ok(featureCss.includes('.grid-cols-' + count + ' { --feature-columns: ' + count + '; }'));
+}
+assert.doesNotMatch(featureCss, /sm\\:grid-cols-4/);
 
 const r2Cover = '/api/media/file/property-1/cover.webp';
 
@@ -118,7 +125,7 @@ function visibleFeatures(html) {
   }
   assert.ok(tiles.length, 'Agrupamento vazio');
   assert.equal(html.slice(tileEnd, tileEnd + 6), '</div>');
-  assert.ok(opening[1].includes('grid-cols-' + tiles.length));
+  assert.deepEqual(opening[1].split(' ').filter(cls => cls.includes('grid-cols-')), ['grid-cols-' + tiles.length]);
   return tiles;
 }
 
@@ -411,6 +418,31 @@ for (const legacyUrl of [
   assert.match(rendered.nodes['property-modal-content'].innerHTML, /Imagem não disponível/);
   assert.doesNotMatch(rendered.nodes['property-modal-content'].innerHTML.split('<div class="p-5 sm:p-7 space-y-5">')[0], /id="modal-property-img"/);
 }
+
+const rental = {...property(null), finalidade:'Alugar', titulo:'Casa de teste com título longo', valor:1234567890,
+  quartos:0, banheiros:0, area_m2:null, vagas:0};
+const rentalRow = {id:1,type:rental.tipo,purpose:rental.finalidade,title:rental.titulo,price:rental.valor,
+  city:'Resende - RJ',neighborhood:rental.bairro,parking:0};
+const detailModal = renderScenario(rental).nodes['property-modal-content'].innerHTML;
+const detailSsr = makeHtml(rentalRow, [], 'https://preview.example.test/');
+function assertDetailOrder(markup, sections) {
+  let previous = -1;
+  for (const section of sections) {
+    const index = markup.indexOf(section, previous + 1);
+    assert.ok(index > previous, 'Ordem de leitura: ' + section);
+    previous = index;
+  }
+}
+assertDetailOrder(detailModal, ['property-modal-header', rental.titulo, '/mês', 'Fechar detalhes',
+  'id="property-gallery-swipe"', 'data-share-code', 'data-property-features', 'id="interest-form"']);
+assertDetailOrder(detailSsr, ['property-detail-header', rental.titulo, '/ mês', 'id="seo-gallery"',
+  'id="seo-share"', 'data-property-features', 'id="seo-interest"']);
+assert.equal((detailModal.match(/data-share-code=/g) || []).length, 1);
+assert.equal((detailSsr.match(/id="seo-share"/g) || []).length, 1);
+assert.doesNotMatch(detailSsr, /Fechar detalhes/);
+assert.match(detailModal, /onclick="closePropertyModal\(\)"[^>]+class="property-detail-control /);
+assert.deepEqual(visibleFeatures(detailModal), [['0','Vagas']]);
+assert.deepEqual(visibleFeatures(detailSsr), [['0','Vagas']]);
 
 const withoutPhoto = renderScenario(property('', []));
 const card = withoutPhoto.nodes['properties-grid'].innerHTML;

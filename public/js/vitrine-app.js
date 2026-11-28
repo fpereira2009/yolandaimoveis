@@ -687,8 +687,8 @@
             function renderPropertyFeatures(prop, modal = false) {
                 const features = prop.caracteristicas;
                 if (!Array.isArray(features) || !features.length || features.length > 4) return '';
-                const columns = modal && features.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-' + features.length;
-                const grid = modal ? 'gap-2.5' : 'gap-2 pt-2 border-t border-sand-border';
+                const columns = 'grid-cols-' + features.length;
+                const grid = modal ? 'property-detail-features gap-2.5' : 'gap-2 pt-2 border-t border-sand-border';
                 const tile = modal ? 'bg-sand p-3 rounded-2xl border border-sand-border' : 'bg-sand/70 py-2 px-1 rounded-xl';
                 const valueStyle = modal ? 'font-extrabold text-sm' : 'font-bold text-xs';
                 const size = modal ? 22 : 18;
@@ -1008,6 +1008,17 @@
                 }
 
                 content.innerHTML =
+                    '<header class="property-detail-header property-modal-header">' +
+                        '<div>' +
+                            '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
+                            '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
+                        '</div>' +
+                        '<p class="property-modal-price font-heading font-extrabold text-charcoal text-2xl sm:text-3xl">' + formatCurrency(prop.valor, prop.finalidade).replace(/\./g, '$&<wbr>') + '</p>' +
+                        '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
+                                'class="property-detail-control p-2.5 rounded-full bg-white/95 text-charcoal hover:bg-terracotta hover:text-white shadow-md transition-colors">' +
+                            '<i data-lucide="x" class="w-5 h-5"></i>' +
+                        '</button>' +
+                    '</header>' +
                     '<div id="property-gallery-swipe" class="property-image-frame relative aspect-[16/9] bg-moss-soft touch-pan-y overflow-hidden" aria-label="' + (resolvedImg ? 'Dê dois cliques ou dois toques para ampliar a foto' : PROPERTY_IMAGE_UNAVAILABLE) + '">' +
                         (resolvedImg ?
                             '<img id="modal-property-img" ' +
@@ -1019,35 +1030,25 @@
                             : '') +
                         unavailablePropertyImageHtml(!resolvedImg) +
                         (activePropertyImages.length > 1 ?
-                            '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
+                            '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 property-detail-control p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
                                 '<i data-lucide="chevron-left" class="w-5 h-5"></i></button>' +
-                            '<button type="button" onclick="movePropertyGallery(1)" aria-label="Próxima foto" class="absolute top-1/2 -translate-y-1/2 right-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
+                            '<button type="button" onclick="movePropertyGallery(1)" aria-label="Próxima foto" class="absolute top-1/2 -translate-y-1/2 right-3 property-detail-control p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
                                 '<i data-lucide="chevron-right" class="w-5 h-5"></i></button>' +
                             '<span id="property-gallery-counter" aria-live="polite" class="absolute bottom-4 right-4 rounded-lg bg-charcoal/80 text-white text-xs font-bold px-2.5 py-1">1 / ' + activePropertyImages.length + '</span>'
                         : '') +
-                        '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
-                                'class="absolute top-4 right-4 p-2.5 rounded-full bg-white/95 text-charcoal hover:bg-terracotta hover:text-white shadow-md transition-colors">' +
-                            '<i data-lucide="x" class="w-5 h-5"></i>' +
-                        '</button>' +
                         '<div class="absolute bottom-4 left-4 flex items-center gap-2">' +
                             '<span class="px-3 py-1 rounded-full text-xs font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
                             '<span class="px-3 py-1 rounded-full bg-charcoal/85 text-white font-mono text-xs font-bold">' + esc(prop.codigo) + '</span>' +
                         '</div>' +
                     '</div>' +
+                    '<div class="property-detail-share">' +
+                        '<a data-share-code="' + esc(prop.codigo) + '" href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                           'title="Encaminhar este anúncio para um contato no WhatsApp" aria-label="Encaminhar anúncio no WhatsApp" ' +
+                           'class="property-detail-control inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
+                            '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
+                        '</a>' +
+                    '</div>' +
                     '<div class="p-5 sm:p-7 space-y-5">' +
-                        '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">' +
-                            '<div>' +
-                                '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
-                                '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
-                                '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
-                            '</div>' +
-                            '<a data-share-code="' + esc(prop.codigo) + '" href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
-                               'title="Encaminhar este anúncio para um contato no WhatsApp" aria-label="Encaminhar anúncio no WhatsApp" ' +
-                               'class="self-start shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
-                                '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
-                                '' +
-                            '</a>' +
-                        '</div>' +
 
                         renderPropertyFeatures(prop, true) +
 

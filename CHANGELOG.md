@@ -8,6 +8,7 @@
 ### Changed
 - Metadados da home e schema de imóveis; suíte Node consolidada.
 - COR-09: iconografia SVG para as características dos imóveis em cards, modal e ficha SSR, com rótulos acessíveis e preservação das regras da COR-08.
+- COR-10: diretriz permanente Mobile First, cabeçalho de detalhes antes da galeria, compartilhamento abaixo à direita e características em uma única linha, com preservação dos controles, conteúdo comercial e acessibilidade.
 ### Fixed
 - Singular/plural, atributos zero e breadcrumb; vagas de garagem permanecem explícitas inclusive quando zero.
 - Descrições sem conteúdo visível usam o fallback compartilhado entre vitrine e ficha. Descrições personalizadas e o valor administrativo são preservados.
