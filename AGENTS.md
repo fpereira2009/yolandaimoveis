@@ -25,6 +25,15 @@ Consulte `wrangler.toml` e, quando disponível, `wrangler.local.toml`, que é ig
 - Restrinja mudanças de HTML e CSS ao escopo aprovado. Preserve IDs, classes, eventos, rotas e contratos existentes.
 - Não introduza frameworks sem autorização. Consulte `public/index.html`, `public/app/index.html`, `public/js/`, `public/css/` e `performance/` conforme o escopo.
 
+## Mobile First
+
+- Priorize a experiência em smartphones. Projete primeiro para telas estreitas e adapte progressivamente para telas maiores, mantendo o desktop funcional e visualmente consistente.
+- Valide prioritariamente 320, 375, 390 e 430 px e também 768 e 1440 px. Evite rolagem horizontal, sobreposição e cortes, reduza espaços verticais desnecessários e preserve a legibilidade.
+- Preserve a acessibilidade e ofereça áreas de toque confortáveis, preferencialmente com pelo menos 44 × 44 pixels CSS para controles interativos.
+- Considere Safari no iPhone e Chrome no Android. Para alterações nas interfaces públicas, registre evidências de validação mobile e identifique quais testes usaram viewport mobile em navegador desktop e quais foram executados em dispositivos ou navegadores móveis reais.
+- Preserve o desempenho em redes móveis. Evite dependências e requisições desnecessárias e priorize a facilidade de navegação e conversão comercial.
+- A diretriz aplica-se ao escopo aprovado. Redesign, mudanças de copywriting e ampliação do escopo exigem autorização própria.
+
 ## 4. Procedimento de desenvolvimento
 
 Em EXP, após aprovação do escopo, siga este ciclo:
