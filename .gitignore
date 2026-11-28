@@ -12,5 +12,11 @@ node_modules/
 .env.*
 .dev.vars
 .dev.vars.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
 /tools/__pycache__/
 /migration_output/

@@ -1,0 +1,2 @@
+tools/copiar_r2_prod_para_preview.ps1 text eol=lf
+tools/test_copiar_r2_prod_para_preview.ps1 text eol=lf

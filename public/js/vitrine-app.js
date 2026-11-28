@@ -17,7 +17,105 @@
             const inFlightImageResolutions = {};
 
             // Último catálogo válido fica guardado no navegador; nunca se exibem imóveis de exemplo.
-            const CATALOG_CACHE_KEY = "yti_catalog_v2";
+            const CATALOG_CACHE_KEY = "yti_catalog_v3";
+            const LEGACY_CATALOG_CACHE_KEY = "yti_catalog_v2";
+            const featureNumber = new Intl.NumberFormat('pt-BR', { maximumSignificantDigits: 21 });
+            const catalogTextFields = ['bairro', 'cidade', 'descricao', 'destaque', 'finalidade',
+                'tipo', 'status', 'foto_url', 'resolved_foto_url', 'url'];
+            const catalogNumericFields = ['area_m2', 'quartos', 'banheiros', 'vagas', 'valor', 'coverImageId'];
+            const imageNumericFields = ['id', 'position', 'sizeBytes', 'width', 'height', 'thumbWidth', 'thumbHeight'];
+
+            // Mesmo contrato de propertyFeatures no SSR. A suíte compara as duas saídas.
+            function numericFeature(value, integer = false) {
+                if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+                if (typeof value !== 'string') return null;
+                const text = value.trim();
+                if (/^[1-9]\d{0,2}[.,]\d{3}$/.test(text)) return null;
+                const pattern = integer ? /^(?:\d+(?:[.,]0+)?|[.,]0+)$/ : /^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/;
+                if (!pattern.test(text)) return null;
+                const number = Number(text.replace(',', '.'));
+                return Number.isFinite(number) ? number : null;
+            }
+
+            function propertyFeatures({area_m2, bedrooms, bathrooms, parking}) {
+                const features = [];
+                const area = numericFeature(area_m2);
+                if (area > 0) {
+                    features.push({key:'area_m2', value:area, label:'Área', display:featureNumber.format(area) + ' m²'});
+                }
+                for (const [key, raw, singular, plural, minimum] of [
+                    ['bedrooms', bedrooms, 'Quarto', 'Quartos', 1],
+                    ['bathrooms', bathrooms, 'Banheiro', 'Banheiros', 1],
+                    ['parking', parking, 'Vaga', 'Vagas', 0],
+                ]) {
+                    const value = numericFeature(raw, true);
+                    if (Number.isSafeInteger(value) && value >= minimum) {
+                        features.push({key, value, label:value === 1 ? singular : plural, display:featureNumber.format(value)});
+                    }
+                }
+                return features;
+            }
+
+            function catalogFeatures({caracteristicas, area_m2, quartos, banheiros, vagas}) {
+                if (Array.isArray(caracteristicas) && caracteristicas.length <= 4 &&
+                    caracteristicas.every(feature => feature && typeof feature.key === 'string' && typeof feature.value === 'number')) {
+                    const values = Object.fromEntries(caracteristicas.map(({key, value}) => [key, value]));
+                    const normalized = propertyFeatures(values);
+                    if (normalized.length === caracteristicas.length && normalized.every((feature, index) => {
+                        const supplied = caracteristicas[index];
+                        return feature.key === supplied.key && feature.value === supplied.value &&
+                            feature.label === supplied.label && feature.display === supplied.display;
+                    })) return caracteristicas;
+                }
+                return propertyFeatures({area_m2, bedrooms:quartos, bathrooms:banheiros, parking:vagas});
+            }
+
+            function isOptionalText(value) {
+                return value == null || typeof value === 'string';
+            }
+
+            function isOptionalNumber(value) {
+                return value == null || typeof value === 'string' || Number.isFinite(value);
+            }
+
+            function isLocalCatalogUrl(value, pattern) {
+                if (value == null || value === '') return true;
+                if (typeof value !== 'string' || /[\s,\\]/.test(value)) return false;
+                try {
+                    const {origin} = window.location;
+                    const url = new URL(value, origin);
+                    return url.origin === origin && !url.username && !url.password &&
+                        pattern.test(url.pathname + url.search + url.hash);
+                } catch (e) { return false; }
+            }
+
+            function isCatalogImage(image) {
+                const mediaPath = /^\/api\/media\/file\/[a-z0-9_./%-]+$/i;
+                return image && typeof image === 'object' && !Array.isArray(image) &&
+                    typeof image.url === 'string' && image.url !== '' &&
+                    isLocalCatalogUrl(image.url, mediaPath) && isLocalCatalogUrl(image.thumbUrl, mediaPath) &&
+                    (image.cover == null || typeof image.cover === 'boolean') &&
+                    isOptionalText(image.mimeType) && imageNumericFields.every(key => isOptionalNumber(image[key]));
+            }
+
+            function prepareCatalog(items) {
+                if (!Array.isArray(items)) throw new Error('Catálogo incompatível');
+                const codes = new Set();
+                return items.map(item => {
+                    if (!item || typeof item.codigo !== 'string' || !/^YTI-\d{4,}$/.test(item.codigo) ||
+                        typeof item.titulo !== 'string' || !item.titulo.trim() || codes.has(item.codigo) ||
+                        !catalogTextFields.every(key => isOptionalText(item[key])) ||
+                        !catalogNumericFields.every(key => isOptionalNumber(item[key])) ||
+                        !isLocalCatalogUrl(item.url, /^(?:\/imoveis\/[a-z0-9-]+|\/\?imovel=YTI-\d{4,})$/) ||
+                        (item.images != null && (!Array.isArray(item.images) ||
+                            !item.images.every(isCatalogImage)))) {
+                        throw new Error('Imóvel incompatível no catálogo');
+                    }
+                    codes.add(item.codigo);
+                    return {...item, caracteristicas:catalogFeatures(item)};
+                });
+            }
+
             function isDeprecatedPhotoPlaceholder(url) {
                 const value = String(url || "");
                 // Descarta fotos fictícias deixadas no cache por versões anteriores.
@@ -25,14 +123,17 @@
                     value.includes("Carregando+Foto+do+Im");
             }
             function readCatalogCache() {
-                try {
-                    const o = JSON.parse(safeGetStorage(CATALOG_CACHE_KEY, "null"));
-                    return o && Array.isArray(o.items) ? o.items.map(function (item) {
-                        if (isDeprecatedPhotoPlaceholder(item.foto_url)) item.foto_url = "";
-                        if (isDeprecatedPhotoPlaceholder(item.resolved_foto_url)) item.resolved_foto_url = "";
-                        return item;
-                    }) : [];
-                } catch (e) { return []; }
+                for (const key of [CATALOG_CACHE_KEY, LEGACY_CATALOG_CACHE_KEY]) {
+                    try {
+                        const snapshot = JSON.parse(safeGetStorage(key, "null"));
+                        return prepareCatalog(snapshot?.items).map(item => {
+                            if (isDeprecatedPhotoPlaceholder(item.foto_url)) item.foto_url = "";
+                            if (isDeprecatedPhotoPlaceholder(item.resolved_foto_url)) item.resolved_foto_url = "";
+                            return item;
+                        });
+                    } catch (e) { /* Tenta a versão anterior sem renovar o cache. */ }
+                }
+                return null;
             }
             function saveCatalogCache(items) {
                 safeSetStorage(CATALOG_CACHE_KEY, JSON.stringify({ at: Date.now(), items: items }));
@@ -43,7 +144,8 @@
                 });
             }
             let catalogFailed = false;
-            let properties = readCatalogCache();
+            let lastValidCatalog = readCatalogCache();
+            let properties = lastValidCatalog ?? [];
             let activeFinalidade = "Todos";
             let propertyHistoryEntry = false;
             let catalogLoaded = false;
@@ -403,42 +505,59 @@
                 if (text) text.textContent = label;
             }
 
-            // ==================== PARSER DE PLANILHA & CSV ====================
+            function renderCatalog(items, unavailable, selectedLocation) {
+                properties = items;
+                catalogFailed = unavailable;
+                populateLocationDropdown();
+                const locationFilter = document.getElementById("filter-location");
+                if (locationFilter && selectedLocation !== undefined) locationFilter.value = selectedLocation;
+                applyFilters();
+                catalogLoaded = true;
+                syncPropertyModalWithUrl();
+            }
+
+            let catalogRequest = 0;
             async function loadCatalog(manualTrigger) {
+                const request = ++catalogRequest;
                 const syncIcon = document.getElementById("sync-icon");
                 if (syncIcon) syncIcon.classList.add("animate-spin");
                 updateSyncStatusUI("loading", "Atualizando catálogo...");
+                let selectedLocation;
+                let timer;
                 try {
                     const ctrl = new AbortController();
-                    const timer = setTimeout(function () { ctrl.abort(); }, 8000);
+                    timer = setTimeout(function () { ctrl.abort(); }, 8000);
                     const resp = await fetch("/api/public/properties", { signal: ctrl.signal });
                     clearTimeout(timer);
                     if (!resp.ok) throw new Error("HTTP " + resp.status);
                     const data = await resp.json();
-                    const items = (data.items || []).map(function (p) {
+                    if (request !== catalogRequest) return;
+                    const items = prepareCatalog(data?.items).map(function (p) {
                         // Não importar ou resolver URLs legadas, mesmo que venham do D1.
                         // Somente a galeria R2 define fotos de anúncios.
                         p.foto_url = getPropertyCoverUrl(p);
                         p.resolved_foto_url = "";
                         return p;
                     });
-                    properties = items;
-                    catalogFailed = false;
+                    selectedLocation = document.getElementById("filter-location")?.value;
+                    renderCatalog(items, false);
+                    lastValidCatalog = items;
                     saveCatalogCache(items);
-                    const nowStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-                    updateSyncStatusUI("connected", "Atualizado • " + items.length + (items.length === 1 ? " imóvel (" : " imóveis (") + nowStr + ")");
-                    if (manualTrigger) showToast(items.length + (items.length === 1 ? " imóvel disponível." : " imóveis disponíveis."));
                 } catch (err) {
-                    properties = readCatalogCache(); catalogFailed = properties.length === 0;
+                    if (request !== catalogRequest) return;
+                    lastValidCatalog ??= readCatalogCache();
+                    renderCatalog(lastValidCatalog ?? [], lastValidCatalog === null, selectedLocation);
                     updateSyncStatusUI("error", "Sem conexão com o catálogo • exibindo última versão salva");
                     if (manualTrigger) showToast("Não foi possível atualizar agora. Tente novamente em instantes.");
+                    return;
                 } finally {
-                    if (syncIcon) syncIcon.classList.remove("animate-spin");
-                    populateLocationDropdown();
-                    applyFilters();
-                    catalogLoaded = true;
-                    syncPropertyModalWithUrl();
+                    clearTimeout(timer);
+                    if (request === catalogRequest && syncIcon) syncIcon.classList.remove("animate-spin");
                 }
+                const count = lastValidCatalog.length;
+                const nowStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                updateSyncStatusUI("connected", "Atualizado • " + count + (count === 1 ? " imóvel (" : " imóveis (") + nowStr + ")");
+                if (manualTrigger) showToast(count + (count === 1 ? " imóvel disponível." : " imóveis disponíveis."));
             }
 
             // Cadastra o contato no CRC (cliente + lead) e devolve { ok, status, error }
@@ -565,6 +684,28 @@
                 return "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
             }
 
+            function renderPropertyFeatures(prop, modal = false) {
+                const features = prop.caracteristicas;
+                if (!Array.isArray(features) || !features.length || features.length > 4) return '';
+                const columns = 'grid-cols-' + features.length;
+                const grid = modal ? 'property-detail-features gap-2.5' : 'gap-2 pt-2 border-t border-sand-border';
+                const tile = modal ? 'bg-sand p-3 rounded-2xl border border-sand-border' : 'bg-sand/70 py-2 px-1 rounded-xl';
+                const valueStyle = modal ? 'font-extrabold text-sm' : 'font-bold text-xs';
+                const size = modal ? 22 : 18;
+                return '<div data-property-features class="grid ' + columns + ' ' + grid + ' text-center">' +
+                    features.map(({key, display, label}) => {
+                        const value = esc(display);
+                        const accessible = key === 'area_m2'
+                            ? 'Área: ' + esc(display.replace(/ m²$/, '')) + ' metros quadrados'
+                            : value + ' ' + esc(label);
+                        return '<div class="' + tile + '"><span class="property-feature-label">' + accessible + '</span>' +
+                            '<div title="' + accessible + '" aria-hidden="true">' +
+                            '<svg class="property-feature-icon" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+                            '<use href="/img/property-features.svg#' + esc(key) + '"/></svg>' +
+                            '<span class="property-feature-value font-heading text-moss ' + valueStyle + '">' + value.replace(/[.,]/g, '$&<wbr>').replace(/ m²$/, ' <span class="property-feature-unit">m²</span>') + '</span></div></div>';
+                    }).join('') + '</div>';
+            }
+
  function renderProperties(list) {
                 const grid = document.getElementById("properties-grid");
                 const counter = document.getElementById("results-counter");
@@ -627,7 +768,7 @@
                                         : '') +
                                     unavailablePropertyImageHtml(!resolvedImg) +
                                     '<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">' +
-                                        '<span class="px-3 py-1 rounded-full text-[11px] font-heading font-bold ' + badgeClass + '">' + prop.finalidade + '</span>' +
+                                        '<span class="px-3 py-1 rounded-full text-[11px] font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
                                         destaqueHtml +
                                     '</div>' +
                                     '<span class="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-charcoal/80 text-white font-mono text-[11px] font-bold">' + esc(prop.codigo) + '</span>' +
@@ -646,24 +787,7 @@
                                         formatCurrency(prop.valor, prop.finalidade) +
                                     '</p>' +
 
-                                    '<div class="grid grid-cols-4 gap-2 pt-2 border-t border-sand-border text-center">' +
-                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
-                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.area_m2 || "-") + ' m²</span>' +
-                                            '<span class="block text-[10px] text-charcoal/65">Área</span>' +
-                                        '</div>' +
-                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
-                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.quartos || 0) + '</span>' +
-                                            '<span class="block text-[10px] text-charcoal/65">Quartos</span>' +
-                                        '</div>' +
-                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
-                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.banheiros || 0) + '</span>' +
-                                            '<span class="block text-[10px] text-charcoal/65">Banh.</span>' +
-                                        '</div>' +
-                                        '<div class="bg-sand/70 py-2 px-1 rounded-xl">' +
-                                            '<span class="block font-heading font-bold text-moss text-xs">' + (prop.vagas || 0) + '</span>' +
-                                            '<span class="block text-[10px] text-charcoal/65">Vagas</span>' +
-                                        '</div>' +
-                                    '</div>' +
+                                    renderPropertyFeatures(prop) +
                                 '</div>' +
                             '</div>' +
 
@@ -884,6 +1008,17 @@
                 }
 
                 content.innerHTML =
+                    '<header class="property-detail-header property-modal-header">' +
+                        '<div>' +
+                            '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
+                            '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
+                        '</div>' +
+                        '<p class="property-modal-price font-heading font-extrabold text-charcoal text-2xl sm:text-3xl">' + formatCurrency(prop.valor, prop.finalidade).replace(/\./g, '$&<wbr>') + '</p>' +
+                        '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
+                                'class="property-detail-control p-2.5 rounded-full bg-white/95 text-charcoal hover:bg-terracotta hover:text-white shadow-md transition-colors">' +
+                            '<i data-lucide="x" class="w-5 h-5"></i>' +
+                        '</button>' +
+                    '</header>' +
                     '<div id="property-gallery-swipe" class="property-image-frame relative aspect-[16/9] bg-moss-soft touch-pan-y overflow-hidden" aria-label="' + (resolvedImg ? 'Dê dois cliques ou dois toques para ampliar a foto' : PROPERTY_IMAGE_UNAVAILABLE) + '">' +
                         (resolvedImg ?
                             '<img id="modal-property-img" ' +
@@ -895,58 +1030,31 @@
                             : '') +
                         unavailablePropertyImageHtml(!resolvedImg) +
                         (activePropertyImages.length > 1 ?
-                            '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
+                            '<button type="button" onclick="movePropertyGallery(-1)" aria-label="Foto anterior" class="absolute top-1/2 -translate-y-1/2 left-3 property-detail-control p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
                                 '<i data-lucide="chevron-left" class="w-5 h-5"></i></button>' +
-                            '<button type="button" onclick="movePropertyGallery(1)" aria-label="Próxima foto" class="absolute top-1/2 -translate-y-1/2 right-3 p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
+                            '<button type="button" onclick="movePropertyGallery(1)" aria-label="Próxima foto" class="absolute top-1/2 -translate-y-1/2 right-3 property-detail-control p-2 rounded-full bg-white/90 text-moss shadow-md hover:bg-sand">' +
                                 '<i data-lucide="chevron-right" class="w-5 h-5"></i></button>' +
                             '<span id="property-gallery-counter" aria-live="polite" class="absolute bottom-4 right-4 rounded-lg bg-charcoal/80 text-white text-xs font-bold px-2.5 py-1">1 / ' + activePropertyImages.length + '</span>'
                         : '') +
-                        '<button type="button" onclick="closePropertyModal()" aria-label="Fechar detalhes" ' +
-                                'class="absolute top-4 right-4 p-2.5 rounded-full bg-white/95 text-charcoal hover:bg-terracotta hover:text-white shadow-md transition-colors">' +
-                            '<i data-lucide="x" class="w-5 h-5"></i>' +
-                        '</button>' +
                         '<div class="absolute bottom-4 left-4 flex items-center gap-2">' +
-                            '<span class="px-3 py-1 rounded-full text-xs font-heading font-bold ' + badgeClass + '">' + prop.finalidade + '</span>' +
+                            '<span class="px-3 py-1 rounded-full text-xs font-heading font-bold ' + badgeClass + '">' + esc(prop.finalidade) + '</span>' +
                             '<span class="px-3 py-1 rounded-full bg-charcoal/85 text-white font-mono text-xs font-bold">' + esc(prop.codigo) + '</span>' +
                         '</div>' +
                     '</div>' +
+                    '<div class="property-detail-share">' +
+                        '<a data-share-code="' + esc(prop.codigo) + '" href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
+                           'title="Encaminhar este anúncio para um contato no WhatsApp" aria-label="Encaminhar anúncio no WhatsApp" ' +
+                           'class="property-detail-control inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
+                            '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
+                        '</a>' +
+                    '</div>' +
                     '<div class="p-5 sm:p-7 space-y-5">' +
-                        '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">' +
-                            '<div>' +
-                                '<p class="text-xs font-bold text-terracotta">' + esc(prop.tipo) + ' • ' + esc(prop.bairro) + ', ' + esc(prop.cidade) + '</p>' +
-                                '<h3 class="font-heading font-extrabold text-moss text-xl sm:text-2xl mt-1">' + esc(prop.titulo) + '</h3>' +
-                                '<p class="font-heading font-extrabold text-charcoal text-2xl sm:text-3xl mt-2">' + formatCurrency(prop.valor, prop.finalidade) + '</p>' +
-                            '</div>' +
-                            '<a data-share-code="' + esc(prop.codigo) + '" href="' + esc(getSharePropertyWhatsAppLink(prop)) + '" target="_blank" rel="noopener noreferrer" ' +
-                               'title="Encaminhar este anúncio para um contato no WhatsApp" aria-label="Encaminhar anúncio no WhatsApp" ' +
-                               'class="self-start shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sand hover:bg-moss-soft text-moss border border-sand-border font-heading font-bold text-xs transition-colors">' +
-                                '<i data-lucide="share-2" class="w-3.5 h-3.5 text-terracotta"></i>' +
-                                '' +
-                            '</a>' +
-                        '</div>' +
 
-                        '<div class="grid grid-cols-4 gap-2.5 text-center">' +
-                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
-                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.area_m2 || "-") + ' m²</span>' +
-                                '<span class="block text-[11px] text-charcoal/65">Área Total</span>' +
-                            '</div>' +
-                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
-                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.quartos || 0) + '</span>' +
-                                '<span class="block text-[11px] text-charcoal/65">Dormitórios</span>' +
-                            '</div>' +
-                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
-                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.banheiros || 0) + '</span>' +
-                                '<span class="block text-[11px] text-charcoal/65">Banheiros</span>' +
-                            '</div>' +
-                            '<div class="bg-sand p-3 rounded-2xl border border-sand-border">' +
-                                '<span class="block font-heading font-extrabold text-moss text-sm">' + (prop.vagas || 0) + '</span>' +
-                                '<span class="block text-[11px] text-charcoal/65">Vagas</span>' +
-                            '</div>' +
-                        '</div>' +
+                        renderPropertyFeatures(prop, true) +
 
                         '<div class="space-y-1.5">' +
                             '<h4 class="font-heading font-bold text-moss text-sm">Descrição do Imóvel</h4>' +
-                            '<div class="property-description text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + YolandaDescription.toHtml(prop.descricao) + '</div>' +
+                            '<div class="property-description text-xs sm:text-sm text-charcoal/80 leading-relaxed">' + YolandaDescription.toHtml(prop.descricao, {legacyHtml:true}) + '</div>' +
                         '</div>' +
 
                         '<form id="interest-form" onsubmit="submitInterest(event, \'' + prop.codigo + '\')" class="space-y-2">' +

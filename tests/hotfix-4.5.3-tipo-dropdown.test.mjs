@@ -16,9 +16,9 @@ check(select?.[0].includes('w-full') && select?.[0].includes('rounded-xl'), 'cla
 check(html.includes('for="prop-type"'), 'rótulo acessível');
 const options = [...select[1].matchAll(/<option value="([^"]+)">([^<]+)<\/option>/g)].map(x=>[x[1],x[2]]);
 equal(JSON.stringify(options), JSON.stringify([
-  ['Casa','Casa'],['Apartamento','Apartamento'],['Terreno','Terreno'],
+  ['Casa','Casa'],['Apartamento','Apartamento'],['Kitnet','Kitnet'],['Terreno','Terreno'],
   ['Comercial','Comercial'],['Chácara/Sítio','Chácara/Sítio'],['Cobertura','Cobertura']
-]), 'seis opções originais, sem alterar valor do banco');
+]), 'sete opções atuais, sem alterar valor do banco');
 check(html.includes('crm-properties.js?v=4.5.3-hf1'), 'cache-busting específico do hotfix');
 check(/type: g\('prop-type'\)/.test(js), 'payload original mantém o valor do campo');
 check(/function openNewPropertyModal\(\) \{ fillPropForm\(null\); \}/.test(js), 'modal de inclusão preservado');

@@ -6,7 +6,7 @@ base=Path(__file__).resolve().parents[1]
 conn=sqlite3.connect(':memory:')
 conn.execute('PRAGMA foreign_keys=ON')
 for f in sorted((base/'migrations').glob('*.sql')):
- if f.name.startswith('0010_'):continue
+ if f.name[:4] >= '0010':continue
  conn.executescript(f.read_text(encoding='utf-8'))
 for i,(ty,bed,area,bairro,city) in enumerate([
  ('Casa',3,150,'Manejo','Resende - RJ'),

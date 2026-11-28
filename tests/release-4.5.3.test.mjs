@@ -110,6 +110,6 @@ ok(properties.includes('price: (v) => money(v)'), 'validação numérica do serv
 ok(properties.includes('.bind('), 'persistência D1 usa statements parametrizados');
 ok(read('wrangler.toml').includes('yolanda-crm-dev') && read('wrangler.toml').includes('yolanda-imoveis-dev'), 'bindings Preview preservados');
 ok(read('functions/_shared/access-auth.js').includes("redirect: 'manual'"), 'autenticação Cloudflare Access preservada');
-eq(JSON.parse(read('package.json')).version, '4.5.3', 'versão atualizada');
+eq(JSON.parse(read('package.json')).version, '4.8.0', 'versão atualizada');
 ok(html.includes('?v=4.5.3'), 'cache-busting do CRM atualizado');
 console.log(`PASSOU: ${checks} verificações específicas da versão 4.5.3.`);

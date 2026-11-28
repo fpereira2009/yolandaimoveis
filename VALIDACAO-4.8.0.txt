@@ -1,0 +1,191 @@
+
+> 01_producao@4.8.0 test
+> node --experimental-sqlite --test tests/*.test.mjs
+
+TAP version 13
+# [preview-access] ACCESS_CONFIG_INVALID { teamDomainDefined: false, audienceDefined: false }
+# [access-jwks] JWKS_UNAVAILABLE { stage: 'FETCH_FAILED_OR_REDIRECT_BLOCKED' }
+# [preview-access] ACCESS_VERIFICATION_UNAVAILABLE { teamDomainDefined: true, audienceDefined: true }
+# 3 testes do diagnóstico de autenticação: aprovados
+# Subtest: tests/access-diagnostic-hotfix.test.mjs
+ok 1 - tests/access-diagnostic-hotfix.test.mjs
+  ---
+  duration_ms: 86.107925
+  type: 'test'
+  ...
+# PASSOU: 4 cenários de falha JWKS, sem exposição de dados sensíveis.
+# Subtest: tests/access-jwks-diagnostic.test.mjs
+ok 2 - tests/access-jwks-diagnostic.test.mjs
+  ---
+  duration_ms: 190.371296
+  type: 'test'
+  ...
+# Analytics 4.7.8: verificações aprovadas.
+# Subtest: tests/analytics-4.7.8.test.mjs
+ok 3 - tests/analytics-4.7.8.test.mjs
+  ---
+  duration_ms: 67.574862
+  type: 'test'
+  ...
+# Analytics 4.7.9: testes de payload, filtros, privacidade, debounce e duplicidade aprovados.
+# Subtest: tests/analytics-4.7.9.test.mjs
+ok 4 - tests/analytics-4.7.9.test.mjs
+  ---
+  duration_ms: 34.78033
+  type: 'test'
+  ...
+# (node:2791) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# PASSOU: 117 verificações 4.3.4 (Ganho, Perdido, vínculos, disputa, histórico, hoje, paridade de regras, UI).
+# Subtest: tests/conflicts-4.3.4.test.mjs
+ok 5 - tests/conflicts-4.3.4.test.mjs
+  ---
+  duration_ms: 466.034904
+  type: 'test'
+  ...
+# (node:2807) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# PASSOU: 84 verificações de paridade Preview/Production com D1 e R2 isolados.
+# Subtest: tests/env-parity-4.3.8.test.mjs
+ok 6 - tests/env-parity-4.3.8.test.mjs
+  ---
+  duration_ms: 256.901713
+  type: 'test'
+  ...
+# PASSOU: 30 verificações específicas de funcionalidades 4.4.0.
+# Subtest: tests/features-release-4.4.0.test.mjs
+ok 7 - tests/features-release-4.4.0.test.mjs
+  ---
+  duration_ms: 55.258012
+  type: 'test'
+  ...
+# PASSOU: 30 verificações do hotfix 4.5.3 dropdown de Tipo.
+# Subtest: tests/hotfix-4.5.3-tipo-dropdown.test.mjs
+ok 8 - tests/hotfix-4.5.3-tipo-dropdown.test.mjs
+  ---
+  duration_ms: 38.351408
+  type: 'test'
+  ...
+# (node:2840) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# PASSOU: multipart WebP principal + thumb R2, metadata, GET seguro, 404 chave inválida
+# Subtest: tests/media-variants-4.7.test.mjs
+ok 9 - tests/media-variants-4.7.test.mjs
+  ---
+  duration_ms: 421.706573
+  type: 'test'
+  ...
+# Subtest: subconjunto inclui todos os ícones estáticos e dinâmicos da homepage
+ok 10 - subconjunto inclui todos os ícones estáticos e dinâmicos da homepage
+  ---
+  duration_ms: 0.730492
+  type: 'test'
+  ...
+# Subtest: converte ícones mantendo classes, IDs e acessibilidade
+ok 11 - converte ícones mantendo classes, IDs e acessibilidade
+  ---
+  duration_ms: 1.37169
+  type: 'test'
+  ...
+# Subtest: renderização dinâmica para cards, modal e fallback sem foto
+ok 12 - renderização dinâmica para cards, modal e fallback sem foto
+  ---
+  duration_ms: 0.85528
+  type: 'test'
+  ...
+# Subtest: homepage usa recursos locais e mantém scripts da vitrine
+ok 13 - homepage usa recursos locais e mantém scripts da vitrine
+  ---
+  duration_ms: 0.358771
+  type: 'test'
+  ...
+# Subtest: favicons são PNG corretos, pequenos e nas dimensões solicitadas
+ok 14 - favicons são PNG corretos, pequenos e nas dimensões solicitadas
+  ---
+  duration_ms: 0.283428
+  type: 'test'
+  ...
+# (node:2862) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# PASSOU: 187 verificações. Migrations 0001_init.sql, 0002_imoveis_integracao.sql, 0003_categoria_captacao.sql, 0004_modalidade_venda.sql, 0005_crc_modalidade_venda.sql, 0006_leads_inteligencia_fechamento.sql, 0007_crm_ultimo_contato.sql, 0008_property_images_r2.sql, 0009_public_url.sql, 0010_seo_slug_4_6_0.sql, 0011_media_variants_4_7_0.sql; reservas, disputas, troca, exclusão, reabertura, legado, CRC e sintaxe da UI.
+# Subtest: tests/preview-crm.test.mjs
+ok 11 - tests/preview-crm.test.mjs
+  ---
+  duration_ms: 372.159072
+  type: 'test'
+  ...
+# (node:2873) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# R2: limpeza pendente para imóvel 3 Error: Falha R2 simulada
+#     at R2.delete (file:///tmp/tmp.odQGD3wFMi/yolandaimoveis-1/tests/r2-media.test.mjs:164:47)
+#     at deletePhysicalImages (file:///tmp/tmp.odQGD3wFMi/yolandaimoveis-1/functions/_shared/property-media.js:62:34)
+#     at deletePropertyWithMedia (file:///tmp/tmp.odQGD3wFMi/yolandaimoveis-1/functions/_shared/api/properties.js:67:15)
+#     at async onRequest (file:///tmp/tmp.odQGD3wFMi/yolandaimoveis-1/functions/_shared/api/router.js:69:46)
+#     at async call (file:///tmp/tmp.odQGD3wFMi/yolandaimoveis-1/tests/r2-media.test.mjs:57:20)
+#     at async file:///tmp/tmp.odQGD3wFMi/yolandaimoveis-1/tests/r2-media.test.mjs:165:1
+# PASSOU: 164 verificações de mídia R2/galeria, CRUD, limite 10, auth, preview/produção e compatibilidade.
+# Subtest: tests/r2-media.test.mjs
+ok 12 - tests/r2-media.test.mjs
+  ---
+  duration_ms: 420.235785
+  type: 'test'
+  ...
+# PASSOU: 61 verificações específicas da versão 4.5.2.
+# Subtest: tests/release-4.5.2.test.mjs
+ok 13 - tests/release-4.5.2.test.mjs
+  ---
+  duration_ms: 53.132551
+  type: 'test'
+  ...
+# PASSOU: 30 verificações específicas da versão 4.5.3.
+# Subtest: tests/release-4.5.3.test.mjs
+ok 14 - tests/release-4.5.3.test.mjs
+  ---
+  duration_ms: 46.107621
+  type: 'test'
+  ...
+# PASSOU: 31 verificações negativas de segurança 4.4.0.
+# Subtest: tests/security-4.4.0.test.mjs
+ok 15 - tests/security-4.4.0.test.mjs
+  ---
+  duration_ms: 438.811868
+  type: 'test'
+  ...
+# [seo-ssr] DATABASE_OR_RENDER_ERROR
+# PASSOU: 36 verificações SEO/SSR 4.6.0 sobre base 4.5.5.
+# Subtest: tests/seo-4.6.0-integration.test.mjs
+ok 16 - tests/seo-4.6.0-integration.test.mjs
+  ---
+  duration_ms: 107.777022
+  type: 'test'
+  ...
+# SEO 4.8.0: metadados, schema, home e noindex aprovados; HTTP 404 estático requer Pages.
+# Subtest: tests/seo-4.8.0.test.mjs
+ok 17 - tests/seo-4.8.0.test.mjs
+  ---
+  duration_ms: 73.791131
+  type: 'test'
+  ...
+# PASSOU: vitrine 4.3.3 (sem URL legada, sem foto genérica, mensagem, capa R2, carrossel e erro de imagem).
+# Subtest: tests/vitrine-sem-imagem.test.mjs
+ok 18 - tests/vitrine-sem-imagem.test.mjs
+  ---
+  duration_ms: 58.258349
+  type: 'test'
+  ...
+# PASSOU: 26 verificações específicas de restauração dos botões WhatsApp na 4.5.1.
+# Subtest: tests/whatsapp-labels-4.5.1.test.mjs
+ok 19 - tests/whatsapp-labels-4.5.1.test.mjs
+  ---
+  duration_ms: 39.127153
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1238.656499

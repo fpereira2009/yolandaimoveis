@@ -1,0 +1,90 @@
+[data-property-features] {
+  display: grid;
+  grid-template-columns: repeat(var(--feature-columns), minmax(0, 1fr));
+  text-align: center;
+}
+
+[data-property-features].grid-cols-1 { --feature-columns: 1; }
+[data-property-features].grid-cols-2 { --feature-columns: 2; }
+[data-property-features].grid-cols-3 { --feature-columns: 3; }
+[data-property-features].grid-cols-4 { --feature-columns: 4; }
+
+.property-feature-icon {
+  display: block;
+  margin: 0 auto .25rem;
+  color: #2C4A3E;
+}
+
+.property-feature-value {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.property-feature-unit { white-space: nowrap; }
+
+.property-feature-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.property-detail-header {
+  padding: .875rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.property-modal-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "heading close" "price price";
+  align-items: start;
+  gap: .5rem;
+}
+
+.property-modal-header > div { grid-area: heading; }
+.property-modal-header > button { grid-area: close; }
+.property-modal-price { grid-area: price; }
+
+.property-detail-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.property-detail-share {
+  display: flex;
+  justify-content: flex-end;
+  padding: .25rem 1rem 0;
+}
+
+.property-ssr-price { margin-top: .5rem; }
+
+#seo-gallery { position: relative; }
+#seo-gallery .seo-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+#seo-gallery .property-ssr-no-photo { display: grid; place-items: center; aspect-ratio: 16 / 10; }
+
+#property-modal-content > .space-y-5,
+.property-ssr-details { padding-top: .5rem; }
+
+.property-detail-features { gap: .375rem; }
+.property-detail-features > div { min-width: 0; padding: .5rem .25rem; }
+.property-ssr-details .property-detail-features { padding-block: .75rem; }
+
+@media (min-width: 640px) {
+  .property-detail-header { padding: 1.25rem 1.75rem; }
+  .property-detail-share { padding-inline: 1.75rem; }
+  .property-detail-features { gap: .5rem; }
+}
+
+@media (max-width: 374px) {
+  .property-site-header > div { flex-wrap: wrap; gap: .25rem .5rem; }
+  .property-site-header nav { gap: .5rem; margin-inline-start: auto; }
+  .property-site-header nav a:last-child { padding-inline: .625rem; }
+}

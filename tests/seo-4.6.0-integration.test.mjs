@@ -40,8 +40,10 @@ ok(renamed.headers.get('Location').endsWith(prop.slug),'301 aponta para canonica
 equal((await getProperty(ctx('sem-id',mockEnv()))).status,404,'sem código 404');
 equal((await getProperty(ctx(prop.slug,mockEnv(null)))).status,404,'não publicado 404');
 equal((await getProperty(ctx(prop.slug,mockEnv(prop,{bad:true})))).status,503,'falha D1 503 controlado');
-const production={MEDIA_ENV:'production',MEDIA_BUCKET:{},DB:{prepare(){throw Error('D1 Production usado!')}}};
-equal((await getProperty(ctx(prop.slug,production))).status,404,'SSR 4.6.0 não lê produção');
+const production=mockEnv(prop,{envType:'production'});
+const prodResponse=await getProperty(ctx(prop.slug,production));
+equal(prodResponse.status,200,'SSR produção usa binding próprio simulado');
+equal(prodResponse.headers.get('X-Robots-Tag'),'index, follow','produção indexável');
 const xml=await getSitemap({env:mockEnv(),request:new Request('https://dev.yolanda-site.pages.dev/sitemap.xml')});
 equal(xml.status,200,'sitemap HTTP 200');
 ok((await xml.text()).includes(prop.slug),'sitemap contém URL amigável');
